@@ -7,9 +7,23 @@ export async function POST() {
   const user = await requireSession();
   if (isApiError(user)) return user;
 
-  const players = await getPlayerSummaries([user.steamId]).catch(() => []);
+  let players: Awaited<ReturnType<typeof getPlayerSummaries>> = [];
+  let fetchError: unknown = null;
+  try {
+    players = await getPlayerSummaries([user.steamId]);
+  } catch (e) {
+    fetchError = e;
+  }
   const player = players[0];
-  if (!player) return err("STEAM_API_ERROR", "Não foi possível buscar o perfil na Steam", 502);
+  if (!player) {
+    console.error("refresh-steam-profile failed", {
+      steamId: user.steamId,
+      hasKey: !!process.env.STEAM_API_KEY,
+      fetchError: String(fetchError),
+      playersCount: players.length,
+    });
+    return err("STEAM_API_ERROR", "Não foi possível buscar o perfil na Steam", 502);
+  }
 
   const updated = await prisma.user.update({
     where: { id: user.id },
