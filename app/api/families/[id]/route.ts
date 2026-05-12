@@ -43,26 +43,27 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 
   if (!family) return err("NOT_FOUND", "Family not found", 404);
 
-  // Refresh stale Steam names in the background (fire-and-forget)
-  const allMembers = [
-    family.chief,
-    ...family.memberships.map((m) => m.user),
-  ];
+  // Synchronously refresh any stale "Steam user" names before returning
+  const allMembers = [family.chief, ...family.memberships.map((m) => m.user)];
   const stale = allMembers.filter((m) => m.personaName.startsWith("Steam user"));
   if (stale.length > 0) {
-    getPlayerSummaries(stale.map((m) => m.steamId)).then(async (players) => {
-      await Promise.all(players.map((player) =>
-        prisma.user.updateMany({
-          where: { steamId: player.steamid, personaName: { startsWith: "Steam user" } },
-          data: {
-            personaName: player.personaname,
-            avatarUrl: player.avatar,
-            avatarMedium: player.avatarmedium,
-            avatarFull: player.avatarfull,
-          },
-        })
-      ));
-    }).catch(() => {});
+    const players = await getPlayerSummaries(stale.map((m) => m.steamId)).catch(() => []);
+    await Promise.all(players.map((player) => {
+      const member = stale.find((m) => m.steamId === player.steamid);
+      if (!member) return;
+      member.personaName = player.personaname;
+      member.avatarUrl = player.avatar;
+      member.avatarMedium = player.avatarmedium;
+      return prisma.user.updateMany({
+        where: { steamId: player.steamid },
+        data: {
+          personaName: player.personaname,
+          avatarUrl: player.avatar,
+          avatarMedium: player.avatarmedium,
+          avatarFull: player.avatarfull,
+        },
+      });
+    }));
   }
 
   const membership = await prisma.familyMembership.findUnique({
