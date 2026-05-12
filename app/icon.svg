@@ -1,0 +1,25 @@
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Dark background -->
+  <rect width="32" height="32" rx="7" fill="#0D0D14"/>
+
+  <!-- Left circle (violet) -->
+  <circle cx="11" cy="19" r="8" fill="#7C3AED" opacity="0.25"/>
+  <circle cx="11" cy="19" r="7" fill="#8B5CF6" opacity="0.85"/>
+
+  <!-- Right circle (cyan) -->
+  <circle cx="21" cy="19" r="8" fill="#06B6D4" opacity="0.25"/>
+  <circle cx="21" cy="19" r="7" fill="#22D3EE" opacity="0.75"/>
+
+  <!-- Top circle (light violet, overlapping both) -->
+  <circle cx="16" cy="11" r="7" fill="#A78BFA" opacity="0.9"/>
+
+  <!-- Gift dot -->
+  <circle cx="16" cy="17" r="2.5" fill="#DDD6FE"/>
+
+  <!-- Gift ribbon vertical -->
+  <line x1="16" y1="14.5" x2="16" y2="12.5" stroke="#A5F3FC" stroke-width="1.8" stroke-linecap="round"/>
+  <!-- Gift ribbon left -->
+  <line x1="14" y1="13.5" x2="16" y2="12.5" stroke="#A78BFA" stroke-width="1.5" stroke-linecap="round"/>
+  <!-- Gift ribbon right -->
+  <line x1="18" y1="13.5" x2="16" y2="12.5" stroke="#A78BFA" stroke-width="1.5" stroke-linecap="round"/>
+</svg>
