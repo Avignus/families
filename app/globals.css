@@ -4,25 +4,33 @@
 
 @layer base {
   :root {
-    --background: 220 15% 8%;
-    --foreground: 210 40% 92%;
-    --card: 220 15% 11%;
-    --card-foreground: 210 40% 92%;
-    --popover: 220 15% 11%;
-    --popover-foreground: 210 40% 92%;
-    --primary: 210 100% 56%;
+    --background: 224 25% 6%;
+    --foreground: 214 30% 92%;
+
+    --card: 224 22% 9%;
+    --card-foreground: 214 30% 92%;
+
+    --popover: 224 22% 9%;
+    --popover-foreground: 214 30% 92%;
+
+    --primary: 258 82% 66%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 220 15% 18%;
-    --secondary-foreground: 210 40% 92%;
-    --muted: 220 15% 16%;
-    --muted-foreground: 215 20% 55%;
-    --accent: 199 89% 48%;
-    --accent-foreground: 0 0% 100%;
-    --destructive: 0 72% 51%;
+
+    --secondary: 224 22% 15%;
+    --secondary-foreground: 214 30% 92%;
+
+    --muted: 224 22% 13%;
+    --muted-foreground: 215 18% 50%;
+
+    --accent: 186 90% 48%;
+    --accent-foreground: 224 25% 6%;
+
+    --destructive: 0 68% 56%;
     --destructive-foreground: 0 0% 100%;
-    --border: 220 15% 20%;
-    --input: 220 15% 18%;
-    --ring: 210 100% 56%;
+
+    --border: 224 22% 17%;
+    --input: 224 22% 14%;
+    --ring: 258 82% 66%;
     --radius: 0.5rem;
   }
 }
@@ -35,19 +43,81 @@
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-space-grotesk), sans-serif;
+  }
 }
 
-/* Steam-style scrollbar */
+/* Gradient border utility */
+.gradient-border {
+  position: relative;
+  background-clip: padding-box;
+}
+.gradient-border::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  margin: -1px;
+  border-radius: inherit;
+  background: linear-gradient(135deg, hsl(258 82% 66% / 0.4), hsl(186 90% 48% / 0.2));
+}
+
+/* Glow effects */
+.glow-primary {
+  box-shadow: 0 0 20px hsl(258 82% 66% / 0.25);
+}
+.glow-accent {
+  box-shadow: 0 0 20px hsl(186 90% 48% / 0.25);
+}
+
+/* Scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 ::-webkit-scrollbar-track {
-  @apply bg-secondary;
+  background: hsl(224 22% 9%);
 }
 ::-webkit-scrollbar-thumb {
-  @apply bg-muted-foreground rounded-full;
+  background: hsl(224 22% 22%);
+  border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  @apply bg-primary;
+  background: hsl(258 82% 66% / 0.6);
+}
+
+/* Noise texture overlay for depth */
+.noise-bg {
+  position: relative;
+}
+.noise-bg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+/* Grid pattern for hero */
+.grid-pattern {
+  background-image:
+    linear-gradient(hsl(258 82% 66% / 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, hsl(258 82% 66% / 0.04) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* Animated gradient for funded state */
+@keyframes funded-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+.funded-pulse {
+  animation: funded-pulse 2s ease-in-out infinite;
+}
+
+/* Progress bar segment transition */
+.pledge-segment {
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 }

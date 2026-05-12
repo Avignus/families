@@ -23,14 +23,14 @@ export function formatRelativeTime(date: Date | string): string {
 }
 
 export const MEMBER_COLORS = [
-  "#3b82f6",
-  "#10b981",
-  "#f59e0b",
-  "#ef4444",
-  "#8b5cf6",
-  "#06b6d4",
-  "#f97316",
-  "#84cc16",
+  "#9b74f7", // violet
+  "#22d3ee", // cyan
+  "#f59e0b", // amber
+  "#34d399", // emerald
+  "#f472b6", // pink
+  "#fb923c", // orange
+  "#60a5fa", // blue
+  "#a3e635", // lime
 ];
 
 export function getMemberColor(index: number): string {
