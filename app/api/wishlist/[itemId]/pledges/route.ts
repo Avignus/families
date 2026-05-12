@@ -38,10 +38,6 @@ export async function POST(req: NextRequest, { params }: { params: { itemId: str
       if (wishlistItem.status !== "open" && wishlistItem.status !== "funded") {
         throw Object.assign(new Error("Este item não está aberto para contribuições"), { code: "ITEM_NOT_OPEN", status: 400 });
       }
-      if (wishlistItem.ownerUserId === user.id) {
-        throw Object.assign(new Error("Você não pode contribuir para seu próprio item"), { code: "OWN_ITEM", status: 400 });
-      }
-
       const membership = await tx.familyMembership.findUnique({
         where: { userId_familyId: { userId: user.id, familyId: wishlistItem.familyId } },
       });
@@ -85,7 +81,7 @@ export async function POST(req: NextRequest, { params }: { params: { itemId: str
       const gameName = steamData?.name ?? `App #${wishlistItem.steamAppId}`;
       const percent = Math.round((body.amountCents / wishlistItem.targetPriceCents) * 100);
 
-      if (wishlistItem.ownerUserId && wishlistItem.ownerUserId !== user.id) {
+      if (wishlistItem.ownerUserId && wishlistItem.ownerUserId !== user.id && user.id !== wishlistItem.ownerUserId) {
         await createNotification(tx, {
           recipientUserId: wishlistItem.ownerUserId,
           type: "PLEDGE_RECEIVED",
