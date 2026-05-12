@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -11,7 +11,7 @@ import { Separator } from "@/components/ui/separator";
 import { WishlistItemCard } from "@/components/wishlist/wishlist-item-card";
 import { GameSearchModal } from "@/components/wishlist/game-search-modal";
 import { VotesPanel } from "@/components/votes/votes-panel";
-import { Plus, ChevronDown, ChevronUp, Settings, Copy } from "lucide-react";
+import { Plus, ChevronDown, ChevronUp, Settings, Copy, LogIn } from "lucide-react";
 import { getMemberColor, formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
 import Link from "next/link";
@@ -56,10 +56,22 @@ export function FamilyPageClient({ familyId }: { familyId: string }) {
   const { data: session } = useSession();
   const userId = (session?.user as { id?: string })?.id ?? "";
 
-  const { data, isLoading, refetch } = useQuery<{ data: FamilyData }>({
+  const { data, isLoading, error, refetch } = useQuery<{ data: FamilyData }, { status: number; code: string }>({
     queryKey: ["family", familyId],
-    queryFn: () => fetch(`/api/families/${familyId}`).then((r) => r.json()),
+    queryFn: async () => {
+      const r = await fetch(`/api/families/${familyId}`);
+      const json = await r.json();
+      if (!r.ok) {
+        const e = Object.assign(new Error(json.error?.message ?? "Error"), {
+          status: r.status,
+          code: json.error?.code ?? "UNKNOWN",
+        });
+        throw e;
+      }
+      return json;
+    },
     staleTime: 10_000,
+    retry: false,
   });
 
   const family = data?.data;
@@ -124,13 +136,17 @@ export function FamilyPageClient({ familyId }: { familyId: string }) {
     );
   }
 
-  if (!family) {
+  if (error) {
+    const isForbidden = (error as { status?: number }).status === 403;
+    if (isForbidden) return <JoinRequestScreen familyId={familyId} />;
     return (
       <div className="container py-8 text-center text-muted-foreground">
-        Família não encontrada ou você não tem acesso.
+        Família não encontrada.
       </div>
     );
   }
+
+  if (!family) return null;
 
   // Settlement summary
   const settlement: Record<string, Record<string, number>> = {};
@@ -311,6 +327,56 @@ export function FamilyPageClient({ familyId }: { familyId: string }) {
         onSelect={handleAddGame}
         title="Adicionar à Lista de Desejos"
       />
+    </div>
+  );
+}
+
+function JoinRequestScreen({ familyId }: { familyId: string }) {
+  const [loading, setLoading] = useState(false);
+  const [sent, setSent] = useState(false);
+
+  const handleRequest = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/families/${familyId}/join-requests`, { method: "POST" });
+      const json = await res.json();
+      if (!res.ok) {
+        if (json.error?.code === "ALREADY_PENDING") {
+          toast.info("Você já tem uma solicitação pendente para esta família.");
+          setSent(true);
+        } else {
+          toast.error(json.error?.message ?? "Erro ao solicitar entrada");
+        }
+        return;
+      }
+      toast.success("Solicitação enviada! Aguarde a aprovação do chefe.");
+      setSent(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="container py-16 flex justify-center">
+      <Card className="w-full max-w-md text-center">
+        <CardHeader>
+          <CardTitle>Você não é membro desta família</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Para ver o conteúdo desta família, envie uma solicitação de entrada ao chefe.
+          </p>
+          <p className="text-xs text-muted-foreground font-mono">{familyId}</p>
+          {sent ? (
+            <p className="text-sm font-medium text-green-500">Solicitação enviada! Aguarde a aprovação.</p>
+          ) : (
+            <Button onClick={handleRequest} disabled={loading} className="w-full">
+              <LogIn className="h-4 w-4 mr-2" />
+              {loading ? "Enviando..." : "Solicitar Entrada"}
+            </Button>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
