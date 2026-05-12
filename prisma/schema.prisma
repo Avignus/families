@@ -1,0 +1,189 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  steamId      String   @unique
+  personaName  String
+  avatarUrl    String
+  avatarMedium String   @default("")
+  avatarFull   String   @default("")
+  profileUrl   String?
+  createdAt    DateTime @default(now())
+
+  memberships   FamilyMembership[]
+  wishlistItems WishlistItem[]
+  pledges       Pledge[]
+  notifications Notification[]
+  chiefOf       Family[]          @relation("ChiefFamilies")
+  votesOpened   Vote[]
+  ballots       VoteBallot[]
+}
+
+model Family {
+  id        String   @id @default(cuid())
+  name      String
+  currency  String   @default("BRL")
+  chiefId   String
+  chief     User     @relation("ChiefFamilies", fields: [chiefId], references: [id])
+  createdAt DateTime @default(now())
+
+  memberships   FamilyMembership[]
+  wishlistItems WishlistItem[]
+  votes         Vote[]
+}
+
+model FamilyMembership {
+  id       String           @id @default(cuid())
+  userId   String
+  familyId String
+  status   MembershipStatus @default(pending)
+  joinedAt DateTime         @default(now())
+
+  user   User   @relation(fields: [userId], references: [id])
+  family Family @relation(fields: [familyId], references: [id])
+
+  @@unique([userId, familyId])
+  @@index([familyId, status])
+}
+
+model WishlistItem {
+  id               String         @id @default(cuid())
+  familyId         String
+  ownerUserId      String?
+  steamAppId       Int
+  targetPriceCents Int
+  currency         String
+  status           WishlistStatus @default(open)
+  createdAt        DateTime       @default(now())
+
+  family  Family  @relation(fields: [familyId], references: [id])
+  owner   User?   @relation(fields: [ownerUserId], references: [id])
+  pledges Pledge[]
+
+  @@unique([familyId, steamAppId])
+  @@index([familyId, status])
+}
+
+model Pledge {
+  id             String        @id @default(cuid())
+  wishlistItemId String
+  pledgerUserId  String
+  amountCents    Int
+  status         PledgeStatus  @default(active)
+  createdAt      DateTime      @default(now())
+
+  wishlistItem WishlistItem @relation(fields: [wishlistItemId], references: [id])
+  pledger      User         @relation(fields: [pledgerUserId], references: [id])
+
+  @@index([wishlistItemId, status])
+  @@index([pledgerUserId])
+}
+
+model Vote {
+  id             String     @id @default(cuid())
+  familyId       String
+  steamAppId     Int
+  openedByUserId String
+  opensAt        DateTime   @default(now())
+  closesAt       DateTime
+  status         VoteStatus @default(open)
+  createdAt      DateTime   @default(now())
+
+  family     Family       @relation(fields: [familyId], references: [id])
+  openedBy   User         @relation(fields: [openedByUserId], references: [id])
+  ballots    VoteBallot[]
+}
+
+model VoteBallot {
+  id       String     @id @default(cuid())
+  voteId   String
+  userId   String
+  choice   VoteChoice
+  castAt   DateTime   @default(now())
+
+  vote Vote @relation(fields: [voteId], references: [id])
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([voteId, userId])
+}
+
+model Notification {
+  id              String           @id @default(cuid())
+  recipientUserId String
+  type            NotificationType
+  payload         Json
+  readAt          DateTime?
+  createdAt       DateTime         @default(now())
+
+  recipient User @relation(fields: [recipientUserId], references: [id])
+
+  @@index([recipientUserId, readAt])
+  @@index([recipientUserId, createdAt])
+}
+
+model SteamAppCache {
+  steamAppId Int      @id
+  payload    Json
+  fetchedAt  DateTime @default(now())
+
+  @@index([fetchedAt])
+}
+
+model SteamAppCatalog {
+  appId     Int      @id
+  name      String
+  updatedAt DateTime @default(now())
+
+  @@index([name])
+}
+
+enum MembershipStatus {
+  pending
+  active
+  rejected
+  removed
+}
+
+enum WishlistStatus {
+  open
+  funded
+  purchased
+  cancelled
+}
+
+enum PledgeStatus {
+  active
+  withdrawn
+  settled
+}
+
+enum VoteStatus {
+  open
+  closed
+  cancelled
+}
+
+enum VoteChoice {
+  yes
+  no
+  abstain
+}
+
+enum NotificationType {
+  JOIN_REQUEST
+  JOIN_APPROVED
+  JOIN_REJECTED
+  PLEDGE_RECEIVED
+  PLEDGE_WITHDRAWN
+  ITEM_FUNDED
+  ITEM_PURCHASED
+  VOTE_OPENED
+  VOTE_CLOSED
+}
