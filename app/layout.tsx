@@ -30,6 +30,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <main className="min-h-[calc(100vh-3.5rem)]">
             {children}
           </main>
+          <footer className="border-t border-border/40 py-4 mt-8">
+            <p className="text-center text-xs text-muted-foreground">
+              &copy; {new Date().getFullYear()} RAPOZOTECH SOLUCOES INTELIGENTES LTDA &mdash; CNPJ 61.992.849/0001-83 &mdash; Todos os direitos reservados.
+            </p>
+          </footer>
         </Providers>
       </body>
     </html>
