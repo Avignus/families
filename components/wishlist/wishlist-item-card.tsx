@@ -41,6 +41,7 @@ type Props = {
     currency: string;
     status: string;
     ownerUserId: string | null;
+    owner: { id: string; personaName: string; avatarUrl: string; avatarMedium: string } | null;
     totalPledgedCents: number;
     percentFunded: number;
     steamData: SteamData | null;
@@ -130,9 +131,27 @@ export function WishlistItemCard({ item, currentUserId, memberColors, onRefresh 
           <h3 className="font-semibold text-sm leading-tight truncate" style={{ fontFamily: "var(--font-space-grotesk)" }}>
             {gameName}
           </h3>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            {item.steamData?.isFree ? "Gratuito" : formatCurrency(item.targetPriceCents, item.currency)}
-          </p>
+          <div className="flex items-center justify-between mt-0.5">
+            <p className="text-xs text-muted-foreground">
+              {item.steamData?.isFree ? "Gratuito" : formatCurrency(item.targetPriceCents, item.currency)}
+            </p>
+            {item.owner && (
+              <div className="flex items-center gap-1">
+                <Avatar className="h-4 w-4">
+                  <AvatarImage src={item.owner.avatarMedium} />
+                  <AvatarFallback style={{ backgroundColor: memberColors.get(item.owner.id), fontSize: 8 }}>
+                    {item.owner.personaName[0]}
+                  </AvatarFallback>
+                </Avatar>
+                <span
+                  className="text-[10px] max-w-[60px] truncate"
+                  style={{ color: memberColors.get(item.owner.id) }}
+                >
+                  {item.owner.id === currentUserId ? "você" : item.owner.personaName}
+                </span>
+              </div>
+            )}
+          </div>
         </div>
 
         {priceChanged && (
@@ -213,7 +232,7 @@ export function WishlistItemCard({ item, currentUserId, memberColors, onRefresh 
 
         {/* Actions */}
         <div className="flex gap-2 pt-0.5">
-          {!isOwner && item.status === "open" && remaining > 0 && (
+          {item.status === "open" && remaining > 0 && (
             <button
               onClick={() => setPledgeOpen(true)}
               className="flex-1 h-8 rounded-md text-xs font-semibold text-white transition-all hover:opacity-90 active:scale-[0.98]"

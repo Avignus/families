@@ -7,13 +7,6 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   const user = await requireSession();
   if (isApiError(user)) return user;
 
-  const membership = await prisma.familyMembership.findUnique({
-    where: { userId_familyId: { userId: user.id, familyId: params.id } },
-  });
-  if (!membership || membership.status !== "active") {
-    return err("FORBIDDEN", "Not a member of this family", 403);
-  }
-
   const family = await prisma.family.findUnique({
     where: { id: params.id },
     include: {
@@ -49,6 +42,13 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   });
 
   if (!family) return err("NOT_FOUND", "Family not found", 404);
+
+  const membership = await prisma.familyMembership.findUnique({
+    where: { userId_familyId: { userId: user.id, familyId: params.id } },
+  });
+  if (!membership || membership.status !== "active") {
+    return err("FORBIDDEN", "Not a member of this family", 403);
+  }
 
   // Enrich wishlist items with cached Steam data
   const enrichedItems = await Promise.all(

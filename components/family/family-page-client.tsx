@@ -24,6 +24,26 @@ type Member = {
   steamId: string;
 };
 
+type WishlistItem = {
+  id: string;
+  steamAppId: number;
+  targetPriceCents: number;
+  currency: string;
+  status: string;
+  ownerUserId: string | null;
+  owner: Member | null;
+  totalPledgedCents: number;
+  percentFunded: number;
+  steamData: { appId: number; name: string; headerImage: string; priceCents: number; currency: string; isFree: boolean } | null;
+  pledges: Array<{
+    id: string;
+    pledgerUserId: string;
+    amountCents: number;
+    percent: number;
+    pledger: Member;
+  }>;
+};
+
 type FamilyData = {
   id: string;
   name: string;
@@ -32,24 +52,7 @@ type FamilyData = {
   isChief: boolean;
   currentUserId: string;
   memberships: Array<{ user: Member }>;
-  wishlistItems: Array<{
-    id: string;
-    steamAppId: number;
-    targetPriceCents: number;
-    currency: string;
-    status: string;
-    ownerUserId: string | null;
-    totalPledgedCents: number;
-    percentFunded: number;
-    steamData: { appId: number; name: string; headerImage: string; priceCents: number; currency: string; isFree: boolean } | null;
-    pledges: Array<{
-      id: string;
-      pledgerUserId: string;
-      amountCents: number;
-      percent: number;
-      pledger: Member;
-    }>;
-  }>;
+  wishlistItems: WishlistItem[];
 };
 
 export function FamilyPageClient({ familyId }: { familyId: string }) {
@@ -76,21 +79,12 @@ export function FamilyPageClient({ familyId }: { familyId: string }) {
 
   const family = data?.data;
 
-  const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
   const [addGameOpen, setAddGameOpen] = useState(false);
   const [votesExpanded, setVotesExpanded] = useState(false);
-
-  const selectedMember = family?.memberships.find((m) => m.user.id === selectedMemberId)?.user
-    ?? family?.memberships.find((m) => m.user.id === userId)?.user;
-  const effectiveSelected = selectedMember ?? family?.memberships[0]?.user;
 
   const memberColors = new Map(
     family?.memberships.map((m, i) => [m.user.id, getMemberColor(i)]) ?? []
   );
-
-  const wishlistForSelected = family?.wishlistItems.filter(
-    (item) => item.ownerUserId === effectiveSelected?.id
-  ) ?? [];
 
   const handleAddGame = async (result: { appId: number; name: string }) => {
     setAddGameOpen(false);
@@ -137,8 +131,7 @@ export function FamilyPageClient({ familyId }: { familyId: string }) {
   }
 
   if (error) {
-    const isForbidden = (error as { status?: number }).status === 403;
-    if (isForbidden) return <JoinRequestScreen familyId={familyId} />;
+    if ((error as { status?: number }).status === 403) return <JoinRequestScreen familyId={familyId} />;
     return (
       <div className="container py-8 text-center text-muted-foreground">
         Família não encontrada.
@@ -192,41 +185,23 @@ export function FamilyPageClient({ familyId }: { familyId: string }) {
           <div>
             <h3 className="text-sm font-medium text-muted-foreground mb-3">Membros</h3>
             <div className="flex flex-wrap gap-4">
-              {family.memberships.map(({ user }, i) => {
+              {family.memberships.map(({ user }) => {
                 const color = memberColors.get(user.id)!;
-                const isSelected = effectiveSelected?.id === user.id;
                 return (
-                  <button
-                    key={user.id}
-                    onClick={() => setSelectedMemberId(user.id)}
-                    className="flex flex-col items-center gap-1.5 group"
-                  >
-                    <div
-                      className={`rounded-full p-0.5 transition-all ${
-                        isSelected ? "ring-2 ring-offset-2 ring-offset-card" : "ring-0"
-                      }`}
-                      style={isSelected ? { outlineColor: color } : {}}
-                    >
-                      <Avatar
-                        className="h-12 w-12 transition-transform group-hover:scale-105"
-                        style={isSelected ? { boxShadow: `0 0 0 2px ${color}` } : {}}
-                      >
-                        <AvatarImage src={user.avatarMedium} alt={user.personaName} />
-                        <AvatarFallback style={{ backgroundColor: color }}>
-                          {user.personaName[0]}
-                        </AvatarFallback>
-                      </Avatar>
-                    </div>
-                    <span
-                      className="text-xs max-w-[60px] truncate"
-                      style={isSelected ? { color } : {}}
-                    >
+                  <div key={user.id} className="flex flex-col items-center gap-1.5">
+                    <Avatar className="h-12 w-12" style={{ boxShadow: `0 0 0 2px ${color}` }}>
+                      <AvatarImage src={user.avatarMedium} alt={user.personaName} />
+                      <AvatarFallback style={{ backgroundColor: color }}>
+                        {user.personaName[0]}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="text-xs max-w-[60px] truncate" style={{ color }}>
                       {user.personaName}
                     </span>
                     {user.id === family.chiefId && (
                       <Badge variant="outline" className="text-[9px] px-1 py-0">Chefe</Badge>
                     )}
-                  </button>
+                  </div>
                 );
               })}
             </div>
@@ -234,28 +209,22 @@ export function FamilyPageClient({ familyId }: { familyId: string }) {
 
           <Separator />
 
-          {/* Selected member's wishlist */}
+          {/* Shared family wishlist */}
           <div>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold">
-                Lista de {effectiveSelected?.personaName}
-              </h3>
-              {effectiveSelected?.id === userId && (
-                <Button size="sm" variant="outline" onClick={() => setAddGameOpen(true)}>
-                  <Plus className="h-4 w-4 mr-1" /> Adicionar Jogo
-                </Button>
-              )}
+              <h3 className="font-semibold">Lista de Desejos da Família</h3>
+              <Button size="sm" variant="outline" onClick={() => setAddGameOpen(true)}>
+                <Plus className="h-4 w-4 mr-1" /> Adicionar Jogo
+              </Button>
             </div>
 
-            {wishlistForSelected.length === 0 ? (
+            {family.wishlistItems.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground text-sm">
-                {effectiveSelected?.id === userId
-                  ? "Sua lista está vazia. Adicione jogos!"
-                  : `${effectiveSelected?.personaName} não tem jogos na lista ainda.`}
+                Nenhum jogo na lista ainda. Adicione o primeiro!
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {wishlistForSelected.map((item) => (
+                {family.wishlistItems.map((item) => (
                   <WishlistItemCard
                     key={item.id}
                     item={item}
