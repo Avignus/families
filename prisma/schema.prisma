@@ -17,14 +17,13 @@ model User {
   profileUrl   String?
   createdAt    DateTime @default(now())
 
-  memberships    FamilyMembership[]
-  wishlistItems  WishlistItem[]
-  pledges        Pledge[]
-  notifications  Notification[]
-  chiefOf        Family[]          @relation("ChiefFamilies")
-  votesOpened    Vote[]
-  ballots        VoteBallot[]
-  paymentProofs  PaymentProof[]
+  memberships   FamilyMembership[]
+  wishlistItems WishlistItem[]
+  pledges       Pledge[]
+  notifications Notification[]
+  chiefOf       Family[]          @relation("ChiefFamilies")
+  votesOpened   Vote[]
+  ballots       VoteBallot[]
 }
 
 model Family {
@@ -80,29 +79,20 @@ model Pledge {
   status         PledgeStatus  @default(active)
   createdAt      DateTime      @default(now())
 
-  wishlistItem   WishlistItem   @relation(fields: [wishlistItemId], references: [id])
-  pledger        User           @relation(fields: [pledgerUserId], references: [id])
-  paymentProofs  PaymentProof[]
+  // MercadoPago payment tracking
+  mpPaymentId    String?       @unique
+  mpStatus       String?       // pending, approved, rejected, cancelled
+  mpQrCode       String?       // PIX QR code (copy & paste)
+  mpQrCodeBase64 String?       // QR code image
+  mpTicketUrl    String?       // payment link
+  paidAt         DateTime?
+
+  wishlistItem WishlistItem @relation(fields: [wishlistItemId], references: [id])
+  pledger      User         @relation(fields: [pledgerUserId], references: [id])
 
   @@index([wishlistItemId, status])
   @@index([pledgerUserId])
-}
-
-model PaymentProof {
-  id          String              @id @default(cuid())
-  pledgeId    String
-  uploadedBy  String
-  parsedData  Json
-  verified    Boolean             @default(false)
-  confidence  Float               @default(0)
-  notes       String?
-  status      PaymentProofStatus  @default(pending)
-  createdAt   DateTime            @default(now())
-
-  pledge   Pledge @relation(fields: [pledgeId], references: [id])
-  uploader User   @relation(fields: [uploadedBy], references: [id])
-
-  @@index([pledgeId])
+  @@index([mpPaymentId])
 }
 
 model Vote {
@@ -193,12 +183,6 @@ enum VoteChoice {
   yes
   no
   abstain
-}
-
-enum PaymentProofStatus {
-  pending
-  verified
-  rejected
 }
 
 enum NotificationType {

@@ -4,12 +4,12 @@ import { requireSession, isApiError, ok, err, parseBody } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { createNotification } from "@/lib/notifications/service";
 import { getAppDetails } from "@/lib/steam";
+import { createPixPayment } from "@/lib/mercadopago";
 
 const PledgeSchema = z.object({
   amountCents: z.number().int().positive(),
 });
 
-// Simple in-memory rate limiter: one mutation per user per item per second
 const recentPledges = new Map<string, number>();
 
 export async function POST(req: NextRequest, { params }: { params: { itemId: string } }) {
@@ -17,8 +17,7 @@ export async function POST(req: NextRequest, { params }: { params: { itemId: str
   if (isApiError(user)) return user;
 
   const rateLimitKey = `${user.id}:${params.itemId}`;
-  const lastPledge = recentPledges.get(rateLimitKey) ?? 0;
-  if (Date.now() - lastPledge < 1000) {
+  if (Date.now() - (recentPledges.get(rateLimitKey) ?? 0) < 1000) {
     return err("RATE_LIMITED", "Aguarde antes de contribuir novamente", 429);
   }
   recentPledges.set(rateLimitKey, Date.now());
@@ -39,7 +38,10 @@ export async function POST(req: NextRequest, { params }: { params: { itemId: str
       if (wishlistItem.status !== "open" && wishlistItem.status !== "funded") {
         throw Object.assign(new Error("Este item não está aberto para contribuições"), { code: "ITEM_NOT_OPEN", status: 400 });
       }
-      // Verify family membership
+      if (wishlistItem.ownerUserId === user.id) {
+        throw Object.assign(new Error("Você não pode contribuir para seu próprio item"), { code: "OWN_ITEM", status: 400 });
+      }
+
       const membership = await tx.familyMembership.findUnique({
         where: { userId_familyId: { userId: user.id, familyId: wishlistItem.familyId } },
       });
@@ -47,7 +49,6 @@ export async function POST(req: NextRequest, { params }: { params: { itemId: str
         throw Object.assign(new Error("Você não é membro desta família"), { code: "FORBIDDEN", status: 403 });
       }
 
-      // Sum active pledges
       const aggregate = await tx.pledge.aggregate({
         where: { wishlistItemId: params.itemId, status: "active" },
         _sum: { amountCents: true },
@@ -57,17 +58,19 @@ export async function POST(req: NextRequest, { params }: { params: { itemId: str
 
       if (body.amountCents > remaining) {
         throw Object.assign(
-          new Error(`Valor excede o restante disponível: R$ ${(remaining / 100).toFixed(2)}`),
+          new Error(`Valor excede o restante: R$ ${(remaining / 100).toFixed(2)} disponível`),
           { code: "EXCEEDS_TARGET", status: 400 }
         );
       }
 
+      // Create pledge first (pending payment)
       const pledge = await tx.pledge.create({
         data: {
           wishlistItemId: params.itemId,
           pledgerUserId: user.id,
           amountCents: body.amountCents,
           status: "active",
+          mpStatus: "pending",
         },
       });
 
@@ -75,10 +78,7 @@ export async function POST(req: NextRequest, { params }: { params: { itemId: str
       const isFunded = newTotal >= wishlistItem.targetPriceCents;
 
       if (isFunded) {
-        await tx.wishlistItem.update({
-          where: { id: params.itemId },
-          data: { status: "funded" },
-        });
+        await tx.wishlistItem.update({ where: { id: params.itemId }, data: { status: "funded" } });
       }
 
       const steamData = await getAppDetails(wishlistItem.steamAppId);
@@ -120,15 +120,50 @@ export async function POST(req: NextRequest, { params }: { params: { itemId: str
         });
       }
 
-      return { pledge, isFunded, newTotal, percent };
+      return { pledge, isFunded, newTotal, percent, gameName, wishlistItem };
     });
 
-    return ok(result, 201);
+    // Create PIX payment outside the transaction (external API call)
+    const baseUrl = process.env.APP_BASE_URL ?? "http://localhost:3000";
+    let pixData = null;
+
+    try {
+      const pix = await createPixPayment({
+        amountCents: body.amountCents,
+        description: `Families — ${result.gameName}`,
+        payerSteamId: user.steamId,
+        pledgeId: result.pledge.id,
+        notificationUrl: `${baseUrl}/api/webhooks/mercadopago`,
+      });
+
+      await prisma.pledge.update({
+        where: { id: result.pledge.id },
+        data: {
+          mpPaymentId: pix.paymentId,
+          mpStatus: pix.status,
+          mpQrCode: pix.qrCode,
+          mpQrCodeBase64: pix.qrCodeBase64,
+          mpTicketUrl: pix.ticketUrl,
+        },
+      });
+
+      pixData = pix;
+    } catch (mpError) {
+      // MP failure doesn't block the pledge — log and continue
+      console.error("MercadoPago error:", mpError);
+    }
+
+    return ok({
+      pledge: result.pledge,
+      isFunded: result.isFunded,
+      newTotal: result.newTotal,
+      percent: result.percent,
+      pix: pixData,
+    }, 201);
+
   } catch (e: unknown) {
     const error = e as Error & { code?: string; status?: number };
-    if (error.code) {
-      return err(error.code, error.message, error.status ?? 400);
-    }
+    if (error.code) return err(error.code, error.message, error.status ?? 400);
     console.error("Pledge error:", e);
     return err("INTERNAL_ERROR", "Erro interno ao processar contribuição", 500);
   }
