@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
+import { useEffect, useState } from "react";
 import { Bell, LogOut, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -15,13 +16,37 @@ import { FamiliesLogo } from "./logo";
 import { formatRelativeTime } from "@/lib/utils";
 
 export function Navbar() {
-  const { data: session } = useSession();
+  const { data: session, update } = useSession();
   const { unreadCount, recent, markRead } = useNotifications();
+  const [freshName, setFreshName] = useState<string | null>(null);
+  const [freshAvatar, setFreshAvatar] = useState<string | null>(null);
+
+  const sessionUser = session?.user as {
+    id?: string; personaName?: string; avatarMedium?: string; name?: string; image?: string;
+  } | undefined;
+
+  // Auto-refresh profile when JWT has fallback Steam name
+  useEffect(() => {
+    const name = sessionUser?.personaName ?? sessionUser?.name ?? "";
+    if (!name.startsWith("Steam user")) return;
+    fetch("/api/auth/refresh-steam-profile", { method: "POST" })
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.data?.personaName) {
+          setFreshName(d.data.personaName);
+          setFreshAvatar(d.data.avatarUrl ?? null);
+          update();
+        }
+      })
+      .catch(() => {});
+  }, [sessionUser?.personaName]);
 
   if (!session?.user) return null;
 
-  const user = session.user as {
-    id?: string; personaName?: string; avatarMedium?: string; name?: string; image?: string;
+  const user = {
+    ...sessionUser,
+    personaName: freshName ?? sessionUser?.personaName,
+    avatarMedium: freshAvatar ?? sessionUser?.avatarMedium,
   };
 
   return (

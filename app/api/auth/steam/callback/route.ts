@@ -59,10 +59,13 @@ export async function GET(req: NextRequest) {
   const avatarFull = player?.avatarfull ?? "";
   const profileUrl = player?.profileurl ?? `https://steamcommunity.com/profiles/${steamId}`;
 
-  // Upsert user
+  // Only update profile fields if Steam API returned real data
+  const hasRealProfile = !!player;
   const user = await prisma.user.upsert({
     where: { steamId },
-    update: { personaName, avatarUrl, avatarMedium, avatarFull, profileUrl },
+    update: hasRealProfile
+      ? { personaName, avatarUrl, avatarMedium, avatarFull, profileUrl }
+      : {},
     create: { steamId, personaName, avatarUrl, avatarMedium, avatarFull, profileUrl },
   });
 
