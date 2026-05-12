@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { requireSession, isApiError, ok, err } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
-import { getAppDetails } from "@/lib/steam";
+import { getAppDetails, getPlayerSummaries } from "@/lib/steam";
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   const user = await requireSession();
@@ -10,7 +10,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   const family = await prisma.family.findUnique({
     where: { id: params.id },
     include: {
-      chief: { select: { id: true, personaName: true, avatarUrl: true, avatarMedium: true } },
+      chief: { select: { id: true, steamId: true, personaName: true, avatarUrl: true, avatarMedium: true } },
       memberships: {
         where: { status: "active" },
         include: {
@@ -42,6 +42,28 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   });
 
   if (!family) return err("NOT_FOUND", "Family not found", 404);
+
+  // Refresh stale Steam names in the background (fire-and-forget)
+  const allMembers = [
+    family.chief,
+    ...family.memberships.map((m) => m.user),
+  ];
+  const stale = allMembers.filter((m) => m.personaName.startsWith("Steam user"));
+  if (stale.length > 0) {
+    getPlayerSummaries(stale.map((m) => m.steamId)).then(async (players) => {
+      await Promise.all(players.map((player) =>
+        prisma.user.updateMany({
+          where: { steamId: player.steamid, personaName: { startsWith: "Steam user" } },
+          data: {
+            personaName: player.personaname,
+            avatarUrl: player.avatar,
+            avatarMedium: player.avatarmedium,
+            avatarFull: player.avatarfull,
+          },
+        })
+      ));
+    }).catch(() => {});
+  }
 
   const membership = await prisma.familyMembership.findUnique({
     where: { userId_familyId: { userId: user.id, familyId: params.id } },
