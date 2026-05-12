@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
-import { Bell, LogOut } from "lucide-react";
+import { Bell, LogOut, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -118,6 +118,12 @@ export function Navbar() {
                 <Link href="/notifications" className="cursor-pointer">
                   <Bell className="h-4 w-4 mr-2 text-muted-foreground" />
                   Notificações
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/settings" className="cursor-pointer">
+                  <Settings className="h-4 w-4 mr-2 text-muted-foreground" />
+                  Configurações
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator className="bg-border/60" />

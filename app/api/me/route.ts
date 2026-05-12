@@ -1,6 +1,26 @@
-import { NextResponse } from "next/server";
-import { requireSession, isApiError, ok, err } from "@/lib/api";
+import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+import { requireSession, isApiError, ok, err, parseBody } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
+
+const PixKeySchema = z.object({
+  pixKey: z.string().max(100).nullable(),
+});
+
+export async function PATCH(req: NextRequest) {
+  const user = await requireSession();
+  if (isApiError(user)) return user;
+
+  const body = await parseBody(req, PixKeySchema);
+  if (isApiError(body)) return body;
+
+  const updated = await prisma.user.update({
+    where: { id: user.id },
+    data: { pixKey: body.pixKey ?? null },
+  });
+
+  return ok({ pixKey: updated.pixKey });
+}
 
 export async function GET() {
   const user = await requireSession();
@@ -40,6 +60,7 @@ export async function GET() {
     avatarMedium: dbUser.avatarMedium,
     avatarFull: dbUser.avatarFull,
     profileUrl: dbUser.profileUrl,
+    pixKey: dbUser.pixKey,
     families: dbUser.memberships.map((m) => ({
       id: m.family.id,
       name: m.family.name,

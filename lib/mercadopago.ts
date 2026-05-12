@@ -1,5 +1,7 @@
 import MercadoPagoConfig, { Payment } from "mercadopago";
 
+export const SERVICE_FEE_RATE = parseFloat(process.env.SERVICE_FEE_RATE ?? "0.05");
+
 let _client: MercadoPagoConfig | null = null;
 
 function getClient(): MercadoPagoConfig {
@@ -58,6 +60,35 @@ export async function createPixPayment(params: {
     status: result.status ?? "pending",
     expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
   };
+}
+
+export async function sendPixDisbursement(params: {
+  amountCents: number;
+  pixKey: string;
+  description: string;
+}): Promise<string> {
+  const amount = params.amountCents / 100;
+  const res = await fetch("https://api.mercadopago.com/v1/account/bank_transfers", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${process.env.MERCADOPAGO_ACCESS_TOKEN}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      amount,
+      origin_account_type: "mp",
+      destination: { type: "pix", pix_key: params.pixKey },
+      description: params.description,
+    }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(`Disbursement failed: ${JSON.stringify(err)}`);
+  }
+
+  const data = await res.json();
+  return String(data.id);
 }
 
 export async function getPaymentStatus(mpPaymentId: string): Promise<string | null> {

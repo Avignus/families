@@ -15,6 +15,7 @@ model User {
   avatarMedium String   @default("")
   avatarFull   String   @default("")
   profileUrl   String?
+  pixKey       String?
   createdAt    DateTime @default(now())
 
   memberships   FamilyMembership[]
@@ -62,6 +63,8 @@ model WishlistItem {
   currency         String
   status           WishlistStatus @default(open)
   createdAt        DateTime       @default(now())
+  disbursedAt      DateTime?
+  disbursementMpId String?
 
   family  Family  @relation(fields: [familyId], references: [id])
   owner   User?   @relation(fields: [ownerUserId], references: [id])
@@ -81,6 +84,7 @@ model Pledge {
 
   // MercadoPago payment tracking
   mpPaymentId    String?       @unique
+  mpAmountCents  Int?          // actual charged amount (contribution + service fee)
   mpStatus       String?       // pending, approved, rejected, cancelled
   mpQrCode       String?       // PIX QR code (copy & paste)
   mpQrCodeBase64 String?       // QR code image
@@ -195,4 +199,6 @@ enum NotificationType {
   ITEM_PURCHASED
   VOTE_OPENED
   VOTE_CLOSED
+  DISBURSEMENT_SENT
+  PIX_KEY_REQUIRED
 }

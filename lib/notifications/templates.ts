@@ -61,6 +61,16 @@ const templates: Record<Locale, Templates> = {
       body: (p) => `A votação para "${p.gameName}" em "${p.familyName}" foi encerrada. Resultado: ${p.result}.`,
       link: (p) => `/families/${p.familyId}/votes`,
     },
+    DISBURSEMENT_SENT: {
+      title: () => "Repasse enviado!",
+      body: (p) => `${formatCurrency(Number(p.amountCents), String(p.currency))} foram enviados para sua chave PIX referente a "${p.gameName}". Compre na Steam!`,
+      link: (p) => `/families/${p.familyId}`,
+    },
+    PIX_KEY_REQUIRED: {
+      title: () => "Cadastre sua chave PIX",
+      body: (p) => `"${p.gameName}" está 100% financiado! Cadastre sua chave PIX nas configurações para receber ${formatCurrency(Number(p.amountCents), String(p.currency))}.`,
+      link: () => `/settings`,
+    },
   },
   en: {
     JOIN_REQUEST: {
@@ -109,6 +119,16 @@ const templates: Record<Locale, Templates> = {
       title: () => "Vote closed",
       body: (p) => `The vote for "${p.gameName}" in "${p.familyName}" has closed. Result: ${p.result}.`,
       link: (p) => `/families/${p.familyId}/votes`,
+    },
+    DISBURSEMENT_SENT: {
+      title: () => "Funds sent!",
+      body: (p) => `${formatCurrency(Number(p.amountCents), String(p.currency))} were sent to your PIX key for "${p.gameName}". Buy it on Steam!`,
+      link: (p) => `/families/${p.familyId}`,
+    },
+    PIX_KEY_REQUIRED: {
+      title: () => "Register your PIX key",
+      body: (p) => `"${p.gameName}" is fully funded! Register your PIX key in settings to receive ${formatCurrency(Number(p.amountCents), String(p.currency))}.`,
+      link: () => `/settings`,
     },
   },
 };

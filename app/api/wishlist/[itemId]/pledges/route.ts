@@ -4,7 +4,7 @@ import { requireSession, isApiError, ok, err, parseBody } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { createNotification } from "@/lib/notifications/service";
 import { getAppDetails } from "@/lib/steam";
-import { createPixPayment } from "@/lib/mercadopago";
+import { createPixPayment, SERVICE_FEE_RATE } from "@/lib/mercadopago";
 
 const PledgeSchema = z.object({
   amountCents: z.number().int().positive(),
@@ -121,11 +121,13 @@ export async function POST(req: NextRequest, { params }: { params: { itemId: str
 
     // Create PIX payment outside the transaction (external API call)
     const baseUrl = process.env.APP_BASE_URL ?? "http://localhost:3000";
+    // Pledger pays amountCents + service fee; owner receives amountCents in full
+    const mpAmountCents = Math.ceil(body.amountCents * (1 + SERVICE_FEE_RATE));
     let pixData = null;
 
     try {
       const pix = await createPixPayment({
-        amountCents: body.amountCents,
+        amountCents: mpAmountCents,
         description: `Families — ${result.gameName}`,
         payerSteamId: user.steamId,
         pledgeId: result.pledge.id,
@@ -136,6 +138,7 @@ export async function POST(req: NextRequest, { params }: { params: { itemId: str
         where: { id: result.pledge.id },
         data: {
           mpPaymentId: pix.paymentId,
+          mpAmountCents,
           mpStatus: pix.status,
           mpQrCode: pix.qrCode,
           mpQrCodeBase64: pix.qrCodeBase64,
