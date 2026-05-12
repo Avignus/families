@@ -162,7 +162,7 @@ export function FamilyPageClient({ familyId }: { familyId: string }) {
         <CardHeader className="pb-4">
           <div className="flex items-start justify-between flex-wrap gap-3">
             <div>
-              <CardTitle className="text-2xl">Família {family.name}</CardTitle>
+              <CardTitle className="text-2xl">{family.name}</CardTitle>
               <div className="flex items-center gap-2 mt-1">
                 <span className="text-xs text-muted-foreground font-mono">{familyId}</span>
                 <button onClick={copyId} className="text-muted-foreground hover:text-foreground">
