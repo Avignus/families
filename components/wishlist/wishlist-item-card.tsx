@@ -6,7 +6,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { formatCurrency, getMemberColor } from "@/lib/utils";
 import { PledgeModal } from "./pledge-modal";
-import { ShoppingCart, Minus, Sparkles } from "lucide-react";
+import { ShoppingCart, Minus, Sparkles, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
 type Pledger = {
@@ -71,6 +71,14 @@ export function WishlistItemCard({ item, currentUserId, memberColors, onRefresh 
     const data = await res.json();
     if (!res.ok) { toast.error(data.error?.message ?? "Erro"); return; }
     toast.success("Jogo marcado como comprado!");
+    onRefresh();
+  };
+
+  const handleUpdatePrice = async () => {
+    const res = await fetch(`/api/wishlist/${item.id}`, { method: "PATCH" });
+    const data = await res.json();
+    if (!res.ok) { toast.error(data.error?.message ?? "Preço ainda indisponível na Steam"); return; }
+    toast.success(`Preço atualizado: ${formatCurrency(data.data.targetPriceCents, item.currency)}`);
     onRefresh();
   };
 
@@ -232,6 +240,15 @@ export function WishlistItemCard({ item, currentUserId, memberColors, onRefresh 
 
         {/* Actions */}
         <div className="flex gap-2 pt-0.5">
+          {item.status === "open" && item.targetPriceCents === 0 && !item.steamData?.isFree && isOwner && (
+            <button
+              onClick={handleUpdatePrice}
+              className="flex-1 h-8 rounded-md text-xs font-semibold border border-amber-500/40 text-amber-400 hover:bg-amber-500/10 transition-colors flex items-center justify-center gap-1.5"
+            >
+              <RefreshCw className="h-3 w-3" />
+              Atualizar preço da Steam
+            </button>
+          )}
           {item.status === "open" && remaining > 0 && (
             <button
               onClick={() => setPledgeOpen(true)}

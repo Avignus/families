@@ -46,6 +46,10 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const family = await prisma.family.findUnique({ where: { id: params.id } });
   if (!family) return err("NOT_FOUND", "Family not found", 404);
 
+  if (steamData.priceCents === 0 && !steamData.isFree) {
+    return err("PRICE_UNAVAILABLE", "Este jogo ainda não tem preço definido na Steam. Adicione-o quando o preço estiver disponível.", 422);
+  }
+
   const item = await prisma.wishlistItem.create({
     data: {
       familyId: params.id,
