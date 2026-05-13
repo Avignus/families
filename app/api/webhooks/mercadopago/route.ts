@@ -29,7 +29,10 @@ export async function POST(req: NextRequest) {
   // Check if this is a membership entry fee payment
   const membership = await prisma.familyMembership.findUnique({
     where: { mpPaymentId: dataId },
-    include: { family: true, user: true },
+    include: {
+      family: { select: { id: true, name: true, chiefId: true, entryFeeCents: true, currency: true } },
+      user: { select: { id: true, personaName: true } },
+    },
   });
 
   if (membership) {
@@ -108,7 +111,8 @@ type MembershipWithFamily = {
   familyId: string;
   mpStatus: string | null;
   feePaidAt: Date | null;
-  family: { id: string; name: string; chiefId: string };
+  feeChargedCents: number | null;
+  family: { id: string; name: string; chiefId: string; entryFeeCents: number; currency: string };
   user: { id: string; personaName: string };
 };
 
@@ -140,6 +144,24 @@ async function handleMembershipPayment(membership: MembershipWithFamily, mpStatu
         payload: { familyId: membership.family.id, familyName: membership.family.name },
       });
     });
+
+    // Disburse entry fee to chief (base fee only, platform keeps service fee)
+    const chief = await prisma.user.findUnique({
+      where: { id: membership.family.chiefId },
+      select: { pixKey: true, personaName: true },
+    });
+
+    if (chief?.pixKey && membership.family.entryFeeCents > 0) {
+      try {
+        await sendPixDisbursement({
+          amountCents: membership.family.entryFeeCents,
+          pixKey: chief.pixKey,
+          description: `Families — Taxa de entrada em ${membership.family.name}`,
+        });
+      } catch (err) {
+        console.error("Entry fee disbursement error:", err);
+      }
+    }
   }
 
   if (mpStatus === "rejected" || mpStatus === "cancelled") {
