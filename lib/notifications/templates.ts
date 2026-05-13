@@ -26,7 +26,9 @@ const templates: Record<Locale, Templates> = {
     },
     JOIN_REJECTED: {
       title: () => "Solicitação recusada",
-      body: (p) => `Sua solicitação para entrar em "${p.familyName}" foi recusada.`,
+      body: (p) => p.refunded
+        ? `Sua solicitação para entrar em "${p.familyName}" foi recusada. O estorno de ${p.refundAmountFormatted} foi processado.`
+        : `Sua solicitação para entrar em "${p.familyName}" foi recusada.`,
       link: () => `/dashboard`,
     },
     PLEDGE_RECEIVED: {
@@ -100,7 +102,9 @@ const templates: Record<Locale, Templates> = {
     },
     JOIN_REJECTED: {
       title: () => "Join request rejected",
-      body: (p) => `Your request to join "${p.familyName}" was rejected.`,
+      body: (p) => p.refunded
+        ? `Your request to join "${p.familyName}" was rejected. A refund of ${p.refundAmountFormatted} has been processed.`
+        : `Your request to join "${p.familyName}" was rejected.`,
       link: () => `/dashboard`,
     },
     PLEDGE_RECEIVED: {

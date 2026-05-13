@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/utils";
 import { PixPaymentModal } from "@/components/wishlist/pix-payment-modal";
+import { QrCode } from "lucide-react";
 
 type PixData = {
   qrCode: string;
@@ -19,12 +20,21 @@ type Props = {
   entryFeeCents: number;
   currency: string;
   initialStatus: string | null;
+  pendingPix?: PixData | null;
 };
 
-export function CatalogJoinButton({ familyId, familyName, entryFeeCents, currency, initialStatus }: Props) {
+export function CatalogJoinButton({
+  familyId,
+  familyName,
+  entryFeeCents,
+  currency,
+  initialStatus,
+  pendingPix = null,
+}: Props) {
   const [status, setStatus] = useState(initialStatus);
   const [loading, setLoading] = useState(false);
-  const [pix, setPix] = useState<PixData | null>(null);
+  const [pix, setPix] = useState<PixData | null>(pendingPix ?? null);
+  const [pixOpen, setPixOpen] = useState(false);
 
   const handleJoin = async () => {
     setLoading(true);
@@ -37,6 +47,7 @@ export function CatalogJoinButton({ familyId, familyName, entryFeeCents, currenc
       }
       if (data.data?.pendingPayment && data.data?.pix) {
         setPix(data.data.pix);
+        setPixOpen(true);
       } else {
         toast.success("Solicitação enviada! Aguarde aprovação do líder.");
         setStatus("pending");
@@ -46,11 +57,41 @@ export function CatalogJoinButton({ familyId, familyName, entryFeeCents, currenc
     }
   };
 
-  if (status === "pending") {
-    return <span className="text-xs text-amber-400 font-semibold">Solicitação enviada</span>;
-  }
   if (status === "rejected") {
     return <span className="text-xs text-destructive font-semibold">Solicitação rejeitada</span>;
+  }
+
+  // Pending with unpaid fee — show pay button
+  if (status === "pending" && pix) {
+    return (
+      <>
+        <Button
+          size="sm"
+          onClick={() => setPixOpen(true)}
+          className="gap-2"
+          style={{
+            background: "linear-gradient(135deg, hsl(258 82% 60%), hsl(258 82% 48%))",
+            boxShadow: "0 0 14px hsl(258 82% 60% / 0.35)",
+          }}
+        >
+          <QrCode className="h-4 w-4" />
+          Pagar taxa de entrada
+        </Button>
+        <PixPaymentModal
+          open={pixOpen}
+          onOpenChange={setPixOpen}
+          amountCents={entryFeeCents}
+          currency={currency}
+          gameName={`Entrada em ${familyName}`}
+          pix={pix}
+        />
+      </>
+    );
+  }
+
+  // Pending without fee — waiting approval
+  if (status === "pending") {
+    return <span className="text-xs text-amber-400 font-semibold">Solicitação enviada</span>;
   }
 
   return (
@@ -64,8 +105,8 @@ export function CatalogJoinButton({ familyId, familyName, entryFeeCents, currenc
       </Button>
       {pix && (
         <PixPaymentModal
-          open
-          onOpenChange={(v) => { if (!v) setPix(null); }}
+          open={pixOpen}
+          onOpenChange={setPixOpen}
           amountCents={entryFeeCents}
           currency={currency}
           gameName={`Entrada em ${familyName}`}

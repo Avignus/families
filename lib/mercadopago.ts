@@ -1,6 +1,7 @@
 import MercadoPagoConfig, { Payment } from "mercadopago";
 
 export const SERVICE_FEE_RATE = parseFloat(process.env.SERVICE_FEE_RATE ?? "0.05");
+export const ENTRY_FEE_SERVICE_RATE = parseFloat(process.env.ENTRY_FEE_SERVICE_RATE ?? "0.15");
 
 let _client: MercadoPagoConfig | null = null;
 
@@ -35,15 +36,17 @@ export async function createPixPayment(params: {
   // MercadoPago requires a payer email — we generate a deterministic one from the Steam ID
   const payerEmail = `steam.${params.payerSteamId}@families.app`;
 
+  const isPublicUrl = params.notificationUrl.startsWith("https://");
+
   const result = await payment.create({
     body: {
       transaction_amount: amount,
       description: params.description,
       payment_method_id: "pix",
       payer: { email: payerEmail },
-      notification_url: params.notificationUrl,
+      ...(isPublicUrl ? { notification_url: params.notificationUrl } : {}),
       external_reference: params.pledgeId,
-      date_of_expiration: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24h
+      date_of_expiration: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
     },
   });
 
@@ -98,6 +101,23 @@ export async function getPaymentStatus(mpPaymentId: string): Promise<string | nu
     return result.status ?? null;
   } catch {
     return null;
+  }
+}
+
+// Partial refund — refunds only entryFeeCents, platform keeps service fee
+export async function refundEntryFee(mpPaymentId: string, entryFeeCents: number): Promise<void> {
+  const amount = entryFeeCents / 100;
+  const res = await fetch(`https://api.mercadopago.com/v1/payments/${mpPaymentId}/refunds`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${process.env.MERCADOPAGO_ACCESS_TOKEN}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ amount }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(`Refund failed: ${JSON.stringify(err)}`);
   }
 }
 

@@ -40,9 +40,10 @@ export function JoinFamilyDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm" variant="outline">
-          <LogIn className="h-4 w-4 mr-1" /> Entrar em Família
-        </Button>
+        <button className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold border transition-all hover:bg-secondary/60 active:scale-[0.98]"
+          style={{ borderColor: "hsl(258 82% 60% / 0.4)", color: "hsl(258 82% 72%)" }}>
+          <LogIn className="h-4 w-4" /> Entre em uma família
+        </button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>

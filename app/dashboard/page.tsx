@@ -59,16 +59,19 @@ export default async function DashboardPage() {
       </div>
 
       {memberships.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-16 gap-4">
-            <Users className="h-12 w-12 text-muted-foreground" />
-            <div className="text-center">
-              <p className="font-medium">Nenhuma família ainda</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                Crie uma nova família ou entre em uma existente.
+        <Card className="border-dashed border-border/60">
+          <CardContent className="flex flex-col items-center justify-center py-20 gap-5">
+            <div className="h-16 w-16 rounded-2xl flex items-center justify-center"
+              style={{ background: "hsl(258 82% 60% / 0.12)", border: "1px solid hsl(258 82% 60% / 0.25)" }}>
+              <Users className="h-8 w-8" style={{ color: "hsl(258 82% 66%)" }} />
+            </div>
+            <div className="text-center space-y-1">
+              <p className="font-semibold text-base">Você ainda não tem famílias</p>
+              <p className="text-sm text-muted-foreground">
+                Crie uma família ou entre em uma existente pelo catálogo ou por ID.
               </p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-3 flex-wrap justify-center">
               <JoinFamilyDialog />
               <CreateFamilyDialog />
             </div>

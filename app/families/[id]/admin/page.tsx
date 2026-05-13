@@ -69,9 +69,19 @@ export default async function AdminPage({ params }: { params: { id: string } }) 
                       <AvatarFallback>{m.user.personaName[0]}</AvatarFallback>
                     </Avatar>
                     <div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <p className="text-sm font-medium">{m.user.personaName}</p>
                         <ReputationBadge score={m.user.reputationScore} showScore />
+                        {m.feePaidAt && (
+                          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/25">
+                            Taxa paga
+                          </span>
+                        )}
+                        {!m.feePaidAt && m.feeChargedCents && (
+                          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/25">
+                            Aguardando pagamento
+                          </span>
+                        )}
                       </div>
                       <p className="text-xs text-muted-foreground">
                         {new Date(m.joinedAt).toLocaleDateString("pt-BR")}

@@ -45,11 +45,22 @@ export default async function CatalogFamilyPage({ params }: { params: { id: stri
   const myMembership = currentUserId
     ? await prisma.familyMembership.findUnique({
         where: { userId_familyId: { userId: currentUserId, familyId: params.id } },
-        select: { status: true },
+        select: {
+          status: true,
+          mpPaymentId: true,
+          mpQrCode: true,
+          mpQrCodeBase64: true,
+          mpTicketUrl: true,
+          feePaidAt: true,
+        },
       })
     : null;
 
   const isMember = myMembership?.status === "active";
+  const hasPendingPayment =
+    myMembership?.status === "pending" &&
+    !!myMembership.mpPaymentId &&
+    !myMembership.feePaidAt;
   const memberCount = family.memberships.length;
   const isFull = family.maxMembers ? memberCount >= family.maxMembers : false;
 
@@ -158,13 +169,19 @@ export default async function CatalogFamilyPage({ params }: { params: { id: stri
                 </Badge>
               )}
             </div>
-            {currentUserId && !isMember && family.isPublic && !isFull && (
+            {currentUserId && !isMember && (family.isPublic && !isFull || hasPendingPayment) && (
               <CatalogJoinButton
                 familyId={params.id}
                 familyName={family.name}
                 entryFeeCents={family.entryFeeCents}
                 currency={family.currency}
                 initialStatus={myMembership?.status ?? null}
+                pendingPix={hasPendingPayment && myMembership?.mpQrCode ? {
+                  qrCode: myMembership.mpQrCode,
+                  qrCodeBase64: myMembership.mpQrCodeBase64 ?? "",
+                  ticketUrl: myMembership.mpTicketUrl ?? "",
+                  paymentId: myMembership.mpPaymentId!,
+                } : null}
               />
             )}
           </div>

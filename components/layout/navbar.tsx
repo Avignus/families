@@ -69,7 +69,7 @@ export function Navbar() {
           {/* Notification bell */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="relative hover:bg-secondary/80">
+              <Button variant="ghost" size="icon" className="relative hover:bg-primary/10 hover:text-primary transition-colors">
                 <Bell className="h-[18px] w-[18px]" />
                 {unreadCount > 0 && (
                   <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-primary text-[10px] font-bold flex items-center justify-center text-white">
@@ -128,7 +128,7 @@ export function Navbar() {
           {/* User menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="flex items-center gap-2 px-2 hover:bg-secondary/80">
+              <Button variant="ghost" className="flex items-center gap-2 px-2 hover:bg-primary/10 hover:text-primary transition-colors">
                 <Avatar className="h-7 w-7 ring-1 ring-border">
                   <AvatarImage src={user.avatarMedium ?? user.image ?? ""} alt={user.personaName ?? user.name ?? ""} />
                   <AvatarFallback className="text-xs bg-primary/20 text-primary">

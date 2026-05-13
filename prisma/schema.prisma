@@ -56,12 +56,14 @@ model FamilyMembership {
   joinedAt DateTime         @default(now())
 
   // Entry fee payment tracking (used when family.entryFeeCents > 0)
-  mpPaymentId    String?  @unique
-  mpStatus       String?
-  mpQrCode       String?
-  mpQrCodeBase64 String?
-  mpTicketUrl    String?
-  feePaidAt      DateTime?
+  mpPaymentId       String?  @unique
+  mpStatus          String?
+  mpQrCode          String?
+  mpQrCodeBase64    String?
+  mpTicketUrl       String?
+  feePaidAt         DateTime?
+  feeChargedCents   Int?     // total charged (entry fee + service fee)
+  feeRefundedAt     DateTime?
 
   // Auto-distribution
   monthlyBudgetCents    Int       @default(0)

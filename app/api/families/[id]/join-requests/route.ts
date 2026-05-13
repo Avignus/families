@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { requireSession, isApiError, ok, err } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { createNotification } from "@/lib/notifications/service";
-import { createPixPayment } from "@/lib/mercadopago";
+import { createPixPayment, ENTRY_FEE_SERVICE_RATE } from "@/lib/mercadopago";
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const user = await requireSession();
@@ -28,6 +28,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   if (existing) {
     if (existing.status === "active") return err("ALREADY_MEMBER", "Already a member of this family");
     if (existing.status === "pending") {
+      // Already has a valid pending PIX — return it
       if (existing.mpPaymentId && !existing.feePaidAt) {
         return ok({
           message: "Join request pending payment",
@@ -40,7 +41,11 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
           },
         });
       }
-      return err("ALREADY_PENDING", "Join request already pending");
+      // Pending without PIX (free family or previous PIX failure) — allow retry if paid family
+      if (!family.entryFeeCents) {
+        return err("ALREADY_PENDING", "Join request already pending");
+      }
+      // Fall through to retry PIX creation below
     }
   }
 
@@ -82,24 +87,47 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       });
 
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? req.headers.get("origin") ?? "";
-  const pix = await createPixPayment({
-    amountCents: family.entryFeeCents,
-    description: `Taxa de entrada — ${family.name}`,
-    payerSteamId: user.steamId,
-    pledgeId: `membership:${membership.id}`,
-    notificationUrl: `${baseUrl}/api/webhooks/mercadopago`,
-  });
 
-  await prisma.familyMembership.update({
-    where: { id: membership.id },
-    data: {
-      mpPaymentId: pix.paymentId,
-      mpStatus: pix.status,
-      mpQrCode: pix.qrCode,
-      mpQrCodeBase64: pix.qrCodeBase64,
-      mpTicketUrl: pix.ticketUrl,
-    },
-  });
+  // Charge entry fee + 15% service fee; only entry fee is refundable on rejection
+  const totalChargeCents = Math.ceil(family.entryFeeCents * (1 + ENTRY_FEE_SERVICE_RATE));
+
+  let pix = null;
+  try {
+    pix = await createPixPayment({
+      amountCents: totalChargeCents,
+      description: `Taxa de entrada — ${family.name}`,
+      payerSteamId: user.steamId,
+      pledgeId: `membership:${membership.id}`,
+      notificationUrl: `${baseUrl}/api/webhooks/mercadopago`,
+    });
+
+    await prisma.familyMembership.update({
+      where: { id: membership.id },
+      data: {
+        mpPaymentId: pix.paymentId,
+        mpStatus: pix.status,
+        mpQrCode: pix.qrCode,
+        mpQrCodeBase64: pix.qrCodeBase64,
+        mpTicketUrl: pix.ticketUrl,
+        feeChargedCents: totalChargeCents,
+      },
+    });
+  } catch (mpErr: unknown) {
+    const mpMsg = mpErr instanceof Error ? mpErr.message : JSON.stringify(mpErr);
+    console.error("MercadoPago entry fee error:", mpMsg);
+    // PIX failed — keep membership pending, notify chief to handle manually
+    await createNotification(prisma, {
+      recipientUserId: family.chiefId,
+      type: "JOIN_REQUEST",
+      payload: {
+        familyId: family.id,
+        familyName: family.name,
+        requesterId: user.id,
+        personaName: user.personaName,
+      },
+    });
+    return err("PIX_UNAVAILABLE", "Não foi possível gerar o PIX no momento. Tente novamente em alguns instantes.", 503);
+  }
 
   return ok({
     message: "Pay the entry fee to complete your request",

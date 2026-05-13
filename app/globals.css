@@ -121,3 +121,38 @@
 .pledge-segment {
   transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 }
+
+/* Logo text gradient shimmer */
+@keyframes logo-shimmer {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+.logo-shimmer {
+  background: linear-gradient(
+    135deg,
+    hsl(258 82% 72%),
+    hsl(186 90% 58%),
+    hsl(258 82% 82%),
+    hsl(186 90% 68%),
+    hsl(258 82% 72%)
+  );
+  background-size: 300% 300%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: logo-shimmer 4s ease-in-out infinite;
+}
+
+/* Logo SVG circles glow pulse */
+@keyframes logo-glow {
+  0%, 100% { opacity: 0.15; }
+  50%       { opacity: 0.45; }
+}
+@keyframes logo-glow-alt {
+  0%, 100% { opacity: 0.10; }
+  50%       { opacity: 0.38; }
+}
+.logo-glow-1 { animation: logo-glow     3s ease-in-out infinite; }
+.logo-glow-2 { animation: logo-glow-alt 3s ease-in-out infinite 0.5s; }
+.logo-glow-3 { animation: logo-glow     3s ease-in-out infinite 1s; }

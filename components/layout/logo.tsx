@@ -12,16 +12,16 @@ export function FamiliesLogo({ className, showText = true }: { className?: strin
         xmlns="http://www.w3.org/2000/svg"
         className="flex-shrink-0"
       >
-        {/* Glow base */}
-        <circle cx="10" cy="15" r="7" fill="hsl(258 82% 66% / 0.15)" />
-        <circle cx="18" cy="15" r="7" fill="hsl(186 90% 48% / 0.15)" />
+        {/* Glow base — animated */}
+        <circle cx="10" cy="15" r="7" fill="hsl(258 82% 66%)" className="logo-glow-1" />
+        <circle cx="18" cy="15" r="7" fill="hsl(186 90% 48%)" className="logo-glow-2" />
 
         {/* Left circle — member */}
         <circle cx="10" cy="15" r="6" stroke="hsl(258 82% 66%)" strokeWidth="1.5" fill="hsl(258 82% 66% / 0.12)" />
         {/* Right circle — member */}
         <circle cx="18" cy="15" r="6" stroke="hsl(186 90% 48%)" strokeWidth="1.5" fill="hsl(186 90% 48% / 0.10)" />
         {/* Top circle — member, overlapping both */}
-        <circle cx="14" cy="8" r="5.5" stroke="hsl(258 82% 80%)" strokeWidth="1.5" fill="hsl(258 82% 66% / 0.18)" />
+        <circle cx="14" cy="8" r="5.5" stroke="hsl(258 82% 80%)" strokeWidth="1.5" fill="hsl(258 82% 66% / 0.18)" className="logo-glow-3" />
 
         {/* Gift dot in center */}
         <circle cx="14" cy="13.5" r="2" fill="hsl(258 82% 80%)" />
@@ -36,16 +36,7 @@ export function FamiliesLogo({ className, showText = true }: { className?: strin
           style={{ fontFamily: "var(--font-space-grotesk)" }}
         >
           <span className="text-foreground">fam</span>
-          <span
-            style={{
-              background: "linear-gradient(135deg, hsl(258 82% 72%), hsl(186 90% 58%))",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-              backgroundClip: "text",
-            }}
-          >
-            ilies
-          </span>
+          <span className="logo-shimmer">ilies</span>
         </span>
       )}
     </div>

@@ -45,9 +45,10 @@ export function CreateFamilyDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm">
-          <Plus className="h-4 w-4 mr-1" /> Nova Família
-        </Button>
+        <button className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white transition-all hover:opacity-90 active:scale-[0.98]"
+          style={{ background: "linear-gradient(135deg, hsl(258 82% 60%), hsl(258 82% 48%))", boxShadow: "0 0 16px hsl(258 82% 60% / 0.35)" }}>
+          <Plus className="h-4 w-4" /> Criar Família
+        </button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
