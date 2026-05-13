@@ -81,6 +81,11 @@ const templates: Record<Locale, Templates> = {
       body: (p) => `${p.pledgerCount} ${Number(p.pledgerCount) === 1 ? "membro contribuiu" : "membros contribuíram"} para "${p.gameName}" em "${p.familyName}". Faltam ${p.remainingFormatted} (${p.remainingPercent}%)!`,
       link: (p) => `/families/${p.familyId}`,
     },
+    AUTO_PLEDGED: {
+      title: () => "Contribuições automáticas criadas!",
+      body: (p) => `Distribuímos ${p.totalFormatted} do seu orçamento em ${p.pledgeCount} ${Number(p.pledgeCount) === 1 ? "jogo" : "jogos"} em "${p.familyName}". Revise e pague para confirmar.`,
+      link: (p) => `/families/${p.familyId}`,
+    },
   },
   en: {
     JOIN_REQUEST: {
@@ -148,6 +153,11 @@ const templates: Record<Locale, Templates> = {
     OPPORTUNITY: {
       title: () => "Opportunity in your family!",
       body: (p) => `${p.pledgerCount} ${Number(p.pledgerCount) === 1 ? "member contributed" : "members contributed"} to "${p.gameName}" in "${p.familyName}". ${p.remainingFormatted} left (${p.remainingPercent}%)!`,
+      link: (p) => `/families/${p.familyId}`,
+    },
+    AUTO_PLEDGED: {
+      title: () => "Auto-pledges created!",
+      body: (p) => `We distributed ${p.totalFormatted} of your budget across ${p.pledgeCount} ${Number(p.pledgeCount) === 1 ? "game" : "games"} in "${p.familyName}". Review and pay to confirm.`,
       link: (p) => `/families/${p.familyId}`,
     },
   },

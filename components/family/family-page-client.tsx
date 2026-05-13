@@ -13,6 +13,7 @@ import { GameSearchModal } from "@/components/wishlist/game-search-modal";
 import { VotesPanel } from "@/components/votes/votes-panel";
 import { SteamLibraryPanel } from "@/components/family/steam-library-panel";
 import { Plus, ChevronDown, ChevronUp, Settings, Copy, LogIn, Gamepad2 } from "lucide-react";
+import { MonthlyBudgetForm } from "@/components/family/monthly-budget-form";
 import { getMemberColor, formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
 import Link from "next/link";
@@ -52,6 +53,7 @@ type FamilyData = {
   chiefId: string;
   isChief: boolean;
   currentUserId: string;
+  monthlyBudgetCents: number;
   memberships: Array<{ user: Member }>;
   wishlistItems: WishlistItem[];
 };
@@ -219,6 +221,12 @@ export function FamilyPageClient({ familyId }: { familyId: string }) {
                 <Plus className="h-4 w-4 mr-1" /> Adicionar Jogo
               </Button>
             </div>
+
+            <MonthlyBudgetForm
+              familyId={familyId}
+              currency={family.currency}
+              initialBudgetCents={family.monthlyBudgetCents}
+            />
 
             {family.wishlistItems.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground text-sm">

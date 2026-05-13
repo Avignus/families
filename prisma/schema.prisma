@@ -63,6 +63,10 @@ model FamilyMembership {
   mpTicketUrl    String?
   feePaidAt      DateTime?
 
+  // Auto-distribution
+  monthlyBudgetCents    Int       @default(0)
+  lastAutoDistributedAt DateTime?
+
   user   User   @relation(fields: [userId], references: [id])
   family Family @relation(fields: [familyId], references: [id])
 
@@ -229,4 +233,5 @@ enum NotificationType {
   DISBURSEMENT_SENT
   PIX_KEY_REQUIRED
   OPPORTUNITY
+  AUTO_PLEDGED
 }

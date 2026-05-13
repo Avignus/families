@@ -109,6 +109,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     wishlistItems: enrichedItems,
     isChief: family.chiefId === user.id,
     currentUserId: user.id,
+    monthlyBudgetCents: membership.monthlyBudgetCents,
   });
 }
 
