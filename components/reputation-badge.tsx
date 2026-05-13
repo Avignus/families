@@ -20,7 +20,7 @@ export function ReputationBadge({ score, showScore = false, size = "sm" }: Props
       style={{ backgroundColor: `${color}22`, color, border: `1px solid ${color}55` }}
     >
       {label}
-      {showScore && <span className="opacity-70">· {score}</span>}
+      {showScore && score > 0 && <span className="opacity-70">· {score}</span>}
     </span>
   );
 }
