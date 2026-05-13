@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useDeferredValue } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { KeyRound, CheckCircle2, Loader2, Star } from "lucide-react";
+import { KeyRound, CheckCircle2, Loader2, Star, XCircle } from "lucide-react";
 import { ReputationBadge } from "@/components/reputation-badge";
 import { getTier, TIER_LABELS } from "@/lib/reputation";
+import { validatePixKey } from "@/lib/pix-key";
+import { toast } from "sonner";
 
 export default function SettingsPage() {
   const [pixKey, setPixKey] = useState("");
@@ -14,6 +16,9 @@ export default function SettingsPage() {
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
+
+  const deferredKey = useDeferredValue(pixKey);
+  const validation = deferredKey.trim() ? validatePixKey(deferredKey.trim()) : null;
 
   useEffect(() => {
     fetch("/api/me")
@@ -27,15 +32,24 @@ export default function SettingsPage() {
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
+    if (pixKey.trim() && validation && !validation.valid) return;
+
     setLoading(true);
     setSaved(false);
-    await fetch("/api/me", {
+    const res = await fetch("/api/me", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ pixKey: pixKey.trim() || null }),
     });
+    const data = await res.json();
     setLoading(false);
+
+    if (!res.ok) {
+      toast.error(data.error?.message ?? "Erro ao salvar");
+      return;
+    }
     setSaved(true);
+    toast.success("Chave PIX salva!");
   }
 
   return (
@@ -55,8 +69,10 @@ export default function SettingsPage() {
           </CardHeader>
           <CardContent className="flex items-center gap-3">
             <ReputationBadge score={reputationScore} showScore size="md" />
-            <div className="text-sm text-muted-foreground space-y-0.5">
-              <p>{reputationScore === 0 ? "Faça sua primeira contribuição para começar a construir sua reputação." : `Tier: ${TIER_LABELS[getTier(reputationScore)]}`}</p>
+            <div className="text-sm text-muted-foreground">
+              {reputationScore === 0
+                ? "Faça sua primeira contribuição para começar a construir sua reputação."
+                : `Tier: ${TIER_LABELS[getTier(reputationScore)]}`}
             </div>
           </CardContent>
         </Card>
@@ -69,8 +85,7 @@ export default function SettingsPage() {
             Chave PIX para recebimento
           </CardTitle>
           <CardDescription>
-            Quando um jogo da sua wishlist for totalmente financiado e todos os pagamentos aprovados,
-            o valor será transferido automaticamente para esta chave.
+            Usada para receber valores de financiamento de jogos e taxas de entrada da sua família.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -88,18 +103,43 @@ export default function SettingsPage() {
                   placeholder="CPF, e-mail, telefone ou chave aleatória"
                   value={pixKey}
                   onChange={(e) => { setPixKey(e.target.value); setSaved(false); }}
+                  className={
+                    validation
+                      ? validation.valid
+                        ? "border-emerald-500/60 focus-visible:ring-emerald-500/30"
+                        : "border-destructive/60 focus-visible:ring-destructive/30"
+                      : ""
+                  }
                 />
-                <p className="text-xs text-muted-foreground">
-                  Aceita qualquer tipo de chave PIX cadastrada na sua conta bancária.
-                </p>
+
+                {/* Live feedback */}
+                {validation && (
+                  <div className={`flex items-center gap-1.5 text-xs ${validation.valid ? "text-emerald-400" : "text-destructive"}`}>
+                    {validation.valid ? (
+                      <><CheckCircle2 className="h-3.5 w-3.5" /> {validation.label} detectado</>
+                    ) : (
+                      <><XCircle className="h-3.5 w-3.5" /> {validation.error}</>
+                    )}
+                  </div>
+                )}
+
+                {!validation && (
+                  <p className="text-xs text-muted-foreground">
+                    Aceita CPF, CNPJ, e-mail, telefone (+55) ou chave aleatória.
+                  </p>
+                )}
               </div>
+
               <div className="flex items-center gap-3">
-                <Button type="submit" disabled={loading}>
+                <Button
+                  type="submit"
+                  disabled={loading || (!!pixKey.trim() && !!validation && !validation.valid)}
+                >
                   {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                   Salvar
                 </Button>
                 {saved && (
-                  <span className="flex items-center gap-1.5 text-sm text-green-500">
+                  <span className="flex items-center gap-1.5 text-sm text-emerald-500">
                     <CheckCircle2 className="h-4 w-4" />
                     Salvo
                   </span>

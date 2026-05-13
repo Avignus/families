@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireSession, isApiError, ok, err, parseBody } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
+import { validatePixKey } from "@/lib/pix-key";
 
 const PixKeySchema = z.object({
   pixKey: z.string().max(100).nullable(),
@@ -14,11 +15,30 @@ export async function PATCH(req: NextRequest) {
   const body = await parseBody(req, PixKeySchema);
   if (isApiError(body)) return body;
 
+  if (body.pixKey) {
+    const result = validatePixKey(body.pixKey);
+    if (!result.valid) return err("INVALID_PIX_KEY", result.error, 422);
+
+    // Check uniqueness
+    const existing = await prisma.user.findFirst({
+      where: { pixKey: result.normalized },
+      select: { id: true },
+    });
+    if (existing && existing.id !== user.id) {
+      return err("PIX_KEY_IN_USE", "Esta chave PIX já está cadastrada em outra conta", 409);
+    }
+
+    const updated = await prisma.user.update({
+      where: { id: user.id },
+      data: { pixKey: result.normalized },
+    });
+    return ok({ pixKey: updated.pixKey, type: result.type, label: result.label });
+  }
+
   const updated = await prisma.user.update({
     where: { id: user.id },
-    data: { pixKey: body.pixKey ?? null },
+    data: { pixKey: null },
   });
-
   return ok({ pixKey: updated.pixKey });
 }
 
