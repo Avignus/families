@@ -7,10 +7,18 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   const user = await requireSession();
   if (isApiError(user)) return user;
 
+  const family = await prisma.family.findUnique({
+    where: { id: params.id },
+    select: { isPublic: true },
+  });
+  if (!family) return err("NOT_FOUND", "Family not found", 404);
+
   const membership = await prisma.familyMembership.findUnique({
     where: { userId_familyId: { userId: user.id, familyId: params.id } },
   });
-  if (!membership || membership.status !== "active") {
+
+  // Allow access if user is an active member, OR if family is public (catalog view)
+  if (!family.isPublic && (!membership || membership.status !== "active")) {
     return err("FORBIDDEN", "Not a member of this family", 403);
   }
 
