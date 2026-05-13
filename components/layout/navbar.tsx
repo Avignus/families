@@ -14,6 +14,7 @@ import {
 import { useNotifications } from "@/components/notifications/notification-provider";
 import { FamiliesLogo } from "./logo";
 import { formatRelativeTime } from "@/lib/utils";
+import { getNotificationContent } from "@/lib/notifications/templates";
 
 export function Navbar() {
   const { data: session, update } = useSession();
@@ -96,21 +97,31 @@ export function Navbar() {
                 <>
                   {recent.slice(0, 10).map((n) => {
                     const payload = n.payload as Record<string, string>;
+                    const content = getNotificationContent(
+                      n.type as Parameters<typeof getNotificationContent>[0],
+                      payload
+                    );
                     return (
                       <DropdownMenuItem
                         key={n.id}
                         className="flex flex-col items-start gap-0.5 cursor-pointer py-2.5 focus:bg-primary/10 focus:text-foreground"
-                        onClick={() => markRead(n.id)}
+                        onClick={() => {
+                          markRead(n.id);
+                          if (content.link) window.location.href = content.link;
+                        }}
                       >
                         <div className="flex items-center gap-2 w-full">
                           {!n.readAt && (
                             <span className="h-1.5 w-1.5 rounded-full bg-primary flex-shrink-0" />
                           )}
                           <span className={`text-sm flex-1 ${!n.readAt ? "font-medium" : "text-muted-foreground"}`}>
-                            {payload.gameName ?? payload.familyName ?? n.type.replace(/_/g, " ")}
+                            {content.title}
                           </span>
                         </div>
-                        <span className="text-xs text-muted-foreground ml-3.5">
+                        <span className="text-xs text-muted-foreground ml-3.5 line-clamp-2 leading-relaxed">
+                          {content.body}
+                        </span>
+                        <span className="text-xs text-muted-foreground/60 ml-3.5">
                           {formatRelativeTime(n.createdAt)}
                         </span>
                       </DropdownMenuItem>
