@@ -76,6 +76,11 @@ const templates: Record<Locale, Templates> = {
       body: (p) => `${p.personaName} pagou a taxa e entrou na família "${p.familyName}".`,
       link: (p) => `/families/${p.familyId}`,
     },
+    OPPORTUNITY: {
+      title: () => "Oportunidade na sua família!",
+      body: (p) => `${p.pledgerCount} ${Number(p.pledgerCount) === 1 ? "membro contribuiu" : "membros contribuíram"} para "${p.gameName}" em "${p.familyName}". Faltam ${p.remainingFormatted} (${p.remainingPercent}%)!`,
+      link: (p) => `/families/${p.familyId}`,
+    },
   },
   en: {
     JOIN_REQUEST: {
@@ -138,6 +143,11 @@ const templates: Record<Locale, Templates> = {
     JOIN_FEE_PAID: {
       title: () => "Entry fee paid!",
       body: (p) => `${p.personaName} paid the entry fee and joined family "${p.familyName}".`,
+      link: (p) => `/families/${p.familyId}`,
+    },
+    OPPORTUNITY: {
+      title: () => "Opportunity in your family!",
+      body: (p) => `${p.pledgerCount} ${Number(p.pledgerCount) === 1 ? "member contributed" : "members contributed"} to "${p.gameName}" in "${p.familyName}". ${p.remainingFormatted} left (${p.remainingPercent}%)!`,
       link: (p) => `/families/${p.familyId}`,
     },
   },
