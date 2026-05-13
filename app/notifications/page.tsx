@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useNotifications } from "@/components/notifications/notification-provider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -22,6 +23,10 @@ const NOTIFICATION_LABELS: Record<string, string> = {
 
 export default function NotificationsPage() {
   const { recent, unreadCount, markRead, markAllRead, refetch } = useNotifications();
+
+  useEffect(() => {
+    if (unreadCount > 0) markAllRead();
+  }, []);
 
   const getLink = (notification: { type: string; payload: Record<string, unknown> }) => {
     const p = notification.payload;
