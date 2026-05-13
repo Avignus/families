@@ -124,7 +124,7 @@ export default async function DashboardPage() {
                       </span>
                       <span className="flex items-center gap-1">
                         <Gamepad2 className="h-3.5 w-3.5" />
-                        {libraryCount} jogável{libraryCount !== 1 ? "is" : ""}
+                        {libraryCount} {libraryCount !== 1 ? "jogáveis" : "jogável"}
                       </span>
                       {wishlistCount > 0 && (
                         <span className="flex items-center gap-1">
