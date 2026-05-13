@@ -12,7 +12,7 @@ import { WishlistItemCard } from "@/components/wishlist/wishlist-item-card";
 import { GameSearchModal } from "@/components/wishlist/game-search-modal";
 import { VotesPanel } from "@/components/votes/votes-panel";
 import { SteamLibraryPanel } from "@/components/family/steam-library-panel";
-import { Plus, ChevronDown, ChevronUp, Settings, Copy, LogIn, Gamepad2 } from "lucide-react";
+import { Plus, ChevronDown, ChevronUp, Settings, Copy, LogIn, Gamepad2, Check, X } from "lucide-react";
 import { MonthlyBudgetForm } from "@/components/family/monthly-budget-form";
 import { getMemberColor, formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
@@ -46,6 +46,11 @@ type WishlistItem = {
   }>;
 };
 
+type PendingMember = {
+  id: string;
+  user: Member;
+};
+
 type FamilyData = {
   id: string;
   name: string;
@@ -55,6 +60,7 @@ type FamilyData = {
   currentUserId: string;
   monthlyBudgetCents: number;
   memberships: Array<{ user: Member }>;
+  pendingMemberships: PendingMember[];
   wishlistItems: WishlistItem[];
 };
 
@@ -208,6 +214,17 @@ export function FamilyPageClient({ familyId }: { familyId: string }) {
                   </div>
                 );
               })}
+
+              {/* Pending members — amber border, approve/reject */}
+              {family.pendingMemberships.map(({ id: membershipId, user }) => (
+                <PendingMemberAvatar
+                  key={membershipId}
+                  membershipId={membershipId}
+                  familyId={familyId}
+                  user={user}
+                  onAction={() => refetch()}
+                />
+              ))}
             </div>
           </div>
 
@@ -329,6 +346,65 @@ export function FamilyPageClient({ familyId }: { familyId: string }) {
         onSelect={handleAddGame}
         title="Adicionar à Lista de Desejos"
       />
+    </div>
+  );
+}
+
+function PendingMemberAvatar({
+  membershipId, familyId, user, onAction,
+}: {
+  membershipId: string;
+  familyId: string;
+  user: Member;
+  onAction: () => void;
+}) {
+  const [loading, setLoading] = useState<"approve" | "reject" | null>(null);
+
+  const act = async (action: "approve" | "reject") => {
+    setLoading(action);
+    try {
+      await fetch(`/api/families/${familyId}/join-requests/${membershipId}/${action}`, { method: "POST" });
+      onAction();
+    } finally {
+      setLoading(null);
+    }
+  };
+
+  return (
+    <div className="flex flex-col items-center gap-1.5">
+      <div className="relative">
+        <Avatar
+          className="h-12 w-12"
+          style={{ boxShadow: "0 0 0 2px hsl(45 90% 55%)" }}
+        >
+          <AvatarImage src={user.avatarMedium} alt={user.personaName} />
+          <AvatarFallback style={{ backgroundColor: "hsl(45 90% 30%)" }}>
+            {user.personaName[0]}
+          </AvatarFallback>
+        </Avatar>
+        <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-amber-400 border-2 border-background" />
+      </div>
+      <span className="text-xs max-w-[60px] truncate text-amber-400">
+        {user.personaName}
+      </span>
+      <div className="flex gap-1">
+        <button
+          onClick={() => act("approve")}
+          disabled={!!loading}
+          title="Aprovar"
+          className="h-5 w-5 rounded-full bg-emerald-500/20 hover:bg-emerald-500/40 flex items-center justify-center transition-colors"
+        >
+          <Check className="h-3 w-3 text-emerald-400" />
+        </button>
+        <button
+          onClick={() => act("reject")}
+          disabled={!!loading}
+          title="Rejeitar"
+          className="h-5 w-5 rounded-full bg-destructive/20 hover:bg-destructive/40 flex items-center justify-center transition-colors"
+        >
+          <X className="h-3 w-3 text-destructive" />
+        </button>
+      </div>
     </div>
   );
 }

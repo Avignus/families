@@ -21,7 +21,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     include: {
       chief: { select: { id: true, steamId: true, personaName: true, avatarUrl: true, avatarMedium: true } },
       memberships: {
-        where: { status: "active" },
+        where: { status: { in: ["active", "pending"] } },
         include: {
           user: { select: { id: true, personaName: true, avatarUrl: true, avatarMedium: true, steamId: true } },
         },
@@ -110,6 +110,11 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     isChief: family.chiefId === user.id,
     currentUserId: user.id,
     monthlyBudgetCents: membership.monthlyBudgetCents,
+    // Split memberships for the client
+    memberships: family.memberships.filter((m) => m.status === "active"),
+    pendingMemberships: family.chiefId === user.id
+      ? family.memberships.filter((m) => m.status === "pending")
+      : [],
   });
 }
 

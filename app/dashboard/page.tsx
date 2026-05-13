@@ -56,6 +56,14 @@ export default async function DashboardPage() {
     where: { family: { chiefId: userId }, status: "pending" },
   });
 
+  // Pending requests per family
+  const pendingRows = await prisma.familyMembership.groupBy({
+    by: ["familyId"],
+    where: { family: { chiefId: userId }, status: "pending" },
+    _count: { id: true },
+  });
+  const pendingMap = new Map(pendingRows.map((p) => [p.familyId, p._count.id]));
+
   // Count Steam library games per family (from cache, non-blocking)
   const libraryCounts = await Promise.all(
     memberships.map(({ family }) => countLibraryGames(family.id))
@@ -105,15 +113,23 @@ export default async function DashboardPage() {
             const isChief = family.chiefId === userId;
             const libraryCount = libraryCounts[i];
             const wishlistCount = family._count.wishlistItems;
+            const pendingCount = pendingMap.get(family.id) ?? 0;
             return (
               <Link key={family.id} href={`/families/${family.id}`}>
-                <Card className="hover:border-primary/50 transition-colors cursor-pointer h-full">
+                <Card className={`hover:border-primary/50 transition-colors cursor-pointer h-full ${pendingCount > 0 ? "border-amber-500/40" : ""}`}>
                   <CardHeader className="pb-2">
                     <div className="flex items-start justify-between">
                       <CardTitle className="text-lg">{family.name}</CardTitle>
-                      {isChief && (
-                        <Badge variant="secondary" className="text-xs">Chefe</Badge>
-                      )}
+                      <div className="flex items-center gap-1.5">
+                        {pendingCount > 0 && (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30">
+                            {pendingCount} pendente{pendingCount > 1 ? "s" : ""}
+                          </span>
+                        )}
+                        {isChief && (
+                          <Badge variant="secondary" className="text-xs">Chefe</Badge>
+                        )}
+                      </div>
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-2">
