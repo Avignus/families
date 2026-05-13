@@ -71,6 +71,11 @@ const templates: Record<Locale, Templates> = {
       body: (p) => `"${p.gameName}" está 100% financiado! Cadastre sua chave PIX nas configurações para receber ${formatCurrency(Number(p.amountCents), String(p.currency))}.`,
       link: () => `/settings`,
     },
+    JOIN_FEE_PAID: {
+      title: () => "Taxa de entrada paga!",
+      body: (p) => `${p.personaName} pagou a taxa e entrou na família "${p.familyName}".`,
+      link: (p) => `/families/${p.familyId}`,
+    },
   },
   en: {
     JOIN_REQUEST: {
@@ -129,6 +134,11 @@ const templates: Record<Locale, Templates> = {
       title: () => "Register your PIX key",
       body: (p) => `"${p.gameName}" is fully funded! Register your PIX key in settings to receive ${formatCurrency(Number(p.amountCents), String(p.currency))}.`,
       link: () => `/settings`,
+    },
+    JOIN_FEE_PAID: {
+      title: () => "Entry fee paid!",
+      body: (p) => `${p.personaName} paid the entry fee and joined family "${p.familyName}".`,
+      link: (p) => `/families/${p.familyId}`,
     },
   },
 };

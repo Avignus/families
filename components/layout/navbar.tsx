@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
 import { useEffect, useState } from "react";
-import { Bell, LogOut, Settings } from "lucide-react";
+import { Bell, LogOut, Settings, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -55,6 +55,13 @@ export function Navbar() {
         <div className="flex items-center gap-6">
           <Link href="/dashboard">
             <FamiliesLogo />
+          </Link>
+          <Link
+            href="/catalog"
+            className="hidden md:flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <Globe className="h-4 w-4" />
+            Catálogo
           </Link>
         </div>
 

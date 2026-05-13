@@ -28,16 +28,23 @@ model User {
 }
 
 model Family {
-  id        String   @id @default(cuid())
-  name      String
-  currency  String   @default("BRL")
-  chiefId   String
-  chief     User     @relation("ChiefFamilies", fields: [chiefId], references: [id])
-  createdAt DateTime @default(now())
+  id            String   @id @default(cuid())
+  name          String
+  currency      String   @default("BRL")
+  chiefId       String
+  chief         User     @relation("ChiefFamilies", fields: [chiefId], references: [id])
+  createdAt     DateTime @default(now())
+
+  isPublic      Boolean  @default(false)
+  description   String?
+  maxMembers    Int?
+  entryFeeCents Int      @default(0)
 
   memberships   FamilyMembership[]
   wishlistItems WishlistItem[]
   votes         Vote[]
+
+  @@index([isPublic])
 }
 
 model FamilyMembership {
@@ -46,6 +53,14 @@ model FamilyMembership {
   familyId String
   status   MembershipStatus @default(pending)
   joinedAt DateTime         @default(now())
+
+  // Entry fee payment tracking (used when family.entryFeeCents > 0)
+  mpPaymentId    String?  @unique
+  mpStatus       String?
+  mpQrCode       String?
+  mpQrCodeBase64 String?
+  mpTicketUrl    String?
+  feePaidAt      DateTime?
 
   user   User   @relation(fields: [userId], references: [id])
   family Family @relation(fields: [familyId], references: [id])
@@ -157,6 +172,16 @@ model SteamAppCatalog {
   @@index([name])
 }
 
+model SteamUserCache {
+  userId    String
+  type      String   // "library" | "wishlist"
+  payload   Json
+  fetchedAt DateTime @default(now())
+
+  @@id([userId, type])
+  @@index([fetchedAt])
+}
+
 enum MembershipStatus {
   pending
   active
@@ -193,6 +218,7 @@ enum NotificationType {
   JOIN_REQUEST
   JOIN_APPROVED
   JOIN_REJECTED
+  JOIN_FEE_PAID
   PLEDGE_RECEIVED
   PLEDGE_WITHDRAWN
   ITEM_FUNDED

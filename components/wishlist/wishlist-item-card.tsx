@@ -92,7 +92,7 @@ export function WishlistItemCard({ item, currentUserId, memberColors, onRefresh 
 
   return (
     <div
-      className={`group relative rounded-xl overflow-hidden border transition-all duration-200 hover:border-primary/40 hover:-translate-y-0.5 ${
+      className={`group relative rounded-xl overflow-hidden border transition-all duration-200 hover:border-primary/40 hover:shadow-[0_4px_20px_hsl(0_0%_0%/0.35)] ${
         isFunded
           ? "border-primary/50 bg-card"
           : isPurchased
@@ -102,12 +102,12 @@ export function WishlistItemCard({ item, currentUserId, memberColors, onRefresh 
       style={isFunded ? { boxShadow: "0 0 20px hsl(258 82% 66% / 0.15)" } : undefined}
     >
       {/* Game header image */}
-      <div className="relative overflow-hidden h-[108px]">
+      <div className="relative h-[108px]">
         {item.steamData?.headerImage ? (
           <img
             src={item.steamData.headerImage}
             alt={gameName}
-            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+            className="w-full h-full object-cover transition-all duration-300 group-hover:brightness-110 group-hover:saturate-[1.1]"
           />
         ) : (
           <div className="w-full h-full bg-secondary flex items-center justify-center">

@@ -25,6 +25,17 @@ export async function POST(req: NextRequest) {
   const mpStatus = await getPaymentStatus(dataId);
   if (!mpStatus) return NextResponse.json({ ok: true });
 
+  // Check if this is a membership entry fee payment
+  const membership = await prisma.familyMembership.findUnique({
+    where: { mpPaymentId: dataId },
+    include: { family: true, user: true },
+  });
+
+  if (membership) {
+    await handleMembershipPayment(membership, mpStatus);
+    return NextResponse.json({ ok: true });
+  }
+
   const pledge = await prisma.pledge.findUnique({
     where: { mpPaymentId: dataId },
     include: {
@@ -87,6 +98,54 @@ export async function POST(req: NextRequest) {
   }
 
   return NextResponse.json({ ok: true });
+}
+
+type MembershipWithFamily = {
+  id: string;
+  userId: string;
+  familyId: string;
+  mpStatus: string | null;
+  feePaidAt: Date | null;
+  family: { id: string; name: string; chiefId: string };
+  user: { id: string; personaName: string };
+};
+
+async function handleMembershipPayment(membership: MembershipWithFamily, mpStatus: string) {
+  await prisma.familyMembership.update({
+    where: { id: membership.id },
+    data: { mpStatus },
+  });
+
+  if (mpStatus === "approved" && !membership.feePaidAt) {
+    await prisma.$transaction(async (tx) => {
+      await tx.familyMembership.update({
+        where: { id: membership.id },
+        data: { status: "active", feePaidAt: new Date(), joinedAt: new Date() },
+      });
+      await createNotification(tx, {
+        recipientUserId: membership.family.chiefId,
+        type: "JOIN_FEE_PAID",
+        payload: {
+          familyId: membership.family.id,
+          familyName: membership.family.name,
+          memberId: membership.userId,
+          personaName: membership.user.personaName,
+        },
+      });
+      await createNotification(tx, {
+        recipientUserId: membership.userId,
+        type: "JOIN_APPROVED",
+        payload: { familyId: membership.family.id, familyName: membership.family.name },
+      });
+    });
+  }
+
+  if (mpStatus === "rejected" || mpStatus === "cancelled") {
+    await prisma.familyMembership.update({
+      where: { id: membership.id },
+      data: { status: "rejected" },
+    });
+  }
 }
 
 async function maybeDisburseFunds(wishlistItemId: string) {
