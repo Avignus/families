@@ -1,16 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireSession, isApiError } from "@/lib/api";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
-  if (req.headers.get("x-seed-secret") !== process.env.SEED_SECRET?.trim()) {
+  const secret = req.nextUrl.searchParams.get("s");
+  if (secret !== process.env.SEED_SECRET?.trim()) {
     return NextResponse.json({ ok: false }, { status: 401 });
   }
 
-  const user = await requireSession();
-  if (isApiError(user)) return NextResponse.json({ ok: false, error: "not logged in" });
+  const user = await prisma.user.findFirst({ where: { personaName: "Avignus" } });
+  if (!user) return NextResponse.json({ ok: false, error: "user not found" });
 
   const result = await prisma.familyMembership.deleteMany({
     where: {
@@ -19,5 +19,5 @@ export async function GET(req: NextRequest) {
     },
   });
 
-  return NextResponse.json({ ok: true, removed: result.count, userId: user.id });
+  return NextResponse.json({ ok: true, removed: result.count });
 }
