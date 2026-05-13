@@ -61,6 +61,7 @@ export async function GET() {
     avatarFull: dbUser.avatarFull,
     profileUrl: dbUser.profileUrl,
     pixKey: dbUser.pixKey,
+    reputationScore: dbUser.reputationScore,
     families: dbUser.memberships.map((m) => ({
       id: m.family.id,
       name: m.family.name,

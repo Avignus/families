@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getPaymentStatus, verifyWebhookSignature, sendPixDisbursement } from "@/lib/mercadopago";
 import { createNotification } from "@/lib/notifications/service";
+import { computeAndSaveReputation } from "@/lib/reputation";
 
 export const dynamic = "force-dynamic";
 
@@ -92,8 +93,9 @@ export async function POST(req: NextRequest) {
     await tx.pledge.update({ where: { id: pledge.id }, data: updates });
   });
 
-  // After marking as approved, check if all pledges for this item are now paid → disburse
+  // After marking as approved, recompute reputation and check for disbursement
   if (mpStatus === "approved") {
+    await computeAndSaveReputation(pledge.pledgerUserId).catch(() => {});
     await maybeDisburseFunds(pledge.wishlistItemId);
   }
 

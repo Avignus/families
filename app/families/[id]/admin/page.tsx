@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { JoinRequestActions } from "@/components/family/join-request-actions";
 import { MemberActions } from "@/components/family/member-actions";
 import { CatalogSettingsForm } from "@/components/family/catalog-settings-form";
+import { ReputationBadge } from "@/components/reputation-badge";
 import { ArrowLeft, Crown, Users, Globe } from "lucide-react";
 import Link from "next/link";
 
@@ -22,7 +23,7 @@ export default async function AdminPage({ params }: { params: { id: string } }) 
       chief: { select: { personaName: true, avatarMedium: true, avatarUrl: true } },
       memberships: {
         where: { status: { in: ["active", "pending"] } },
-        include: { user: { select: { id: true, personaName: true, avatarUrl: true, avatarMedium: true } } },
+        include: { user: { select: { id: true, personaName: true, avatarUrl: true, avatarMedium: true, reputationScore: true } } },
         orderBy: { joinedAt: "asc" },
       },
     },
@@ -68,7 +69,10 @@ export default async function AdminPage({ params }: { params: { id: string } }) 
                       <AvatarFallback>{m.user.personaName[0]}</AvatarFallback>
                     </Avatar>
                     <div>
-                      <p className="text-sm font-medium">{m.user.personaName}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-medium">{m.user.personaName}</p>
+                        <ReputationBadge score={m.user.reputationScore} showScore />
+                      </div>
                       <p className="text-xs text-muted-foreground">
                         {new Date(m.joinedAt).toLocaleDateString("pt-BR")}
                       </p>

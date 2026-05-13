@@ -15,8 +15,9 @@ model User {
   avatarMedium String   @default("")
   avatarFull   String   @default("")
   profileUrl   String?
-  pixKey       String?
-  createdAt    DateTime @default(now())
+  pixKey           String?
+  reputationScore  Int      @default(0)
+  createdAt        DateTime @default(now())
 
   memberships   FamilyMembership[]
   wishlistItems WishlistItem[]
