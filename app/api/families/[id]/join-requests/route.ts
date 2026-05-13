@@ -48,6 +48,7 @@ async function handlePost(req: NextRequest, params: { id: string }) {
             qrCodeBase64: existing.mpQrCodeBase64,
             ticketUrl: existing.mpTicketUrl,
             paymentId: existing.mpPaymentId,
+            expiresAt: new Date(existing.joinedAt.getTime() + 24 * 60 * 60 * 1000).toISOString(),
           },
         });
       }
@@ -154,6 +155,7 @@ async function handlePost(req: NextRequest, params: { id: string }) {
       qrCodeBase64: pix.qrCodeBase64,
       ticketUrl: pix.ticketUrl,
       paymentId: pix.paymentId,
+      expiresAt: pix.expiresAt.toISOString(),
     },
   }, 201);
 }

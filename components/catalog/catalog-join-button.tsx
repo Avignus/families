@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { formatCurrency } from "@/lib/utils";
 import { PixPaymentModal } from "@/components/wishlist/pix-payment-modal";
 import { QrCode } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 type PixData = {
   qrCode: string;
@@ -31,6 +32,7 @@ export function CatalogJoinButton({
   initialStatus,
   pendingPix = null,
 }: Props) {
+  const router = useRouter();
   const [status, setStatus] = useState(initialStatus);
   const [loading, setLoading] = useState(false);
   const [pix, setPix] = useState<PixData | null>(pendingPix ?? null);
@@ -84,6 +86,8 @@ export function CatalogJoinButton({
           currency={currency}
           gameName={`Entrada em ${familyName}`}
           pix={pix}
+          pollUrl={`/api/families/${familyId}/entry-status`}
+          onConfirmed={() => router.push(`/families/${familyId}`)}
         />
       </>
     );
@@ -111,6 +115,8 @@ export function CatalogJoinButton({
           currency={currency}
           gameName={`Entrada em ${familyName}`}
           pix={pix}
+          pollUrl={`/api/families/${familyId}/entry-status`}
+          onConfirmed={() => router.push(`/families/${familyId}`)}
         />
       )}
     </>
