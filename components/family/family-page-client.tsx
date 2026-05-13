@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -359,11 +359,16 @@ function PendingMemberAvatar({
   onAction: () => void;
 }) {
   const [loading, setLoading] = useState<"approve" | "reject" | null>(null);
+  const queryClient = useQueryClient();
 
   const act = async (action: "approve" | "reject") => {
     setLoading(action);
     try {
       await fetch(`/api/families/${familyId}/join-requests/${membershipId}/${action}`, { method: "POST" });
+      if (action === "approve") {
+        // Invalidate steam library so new member's games load immediately
+        await queryClient.invalidateQueries({ queryKey: ["steam-library", familyId] });
+      }
       onAction();
     } finally {
       setLoading(null);
