@@ -6,6 +6,8 @@ const DEFAULT_LANG = "portuguese";
 
 const PRICE_CACHE_TTL_MS = 6 * 60 * 60 * 1000; // 6 hours
 const STATIC_CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+const LIBRARY_CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
+const WISHLIST_CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
 
 export type SteamAppDetails = {
   appId: number;
@@ -92,6 +94,121 @@ export async function searchAppCatalog(query: string, limit = 20): Promise<{ app
   });
   return results.map((r) => ({ appId: r.appId, name: r.name }));
 }
+
+export type OwnedGame = {
+  appId: number;
+  name: string;
+  playtimeMinutes: number;
+};
+
+export type SteamWishlistGame = {
+  appId: number;
+  name: string;
+};
+
+function steamHeaderImage(appId: number) {
+  return `https://cdn.cloudflare.steamstatic.com/steam/apps/${appId}/header.jpg`;
+}
+
+// Sentinel distinguishing "Steam key invalid/revoked" from "profile is private"
+export const STEAM_KEY_ERROR = "STEAM_KEY_ERROR" as const;
+type SteamKeyError = typeof STEAM_KEY_ERROR;
+
+export async function getOwnedGames(steamId: string): Promise<OwnedGame[] | null | SteamKeyError> {
+  const cached = await prisma.steamUserCache.findUnique({
+    where: { userId_type: { userId: steamId, type: "library" } },
+  });
+  if (cached) {
+    const age = Date.now() - cached.fetchedAt.getTime();
+    if (age < LIBRARY_CACHE_TTL_MS) return cached.payload as unknown as OwnedGame[];
+  }
+
+  try {
+    const url = `https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/?key=${STEAM_API_KEY}&steamid=${steamId}&include_appinfo=true&include_played_free_games=true`;
+    const res = await fetch(url, { next: { revalidate: 0 } });
+
+    // Fall back to stale cache rather than returning an error when key is invalid
+    if (res.status === 401 || res.status === 403) {
+      return cached ? (cached.payload as unknown as OwnedGame[]) : STEAM_KEY_ERROR;
+    }
+    if (!res.ok) return cached ? (cached.payload as unknown as OwnedGame[]) : null;
+
+    const data = await res.json();
+    // response.games absent → game list is private (profile set to Friends-only or Private)
+    if (!data.response?.games) return null;
+
+    const games: OwnedGame[] = data.response.games.map(
+      (g: { appid: number; name: string; playtime_forever?: number }) => ({
+        appId: g.appid,
+        name: g.name,
+        playtimeMinutes: g.playtime_forever ?? 0,
+      })
+    );
+
+    await prisma.steamUserCache.upsert({
+      where: { userId_type: { userId: steamId, type: "library" } },
+      update: { payload: games as unknown as object, fetchedAt: new Date() },
+      create: { userId: steamId, type: "library", payload: games as unknown as object },
+    });
+
+    return games;
+  } catch {
+    return cached ? (cached.payload as unknown as OwnedGame[]) : null;
+  }
+}
+
+export async function getSteamWishlist(steamId: string): Promise<SteamWishlistGame[] | null | SteamKeyError> {
+  const cached = await prisma.steamUserCache.findUnique({
+    where: { userId_type: { userId: steamId, type: "wishlist" } },
+  });
+  if (cached) {
+    const age = Date.now() - cached.fetchedAt.getTime();
+    if (age < WISHLIST_CACHE_TTL_MS) return cached.payload as unknown as SteamWishlistGame[];
+  }
+
+  try {
+    // Official API endpoint — requires a valid key and respects profile privacy settings
+    const url = `https://api.steampowered.com/IWishlistService/GetWishlist/v1/?key=${STEAM_API_KEY}&steamid=${steamId}`;
+    const res = await fetch(url, { next: { revalidate: 0 } });
+
+    if (res.status === 401 || res.status === 403) {
+      return cached ? (cached.payload as unknown as SteamWishlistGame[]) : STEAM_KEY_ERROR;
+    }
+    if (!res.ok) return cached ? (cached.payload as unknown as SteamWishlistGame[]) : null;
+
+    const data = await res.json();
+    const items: { appid: number }[] = data.response?.items ?? [];
+
+    // Empty array means wishlist is empty or private
+    if (items.length === 0) return [];
+
+    // IWishlistService doesn't return names — resolve them from local catalog cache
+    const appIds = items.map((i) => i.appid);
+    const catalogEntries = await prisma.steamAppCatalog.findMany({
+      where: { appId: { in: appIds } },
+      select: { appId: true, name: true },
+    });
+    const nameMap = new Map(catalogEntries.map((e) => [e.appId, e.name]));
+
+    const games: SteamWishlistGame[] = appIds.map((appId) => ({
+      appId,
+      name: nameMap.get(appId) ?? `App #${appId}`,
+    }));
+
+    await prisma.steamUserCache.upsert({
+      where: { userId_type: { userId: steamId, type: "wishlist" } },
+      update: { payload: games as unknown as object, fetchedAt: new Date() },
+      create: { userId: steamId, type: "wishlist", payload: games as unknown as object },
+    });
+
+    return games;
+  } catch {
+    return cached ? (cached.payload as unknown as SteamWishlistGame[]) : null;
+  }
+}
+
+// Exposed so UI can build consistent image URLs without duplicating the CDN pattern
+export { steamHeaderImage };
 
 export async function refreshAppCatalog(): Promise<void> {
   try {

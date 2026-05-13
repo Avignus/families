@@ -11,7 +11,8 @@ import { Separator } from "@/components/ui/separator";
 import { WishlistItemCard } from "@/components/wishlist/wishlist-item-card";
 import { GameSearchModal } from "@/components/wishlist/game-search-modal";
 import { VotesPanel } from "@/components/votes/votes-panel";
-import { Plus, ChevronDown, ChevronUp, Settings, Copy, LogIn } from "lucide-react";
+import { SteamLibraryPanel } from "@/components/family/steam-library-panel";
+import { Plus, ChevronDown, ChevronUp, Settings, Copy, LogIn, Gamepad2 } from "lucide-react";
 import { getMemberColor, formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
 import Link from "next/link";
@@ -81,6 +82,7 @@ export function FamilyPageClient({ familyId }: { familyId: string }) {
 
   const [addGameOpen, setAddGameOpen] = useState(false);
   const [votesExpanded, setVotesExpanded] = useState(false);
+  const [steamExpanded, setSteamExpanded] = useState(false);
 
   const memberColors = new Map(
     family?.memberships.map((m, i) => [m.user.id, getMemberColor(i)]) ?? []
@@ -237,6 +239,23 @@ export function FamilyPageClient({ familyId }: { familyId: string }) {
             )}
           </div>
 
+          {/* Votes panel */}
+          <Separator />
+          <div>
+            <button
+              onClick={() => setVotesExpanded((v) => !v)}
+              className="flex items-center gap-2 text-sm font-semibold w-full text-left"
+            >
+              <span>Votações</span>
+              {votesExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            </button>
+            {votesExpanded && (
+              <div className="mt-4">
+                <VotesPanel familyId={familyId} currency={family.currency} />
+              </div>
+            )}
+          </div>
+
           {/* Settlement table */}
           {Object.keys(settlement).length > 0 && (
             <>
@@ -271,19 +290,25 @@ export function FamilyPageClient({ familyId }: { familyId: string }) {
             </>
           )}
 
-          {/* Votes panel */}
+          {/* Steam — games & unified wishlist */}
           <Separator />
           <div>
             <button
-              onClick={() => setVotesExpanded((v) => !v)}
+              onClick={() => setSteamExpanded((v) => !v)}
               className="flex items-center gap-2 text-sm font-semibold w-full text-left"
             >
-              <span>Votações</span>
-              {votesExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+              <Gamepad2 className="h-4 w-4 text-muted-foreground" />
+              <span>Jogos Steam da Família</span>
+              {steamExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
             </button>
-            {votesExpanded && (
+            {steamExpanded && (
               <div className="mt-4">
-                <VotesPanel familyId={familyId} currency={family.currency} />
+                <SteamLibraryPanel
+                  familyId={familyId}
+                  currentUserId={userId}
+                  memberColors={memberColors}
+                  sharedWishlistAppIds={new Set(family.wishlistItems.map((i) => i.steamAppId))}
+                />
               </div>
             )}
           </div>

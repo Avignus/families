@@ -6,7 +6,8 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { JoinRequestActions } from "@/components/family/join-request-actions";
 import { MemberActions } from "@/components/family/member-actions";
-import { ArrowLeft, Crown, Users } from "lucide-react";
+import { CatalogSettingsForm } from "@/components/family/catalog-settings-form";
+import { ArrowLeft, Crown, Users, Globe } from "lucide-react";
 import Link from "next/link";
 
 export default async function AdminPage({ params }: { params: { id: string } }) {
@@ -18,6 +19,7 @@ export default async function AdminPage({ params }: { params: { id: string } }) 
   const family = await prisma.family.findUnique({
     where: { id: params.id },
     include: {
+      chief: { select: { personaName: true, avatarMedium: true, avatarUrl: true } },
       memberships: {
         where: { status: { in: ["active", "pending"] } },
         include: { user: { select: { id: true, personaName: true, avatarUrl: true, avatarMedium: true } } },
@@ -115,6 +117,32 @@ export default async function AdminPage({ params }: { params: { id: string } }) 
               </div>
             ))}
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Catalog settings */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Globe className="h-4 w-4" />
+            Catálogo Público
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <CatalogSettingsForm
+            familyId={params.id}
+            familyName={family.name}
+            chiefName={family.chief.personaName}
+            chiefAvatar={family.chief.avatarMedium || family.chief.avatarUrl}
+            initial={{
+              isPublic: family.isPublic,
+              description: family.description,
+              maxMembers: family.maxMembers,
+              entryFeeCents: family.entryFeeCents,
+              currency: family.currency,
+              memberCount: activeMembers.length,
+            }}
+          />
         </CardContent>
       </Card>
 

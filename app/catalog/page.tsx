@@ -5,27 +5,51 @@ import { CatalogClient } from "@/components/catalog/catalog-client";
 
 export const dynamic = "force-dynamic";
 
-export default async function CatalogPage() {
+const PAGE_SIZE = 12;
+
+export default async function CatalogPage({
+  searchParams,
+}: {
+  searchParams: { q?: string; page?: string };
+}) {
   const session = await getSession();
   const currentUserId = (session?.user as { id?: string })?.id ?? null;
 
-  const families = await prisma.family.findMany({
-    where: { isPublic: true },
-    include: {
-      chief: { select: { id: true, personaName: true, avatarUrl: true, avatarMedium: true } },
-      _count: { select: { memberships: { where: { status: "active" } } } },
-      wishlistItems: {
-        where: { status: { not: "cancelled" } },
-        select: { steamAppId: true },
-        take: 4,
-        orderBy: { createdAt: "desc" },
+  const q = searchParams.q?.trim() ?? "";
+  const page = Math.max(1, parseInt(searchParams.page ?? "1"));
+  const skip = (page - 1) * PAGE_SIZE;
+
+  const where = q
+    ? {
+        OR: [
+          { name: { contains: q, mode: "insensitive" as const } },
+          { id: q },
+        ],
+      }
+    : {};
+
+  const [families, total] = await Promise.all([
+    prisma.family.findMany({
+      where,
+      include: {
+        chief: { select: { id: true, personaName: true, avatarUrl: true, avatarMedium: true } },
+        _count: { select: { memberships: { where: { status: "active" } } } },
+        wishlistItems: {
+          where: { status: { not: "cancelled" } },
+          select: { steamAppId: true },
+          take: 4,
+          orderBy: { createdAt: "desc" },
+        },
+        ...(currentUserId
+          ? { memberships: { where: { userId: currentUserId }, select: { status: true } } }
+          : {}),
       },
-      memberships: currentUserId
-        ? { where: { userId: currentUserId }, select: { status: true } }
-        : undefined,
-    },
-    orderBy: { createdAt: "desc" },
-  });
+      orderBy: { createdAt: "desc" },
+      skip,
+      take: PAGE_SIZE,
+    }),
+    prisma.family.count({ where }),
+  ]);
 
   const items = await Promise.all(
     families.map(async (f) => {
@@ -35,12 +59,17 @@ export default async function CatalogPage() {
           getAppDetails(item.steamAppId).then((d) => d?.headerImage ?? null)
         )
       );
-      const myMembership = currentUserId && f.memberships?.length ? f.memberships[0] : null;
+      const myMembership =
+        currentUserId && "memberships" in f && Array.isArray((f as any).memberships) && (f as any).memberships.length
+          ? (f as any).memberships[0]
+          : null;
+
       return {
         id: f.id,
         name: f.name,
         description: f.description,
         currency: f.currency,
+        isPublic: f.isPublic,
         entryFeeCents: f.entryFeeCents,
         maxMembers: f.maxMembers,
         memberCount,
@@ -53,5 +82,14 @@ export default async function CatalogPage() {
     })
   );
 
-  return <CatalogClient families={items} isLoggedIn={!!currentUserId} />;
+  return (
+    <CatalogClient
+      families={items}
+      isLoggedIn={!!currentUserId}
+      total={total}
+      page={page}
+      pageSize={PAGE_SIZE}
+      query={q}
+    />
+  );
 }
