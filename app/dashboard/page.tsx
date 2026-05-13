@@ -2,12 +2,32 @@ import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
-import { Plus, Users, AlertTriangle, LogIn } from "lucide-react";
+import { Users, AlertTriangle, Gamepad2, Heart } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { CreateFamilyDialog } from "@/components/family/create-family-dialog";
 import { JoinFamilyDialog } from "@/components/family/join-family-dialog";
+
+export const dynamic = "force-dynamic";
+
+async function countLibraryGames(familyId: string): Promise<number> {
+  const memberships = await prisma.familyMembership.findMany({
+    where: { familyId, status: "active" },
+    select: { user: { select: { steamId: true } } },
+  });
+
+  const appIds = new Set<number>();
+  for (const { user } of memberships) {
+    const cache = await prisma.steamUserCache.findUnique({
+      where: { userId_type: { userId: user.steamId, type: "library" } },
+      select: { payload: true },
+    });
+    if (!cache) continue;
+    const games = cache.payload as Array<{ appid: number }>;
+    if (Array.isArray(games)) games.forEach((g) => appIds.add(g.appid));
+  }
+  return appIds.size;
+}
 
 export default async function DashboardPage() {
   const session = await getSession();
@@ -33,11 +53,13 @@ export default async function DashboardPage() {
   });
 
   const totalPendingRequests = await prisma.familyMembership.count({
-    where: {
-      family: { chiefId: userId },
-      status: "pending",
-    },
+    where: { family: { chiefId: userId }, status: "pending" },
   });
+
+  // Count Steam library games per family (from cache, non-blocking)
+  const libraryCounts = await Promise.all(
+    memberships.map(({ family }) => countLibraryGames(family.id))
+  );
 
   return (
     <div className="container py-8 space-y-6">
@@ -79,8 +101,10 @@ export default async function DashboardPage() {
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {memberships.map(({ family }) => {
+          {memberships.map(({ family }, i) => {
             const isChief = family.chiefId === userId;
+            const libraryCount = libraryCounts[i];
+            const wishlistCount = family._count.wishlistItems;
             return (
               <Link key={family.id} href={`/families/${family.id}`}>
                 <Card className="hover:border-primary/50 transition-colors cursor-pointer h-full">
@@ -98,7 +122,16 @@ export default async function DashboardPage() {
                         <Users className="h-3.5 w-3.5" />
                         {family._count.memberships} membro{family._count.memberships !== 1 ? "s" : ""}
                       </span>
-                      <span>{family._count.wishlistItems} jogo{family._count.wishlistItems !== 1 ? "s" : ""}</span>
+                      <span className="flex items-center gap-1">
+                        <Gamepad2 className="h-3.5 w-3.5" />
+                        {libraryCount} jogável{libraryCount !== 1 ? "is" : ""}
+                      </span>
+                      {wishlistCount > 0 && (
+                        <span className="flex items-center gap-1">
+                          <Heart className="h-3.5 w-3.5" />
+                          {wishlistCount} na lista
+                        </span>
+                      )}
                     </div>
                     <div className="text-xs text-muted-foreground">
                       Moeda: {family.currency}
