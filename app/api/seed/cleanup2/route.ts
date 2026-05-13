@@ -10,6 +10,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: false }, { status: 401 });
   }
 
+  const all = await prisma.family.findMany({ select: { id: true, name: true } });
+  // eslint-disable-next-line no-console
+  console.log("ALL FAMILIES:", JSON.stringify(all));
+
   const toDelete = await prisma.family.findMany({
     where: {
       id: { not: KEEP_FAMILY },
@@ -27,7 +31,7 @@ export async function GET(req: NextRequest) {
   const ids = toDelete.map((f) => f.id);
 
   if (ids.length === 0) {
-    return NextResponse.json({ ok: true, deleted: [], message: "nothing to delete" });
+    return NextResponse.json({ ok: true, deleted: [], message: "nothing to delete", all });
   }
 
   await prisma.voteBallot.deleteMany({ where: { vote: { familyId: { in: ids } } } });
