@@ -3,6 +3,7 @@ import { requireSession, isApiError, ok, err } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { createNotification } from "@/lib/notifications/service";
 import { createPixPayment, ENTRY_FEE_SERVICE_RATE } from "@/lib/mercadopago";
+import { getPlayerSummaries } from "@/lib/steam";
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -18,12 +19,27 @@ async function handlePost(req: NextRequest, params: { id: string }) {
   const user = await requireSession();
   if (isApiError(user)) return user;
 
-  // Always use the latest personaName from DB, not the potentially stale JWT
+  // Always use the latest personaName from DB, refreshing from Steam if still a fallback name
   const dbUser = await prisma.user.findUnique({
     where: { id: user.id },
-    select: { personaName: true },
+    select: { personaName: true, steamId: true },
   });
-  const personaName = dbUser?.personaName ?? user.personaName;
+  let personaName = dbUser?.personaName ?? user.personaName;
+  if (personaName.startsWith("Steam user") && dbUser?.steamId) {
+    const [player] = await getPlayerSummaries([dbUser.steamId]).catch(() => []);
+    if (player?.personaname) {
+      personaName = player.personaname;
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          personaName: player.personaname,
+          avatarUrl: player.avatar,
+          avatarMedium: player.avatarmedium,
+          avatarFull: player.avatarfull,
+        },
+      });
+    }
+  }
 
   const family = await prisma.family.findUnique({
     where: { id: params.id },
