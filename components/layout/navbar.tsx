@@ -99,7 +99,7 @@ export function Navbar() {
                     return (
                       <DropdownMenuItem
                         key={n.id}
-                        className="flex flex-col items-start gap-0.5 cursor-pointer py-2.5 focus:bg-secondary/60"
+                        className="flex flex-col items-start gap-0.5 cursor-pointer py-2.5 focus:bg-primary/10 focus:text-foreground"
                         onClick={() => markRead(n.id)}
                       >
                         <div className="flex items-center gap-2 w-full">
@@ -117,7 +117,7 @@ export function Navbar() {
                     );
                   })}
                   <DropdownMenuSeparator className="bg-border/60" />
-                  <DropdownMenuItem asChild className="justify-center text-primary text-xs py-2">
+                  <DropdownMenuItem asChild className="justify-center text-primary text-xs py-2 focus:bg-primary/10 focus:text-primary">
                     <Link href="/notifications">Ver todas as notificações</Link>
                   </DropdownMenuItem>
                 </>
@@ -146,13 +146,13 @@ export function Navbar() {
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator className="bg-border/60" />
-              <DropdownMenuItem asChild>
+              <DropdownMenuItem asChild className="focus:bg-primary/10 focus:text-foreground">
                 <Link href="/notifications" className="cursor-pointer">
                   <Bell className="h-4 w-4 mr-2 text-muted-foreground" />
                   Notificações
                 </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem asChild>
+              <DropdownMenuItem asChild className="focus:bg-primary/10 focus:text-foreground">
                 <Link href="/settings" className="cursor-pointer">
                   <Settings className="h-4 w-4 mr-2 text-muted-foreground" />
                   Configurações
