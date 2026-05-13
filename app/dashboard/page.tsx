@@ -23,8 +23,8 @@ async function countLibraryGames(familyId: string): Promise<number> {
       select: { payload: true },
     });
     if (!cache) continue;
-    const games = cache.payload as Array<{ appid: number }>;
-    if (Array.isArray(games)) games.forEach((g) => appIds.add(g.appid));
+    const games = cache.payload as Array<{ appId: number }>;
+    if (Array.isArray(games)) games.forEach((g) => appIds.add(g.appId));
   }
   return appIds.size;
 }

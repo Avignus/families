@@ -18,6 +18,13 @@ async function handlePost(req: NextRequest, params: { id: string }) {
   const user = await requireSession();
   if (isApiError(user)) return user;
 
+  // Always use the latest personaName from DB, not the potentially stale JWT
+  const dbUser = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: { personaName: true },
+  });
+  const personaName = dbUser?.personaName ?? user.personaName;
+
   const family = await prisma.family.findUnique({
     where: { id: params.id },
     include: { chief: { select: { id: true, personaName: true } } },
@@ -79,7 +86,7 @@ async function handlePost(req: NextRequest, params: { id: string }) {
             familyId: family.id,
             familyName: family.name,
             requesterId: user.id,
-            personaName: user.personaName,
+            personaName,
           },
         });
       });
