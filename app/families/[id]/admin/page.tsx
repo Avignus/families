@@ -8,6 +8,7 @@ import { JoinRequestActions } from "@/components/family/join-request-actions";
 import { MemberActions } from "@/components/family/member-actions";
 import { CatalogSettingsForm } from "@/components/family/catalog-settings-form";
 import { ReputationBadge } from "@/components/reputation-badge";
+import { DeleteFamilyButton } from "@/components/family/delete-family-button";
 import { ArrowLeft, Crown, Users, Globe } from "lucide-react";
 import Link from "next/link";
 
@@ -170,6 +171,16 @@ export default async function AdminPage({ params }: { params: { id: string } }) 
           <p className="text-xs text-muted-foreground mt-1">
             Compartilhe este ID para que outras pessoas possam solicitar entrada.
           </p>
+        </CardContent>
+      </Card>
+
+      {/* Danger zone */}
+      <Card className="border-destructive/30">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base text-destructive">Zona de Perigo</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <DeleteFamilyButton familyId={params.id} familyName={family.name} />
         </CardContent>
       </Card>
     </div>

@@ -137,3 +137,21 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
   return ok(updated);
 }
+
+export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
+  const user = await requireSession();
+  if (isApiError(user)) return user;
+
+  const family = await prisma.family.findUnique({ where: { id: params.id } });
+  if (!family) return err("NOT_FOUND", "Family not found", 404);
+  if (family.chiefId !== user.id) return err("FORBIDDEN", "Only the chief can delete the family", 403);
+
+  await prisma.voteBallot.deleteMany({ where: { vote: { familyId: params.id } } });
+  await prisma.vote.deleteMany({ where: { familyId: params.id } });
+  await prisma.pledge.deleteMany({ where: { wishlistItem: { familyId: params.id } } });
+  await prisma.wishlistItem.deleteMany({ where: { familyId: params.id } });
+  await prisma.familyMembership.deleteMany({ where: { familyId: params.id } });
+  await prisma.family.delete({ where: { id: params.id } });
+
+  return ok({ message: "Family deleted" });
+}
