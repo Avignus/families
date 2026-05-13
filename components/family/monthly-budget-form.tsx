@@ -27,7 +27,8 @@ export function MonthlyBudgetForm({ familyId, currency, initialBudgetCents }: Pr
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ monthlyBudgetCents: cents }),
       });
-      const data = await res.json();
+      const text = await res.text();
+      const data = text ? JSON.parse(text) : {};
       if (!res.ok) { toast.error(data.error?.message ?? "Erro"); return; }
       toast.success(cents > 0 ? `Orçamento de ${currency} ${(cents / 100).toFixed(2)}/mês ativado!` : "Orçamento desativado.");
     } finally {

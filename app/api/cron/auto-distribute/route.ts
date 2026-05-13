@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
       ],
     },
     include: {
-      user: { select: { id: true } },
+      user: { select: { id: true, personaName: true } },
       family: {
         include: {
           wishlistItems: {
@@ -45,6 +45,7 @@ export async function GET(req: NextRequest) {
     },
   });
 
+  const log: Array<{ user: string; family: string; game: string; amountCents: number }> = [];
   let totalDistributed = 0;
 
   for (const membership of memberships) {
@@ -107,6 +108,12 @@ export async function GET(req: NextRequest) {
       const gameName = (cache?.payload as { name?: string } | null)?.name ?? `App #${item.steamAppId}`;
 
       pledgesCreated.push({ itemId: pledge.id, amountCents: allocate, gameName });
+      log.push({
+        user: membership.user.personaName,
+        family: membership.family.name,
+        game: gameName,
+        amountCents: allocate,
+      });
       budget -= allocate;
       totalDistributed++;
     }
@@ -137,5 +144,5 @@ export async function GET(req: NextRequest) {
     });
   }
 
-  return NextResponse.json({ ok: true, distributed: totalDistributed });
+  return NextResponse.json({ ok: true, distributed: totalDistributed, log });
 }

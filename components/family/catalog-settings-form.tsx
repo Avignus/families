@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Globe, Lock, Users, Crown, Unlock } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
+import { FamilyCoverArt } from "@/components/family-cover-art";
 
 type Props = {
   familyId: string;
@@ -120,8 +121,8 @@ export function CatalogSettingsForm({ familyId, familyName, chiefName, chiefAvat
       <div className="space-y-2">
         <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Preview do card no catálogo</p>
         <div className="rounded-xl border border-border/50 bg-card overflow-hidden max-w-[240px]">
-          <div className="h-16 bg-secondary flex items-center justify-center">
-            <Users className="h-6 w-6 text-muted-foreground/30" />
+          <div className="h-16 overflow-hidden">
+            <FamilyCoverArt familyId={familyId} />
           </div>
           <div className="p-3 space-y-2">
             <p className="font-semibold text-xs truncate" style={{ fontFamily: "var(--font-space-grotesk)" }}>

@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { PixPaymentModal } from "@/components/wishlist/pix-payment-modal";
 import Link from "next/link";
+import { FamilyCoverArt } from "@/components/family-cover-art";
 
 type Family = {
   id: string;
@@ -197,9 +198,7 @@ function FamilyCard({
               <img key={i} src={src} alt="" className="h-full object-cover flex-1 min-w-0" />
             ))
           ) : (
-            <div className="w-full flex items-center justify-center">
-              <Users className="h-8 w-8 text-muted-foreground/30" />
-            </div>
+            <FamilyCoverArt familyId={family.id} />
           )}
         </div>
       </Link>

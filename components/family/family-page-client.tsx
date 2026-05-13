@@ -84,7 +84,7 @@ export function FamilyPageClient({ familyId }: { familyId: string }) {
 
   const [addGameOpen, setAddGameOpen] = useState(false);
   const [votesExpanded, setVotesExpanded] = useState(false);
-  const [steamExpanded, setSteamExpanded] = useState(false);
+  const [steamExpanded, setSteamExpanded] = useState(true);
 
   const memberColors = new Map(
     family?.memberships.map((m, i) => [m.user.id, getMemberColor(i)]) ?? []

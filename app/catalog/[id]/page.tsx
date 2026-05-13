@@ -6,6 +6,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/utils";
 import { ArrowLeft, Crown, Users, Lock, Unlock, Gamepad2, ShoppingCart, TrendingUp, Library, Trophy } from "lucide-react";
+import { FamilyCoverArt } from "@/components/family-cover-art";
 import Link from "next/link";
 import { CatalogJoinButton } from "@/components/catalog/catalog-join-button";
 import { CatalogWishlistItem } from "@/components/catalog/catalog-wishlist-item";
@@ -112,6 +113,21 @@ export default async function CatalogFamilyPage({ params }: { params: { id: stri
       >
         <ArrowLeft className="h-4 w-4" /> Catálogo
       </Link>
+
+      {/* Cover image */}
+      <div className="rounded-xl overflow-hidden h-48 w-full -mt-2">
+        {wishlistWithSteam[0]?.steam?.headerImage ? (
+          <div className="flex h-full">
+            {wishlistWithSteam.slice(0, 4).map((item, i) => (
+              item.steam?.headerImage && (
+                <img key={i} src={item.steam.headerImage} alt="" className="h-full object-cover flex-1 min-w-0" />
+              )
+            ))}
+          </div>
+        ) : (
+          <FamilyCoverArt familyId={params.id} />
+        )}
+      </div>
 
       {/* Header */}
       <div className="space-y-4">
