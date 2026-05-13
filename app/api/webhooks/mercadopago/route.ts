@@ -13,7 +13,8 @@ export async function POST(req: NextRequest) {
   const xRequestId = req.headers.get("x-request-id") ?? "";
   const dataId = String(body?.data?.id ?? "");
 
-  if (xSignature && !verifyWebhookSignature({ xSignature, xRequestId, dataId })) {
+  const hasSecret = !!process.env.MERCADOPAGO_WEBHOOK_SECRET;
+  if (hasSecret && (!xSignature || !verifyWebhookSignature({ xSignature, xRequestId, dataId }))) {
     return NextResponse.json({ ok: false }, { status: 401 });
   }
 
