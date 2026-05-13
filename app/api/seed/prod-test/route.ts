@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
-  if (req.headers.get("x-seed-secret") !== process.env.SEED_SECRET) {
+  if (req.headers.get("x-seed-secret") !== process.env.SEED_SECRET?.trim()) {
     return NextResponse.json({ ok: false }, { status: 401 });
   }
 
