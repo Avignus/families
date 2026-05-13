@@ -146,7 +146,9 @@ export function Navbar() {
                     {(user.personaName ?? user.name ?? "?")[0].toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
-                <span className="hidden md:block text-sm font-medium">{user.personaName ?? user.name}</span>
+                {user.personaName && !user.personaName.startsWith("Steam user") && (
+                  <span className="hidden md:block text-sm font-medium">{user.personaName}</span>
+                )}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="bg-card/95 backdrop-blur border-border/60">
