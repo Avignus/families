@@ -72,7 +72,8 @@ export function CatalogClient({ families, isLoggedIn, total, page, pageSize, que
     setLoading(family.id);
     try {
       const res = await fetch(`/api/families/${family.id}/join-requests`, { method: "POST" });
-      const data = await res.json();
+      const text = await res.text();
+      const data = text ? JSON.parse(text) : {};
       if (!res.ok) {
         toast.error(data.error?.message ?? "Erro ao solicitar entrada");
         return;

@@ -55,11 +55,13 @@ export async function createPixPayment(params: {
   const txData = result.point_of_interaction?.transaction_data;
   if (!txData?.qr_code) throw new Error("MercadoPago não retornou QR code PIX");
 
+  const isSandbox = (process.env.MERCADOPAGO_ACCESS_TOKEN ?? "").startsWith("TEST-");
+
   return {
     paymentId: String(result.id),
     qrCode: txData.qr_code,
     qrCodeBase64: txData.qr_code_base64 ?? "",
-    ticketUrl: txData.ticket_url ?? "",
+    ticketUrl: isSandbox ? "" : (txData.ticket_url ?? ""),
     status: result.status ?? "pending",
     expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
   };

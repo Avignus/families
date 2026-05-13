@@ -5,6 +5,16 @@ import { createNotification } from "@/lib/notifications/service";
 import { createPixPayment, ENTRY_FEE_SERVICE_RATE } from "@/lib/mercadopago";
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+  try {
+    return await handlePost(req, params);
+  } catch (e: unknown) {
+    console.error("[join-requests POST]", e);
+    const msg = e instanceof Error ? e.message : String(e);
+    return err("INTERNAL_ERROR", msg, 500);
+  }
+}
+
+async function handlePost(req: NextRequest, params: { id: string }) {
   const user = await requireSession();
   if (isApiError(user)) return user;
 
@@ -76,58 +86,65 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     return ok({ message: "Join request sent" }, 201);
   }
 
-  // Has entry fee — create membership + PIX payment
-  const membership = existing
-    ? await prisma.familyMembership.update({
-        where: { id: existing.id },
-        data: { status: "pending", joinedAt: new Date() },
-      })
-    : await prisma.familyMembership.create({
-        data: { userId: user.id, familyId: params.id, status: "pending" },
-      });
-
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? req.headers.get("origin") ?? "";
-
-  // Charge entry fee + 15% service fee; only entry fee is refundable on rejection
   const totalChargeCents = Math.ceil(family.entryFeeCents * (1 + ENTRY_FEE_SERVICE_RATE));
 
-  let pix = null;
+  // Generate PIX before creating membership — only persist if payment was created successfully
+  let pix;
+  const tempRef = `membership-temp:${user.id}:${params.id}`;
   try {
     pix = await createPixPayment({
       amountCents: totalChargeCents,
       description: `Taxa de entrada — ${family.name}`,
       payerSteamId: user.steamId,
-      pledgeId: `membership:${membership.id}`,
+      pledgeId: tempRef,
       notificationUrl: `${baseUrl}/api/webhooks/mercadopago`,
-    });
-
-    await prisma.familyMembership.update({
-      where: { id: membership.id },
-      data: {
-        mpPaymentId: pix.paymentId,
-        mpStatus: pix.status,
-        mpQrCode: pix.qrCode,
-        mpQrCodeBase64: pix.qrCodeBase64,
-        mpTicketUrl: pix.ticketUrl,
-        feeChargedCents: totalChargeCents,
-      },
     });
   } catch (mpErr: unknown) {
     const mpMsg = mpErr instanceof Error ? mpErr.message : JSON.stringify(mpErr);
     console.error("MercadoPago entry fee error:", mpMsg);
-    // PIX failed — keep membership pending, notify chief to handle manually
-    await createNotification(prisma, {
-      recipientUserId: family.chiefId,
-      type: "JOIN_REQUEST",
-      payload: {
-        familyId: family.id,
-        familyName: family.name,
-        requesterId: user.id,
-        personaName: user.personaName,
-      },
-    });
     return err("PIX_UNAVAILABLE", "Não foi possível gerar o PIX no momento. Tente novamente em alguns instantes.", 503);
   }
+
+  // PIX created — now persist the membership with payment data
+  const membership = existing
+    ? await prisma.familyMembership.update({
+        where: { id: existing.id },
+        data: {
+          status: "pending",
+          joinedAt: new Date(),
+          mpPaymentId: pix.paymentId,
+          mpStatus: pix.status,
+          mpQrCode: pix.qrCode,
+          mpQrCodeBase64: pix.qrCodeBase64,
+          mpTicketUrl: pix.ticketUrl,
+          feeChargedCents: totalChargeCents,
+        },
+      })
+    : await prisma.familyMembership.create({
+        data: {
+          userId: user.id,
+          familyId: params.id,
+          status: "pending",
+          mpPaymentId: pix.paymentId,
+          mpStatus: pix.status,
+          mpQrCode: pix.qrCode,
+          mpQrCodeBase64: pix.qrCodeBase64,
+          mpTicketUrl: pix.ticketUrl,
+          feeChargedCents: totalChargeCents,
+        },
+      });
+
+  // Update external_reference in MP to point to the real membership ID
+  // (best-effort, webhook uses mpPaymentId to find membership so this is optional)
+  void fetch(`https://api.mercadopago.com/v1/payments/${pix.paymentId}`, {
+    method: "PUT",
+    headers: {
+      Authorization: `Bearer ${process.env.MERCADOPAGO_ACCESS_TOKEN}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ external_reference: `membership:${membership.id}` }),
+  }).catch(() => {});
 
   return ok({
     message: "Pay the entry fee to complete your request",
