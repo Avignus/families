@@ -55,6 +55,15 @@ async function handlePost(req: NextRequest, params: { id: string }) {
     return err("FAMILY_FULL", "This family has no available spots", 409);
   }
 
+  // Single-family rule: user cannot be active in another family simultaneously
+  const otherActive = await prisma.familyMembership.findFirst({
+    where: { userId: user.id, status: "active", familyId: { not: params.id } },
+    select: { familyId: true },
+  });
+  if (otherActive) {
+    return err("ALREADY_IN_FAMILY", "Você já faz parte de uma família. A Steam só permite uma família por conta.", 409);
+  }
+
   const existing = await prisma.familyMembership.findUnique({
     where: { userId_familyId: { userId: user.id, familyId: params.id } },
   });

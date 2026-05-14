@@ -65,6 +65,21 @@ async function handleMembershipPayment(membership: MembershipWithFamily, status:
   });
 
   if (status === "approved" && !membership.feePaidAt) {
+    // Single-family rule: if user joined another family while payment was pending, reject
+    const otherActive = await prisma.familyMembership.findFirst({
+      where: { userId: membership.userId, status: "active", familyId: { not: membership.familyId } },
+      select: { familyId: true },
+    });
+    if (otherActive) {
+      await prisma.familyMembership.update({
+        where: { id: membership.id },
+        data: { status: "rejected", mpStatus: "rejected" },
+      });
+      // TODO: trigger refund to the user
+      console.warn(`Membership ${membership.id} rejected: user ${membership.userId} already in another family. Refund needed.`);
+      return;
+    }
+
     await prisma.$transaction(async (tx) => {
       await tx.familyMembership.update({
         where: { id: membership.id },

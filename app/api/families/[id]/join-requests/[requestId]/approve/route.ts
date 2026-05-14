@@ -25,6 +25,19 @@ export async function POST(
     return err("INVALID_STATE", "Request is not pending");
   }
 
+  // Single-family rule: reject if the requester joined another family while pending
+  const otherActive = await prisma.familyMembership.findFirst({
+    where: { userId: membership.userId, status: "active", familyId: { not: params.id } },
+    select: { familyId: true },
+  });
+  if (otherActive) {
+    await prisma.familyMembership.update({
+      where: { id: params.requestId },
+      data: { status: "rejected" },
+    });
+    return err("ALREADY_IN_FAMILY", "Este usuário já faz parte de outra família e não pode ser aprovado.", 409);
+  }
+
   await prisma.$transaction(async (tx) => {
     await tx.familyMembership.update({
       where: { id: params.requestId },

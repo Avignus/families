@@ -15,6 +15,14 @@ export async function POST(req: NextRequest) {
   const body = await parseBody(req, CreateFamilySchema);
   if (isApiError(body)) return body;
 
+  const alreadyIn = await prisma.familyMembership.findFirst({
+    where: { userId: user.id, status: "active" },
+    select: { familyId: true },
+  });
+  if (alreadyIn) {
+    return err("ALREADY_IN_FAMILY", "Você já faz parte de uma família. A Steam só permite uma família por conta.", 409);
+  }
+
   try {
     const family = await prisma.$transaction(async (tx) => {
       const f = await tx.family.create({
