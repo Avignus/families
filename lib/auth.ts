@@ -48,7 +48,13 @@ export const authOptions: NextAuthOptions = {
     strategy: "jwt",
   },
   callbacks: {
-    async jwt({ token, user, account, profile }) {
+    async jwt({ token, user, trigger, session }) {
+      // Allow session.update({ personaName, avatarUrl, avatarMedium }) to refresh the JWT
+      if (trigger === "update" && session) {
+        if (session.personaName) token.personaName = session.personaName;
+        if (session.avatarUrl) token.avatarUrl = session.avatarUrl;
+        if (session.avatarMedium) token.avatarMedium = session.avatarMedium;
+      }
       if (user) {
         token.steamId = (user as { steamId?: string }).steamId;
         token.userId = user.id;

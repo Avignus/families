@@ -6,12 +6,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { KeyRound, CheckCircle2, Loader2, Star, XCircle, Mail, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { ReputationBadge } from "@/components/reputation-badge";
 import { getTier, TIER_LABELS } from "@/lib/reputation";
 import { validatePixKey } from "@/lib/pix-key";
 import { toast } from "sonner";
 
 export default function SettingsPage() {
+  const { data: session } = useSession();
+  const sessionUser = session?.user as { personaName?: string; avatarMedium?: string; image?: string } | undefined;
   const [pixKey, setPixKey] = useState("");
   const [email, setEmail] = useState("");
   const [reputationScore, setReputationScore] = useState<number | null>(null);
@@ -98,7 +102,18 @@ export default function SettingsPage() {
 
   return (
     <div className="container py-8 max-w-lg">
-      <h1 className="text-2xl font-bold mb-6">Configurações</h1>
+      <div className="flex items-center gap-4 mb-8">
+        <Avatar className="h-14 w-14 ring-2 ring-border">
+          <AvatarImage src={sessionUser?.avatarMedium ?? sessionUser?.image ?? ""} alt={sessionUser?.personaName ?? ""} />
+          <AvatarFallback className="text-lg bg-primary/20 text-primary">
+            {(sessionUser?.personaName ?? "?")[0].toUpperCase()}
+          </AvatarFallback>
+        </Avatar>
+        <div>
+          <h1 className="text-2xl font-bold">{sessionUser?.personaName ?? "Carregando..."}</h1>
+          <p className="text-sm text-muted-foreground">Configurações da conta</p>
+        </div>
+      </div>
 
       {reputationScore !== null && (
         <Card className="mb-4">

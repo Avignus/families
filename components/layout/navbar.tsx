@@ -36,7 +36,7 @@ export function Navbar() {
         if (d.data?.personaName) {
           setFreshName(d.data.personaName);
           setFreshAvatar(d.data.avatarUrl ?? null);
-          update();
+          update({ personaName: d.data.personaName, avatarUrl: d.data.avatarUrl });
         }
       })
       .catch(() => {});
