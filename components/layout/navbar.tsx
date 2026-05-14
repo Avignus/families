@@ -149,7 +149,7 @@ export function Navbar() {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="flex items-center gap-2 px-2 hover:bg-primary/10 hover:text-primary transition-colors">
                 <Avatar className="h-7 w-7 ring-1 ring-border">
-                  <AvatarImage src={user.avatarMedium ?? user.image ?? ""} alt={user.personaName ?? user.name ?? ""} />
+                  <AvatarImage src={user.avatarMedium || user.image || ""} alt={user.personaName || user.name || ""} />
                   <AvatarFallback className="text-xs bg-primary/20 text-primary">
                     {(user.personaName ?? user.name ?? "?")[0].toUpperCase()}
                   </AvatarFallback>
