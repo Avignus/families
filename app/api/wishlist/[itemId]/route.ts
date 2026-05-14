@@ -3,6 +3,7 @@ import { requireSession, isApiError, ok, err } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { getAppDetails } from "@/lib/steam";
 import { creditWallet } from "@/lib/wallet";
+import { itadWaitlistRemove } from "@/lib/itad";
 
 export async function PATCH(_req: NextRequest, { params }: { params: { itemId: string } }) {
   const user = await requireSession();
@@ -61,6 +62,14 @@ export async function DELETE(_req: NextRequest, { params }: { params: { itemId: 
       }
     }
   });
+
+  // Best-effort: check if any other family still tracks this game; if not, remove from ITAD waitlist
+  const otherItems = await prisma.wishlistItem.count({
+    where: { steamAppId: item.steamAppId, status: { in: ["open", "funded"] } },
+  });
+  if (otherItems === 0) {
+    itadWaitlistRemove([item.steamAppId]).catch(() => {});
+  }
 
   return ok({ message: "Wishlist item removed" });
 }

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireSession, isApiError, ok, err, parseBody } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { getAppDetails } from "@/lib/steam";
+import { itadWaitlistAdd } from "@/lib/itad";
 
 const AddWishlistSchema = z.object({
   steamAppId: z.number().int().positive(),
@@ -59,6 +60,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       owner: { select: { id: true, personaName: true, avatarUrl: true } },
     },
   });
+
+  // Best-effort: add to ITAD waitlist so webhook fires on price changes
+  itadWaitlistAdd([body.steamAppId]).catch(() => {});
 
   return ok({ ...item, steamData }, 201);
 }
