@@ -10,7 +10,7 @@
     },
     {
       "path": "/api/cron/price-sync",
-      "schedule": "0 3 * * *"
+      "schedule": "0 */6 * * *"
     }
   ]
 }

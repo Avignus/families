@@ -34,33 +34,3 @@ export async function itadPriceHistory(itadId: string, country = "BR"): Promise<
   }
 }
 
-/**
- * Add or remove games from the platform ITAD account's waitlist.
- * This drives the webhook — ITAD will push us when any tracked game drops in price.
- */
-export async function itadWaitlistAdd(steamAppIds: number[]): Promise<void> {
-  if (!KEY || steamAppIds.length === 0) return;
-  try {
-    // Resolve ITAD IDs first (required for waitlist API)
-    const ids = (await Promise.all(steamAppIds.map(itadLookup))).filter(Boolean) as string[];
-    if (ids.length === 0) return;
-    await fetch(`${BASE}/waitlist/games/v1?key=${KEY}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(ids),
-    });
-  } catch { /* non-critical, best-effort */ }
-}
-
-export async function itadWaitlistRemove(steamAppIds: number[]): Promise<void> {
-  if (!KEY || steamAppIds.length === 0) return;
-  try {
-    const ids = (await Promise.all(steamAppIds.map(itadLookup))).filter(Boolean) as string[];
-    if (ids.length === 0) return;
-    await fetch(`${BASE}/waitlist/games/v1?key=${KEY}`, {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(ids),
-    });
-  } catch { /* non-critical, best-effort */ }
-}

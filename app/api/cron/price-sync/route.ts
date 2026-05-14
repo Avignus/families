@@ -51,11 +51,19 @@ export async function GET(req: NextRequest) {
     if (!data) continue;
     priceMap.set(appId, data);
 
-    // Record snapshot for every priced, non-free game
+    // Record one snapshot per calendar day per game
     if (!data.isFree && data.priceCents > 0) {
-      await prisma.steamPriceHistory.create({
-        data: { steamAppId: appId, priceCents: data.priceCents, currency: data.currency },
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const alreadyToday = await prisma.steamPriceHistory.findFirst({
+        where: { steamAppId: appId, recordedAt: { gte: today } },
+        select: { id: true },
       });
+      if (!alreadyToday) {
+        await prisma.steamPriceHistory.create({
+          data: { steamAppId: appId, priceCents: data.priceCents, currency: data.currency },
+        });
+      }
     }
   }
 
