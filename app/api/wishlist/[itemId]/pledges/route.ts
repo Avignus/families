@@ -4,7 +4,7 @@ import { requireSession, isApiError, ok, err, parseBody } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { createNotification } from "@/lib/notifications/service";
 import { getAppDetails } from "@/lib/steam";
-import { createPixPayment, SERVICE_FEE_RATE } from "@/lib/mercadopago";
+import { createPixPayment, SERVICE_FEE_RATE, ASAAS_MIN_CHARGE_CENTS } from "@/lib/asaas";
 
 const PledgeSchema = z.object({
   amountCents: z.number().int().positive(),
@@ -123,6 +123,15 @@ export async function POST(req: NextRequest, { params }: { params: { itemId: str
     const baseUrl = process.env.APP_BASE_URL ?? "http://localhost:3000";
     // Pledger pays amountCents + service fee; owner receives amountCents in full
     const mpAmountCents = Math.ceil(body.amountCents * (1 + SERVICE_FEE_RATE));
+
+    if (mpAmountCents < ASAAS_MIN_CHARGE_CENTS) {
+      const minPledge = Math.ceil(ASAAS_MIN_CHARGE_CENTS / (1 + SERVICE_FEE_RATE));
+      return err(
+        "BELOW_MINIMUM",
+        `Contribuição mínima é R$ ${(minPledge / 100).toFixed(2).replace(".", ",")}`,
+        400
+      );
+    }
     let pixData = null;
 
     try {
@@ -130,8 +139,9 @@ export async function POST(req: NextRequest, { params }: { params: { itemId: str
         amountCents: mpAmountCents,
         description: `Families — ${result.gameName}`,
         payerSteamId: user.steamId,
-        pledgeId: result.pledge.id,
-        notificationUrl: `${baseUrl}/api/webhooks/mercadopago`,
+        payerName: user.personaName,
+        externalReference: `pledge:${result.pledge.id}`,
+        notificationUrl: `${baseUrl}/api/webhooks/asaas`,
       });
 
       await prisma.pledge.update({
@@ -148,8 +158,8 @@ export async function POST(req: NextRequest, { params }: { params: { itemId: str
 
       pixData = pix;
     } catch (mpError) {
-      // MP failure doesn't block the pledge — log and continue
-      console.error("MercadoPago error:", mpError);
+      // Payment creation failure doesn't block the pledge — log and continue
+      console.error("Asaas error:", mpError);
     }
 
     return ok({

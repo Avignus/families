@@ -16,6 +16,7 @@ model User {
   avatarFull   String   @default("")
   profileUrl   String?
   pixKey           String?  @unique
+  email            String?  @unique
   reputationScore  Int      @default(0)
   createdAt        DateTime @default(now())
 

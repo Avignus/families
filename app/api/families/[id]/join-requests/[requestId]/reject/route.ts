@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { requireSession, isApiError, ok, err } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { createNotification } from "@/lib/notifications/service";
-import { refundEntryFee } from "@/lib/mercadopago";
+import { refundPayment } from "@/lib/asaas";
 
 export async function POST(
   _req: NextRequest,
@@ -30,7 +30,7 @@ export async function POST(
   let refunded = false;
   if (membership.feePaidAt && membership.mpPaymentId && !membership.feeRefundedAt) {
     try {
-      await refundEntryFee(membership.mpPaymentId, family.entryFeeCents);
+      await refundPayment(membership.mpPaymentId, family.entryFeeCents);
       refunded = true;
     } catch (refundErr) {
       console.error("Refund error:", refundErr);

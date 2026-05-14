@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { requireSession, isApiError, ok, err } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { createNotification } from "@/lib/notifications/service";
-import { createPixPayment, ENTRY_FEE_SERVICE_RATE } from "@/lib/mercadopago";
+import { createPixPayment, ENTRY_FEE_SERVICE_RATE, ASAAS_MIN_CHARGE_CENTS } from "@/lib/asaas";
 import { getPlayerSummaries } from "@/lib/steam";
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
@@ -113,62 +113,56 @@ async function handlePost(req: NextRequest, params: { id: string }) {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? req.headers.get("origin") ?? "";
   const totalChargeCents = Math.ceil(family.entryFeeCents * (1 + ENTRY_FEE_SERVICE_RATE));
 
-  // Generate PIX before creating membership — only persist if payment was created successfully
-  let pix;
-  const tempRef = `membership-temp:${user.id}:${params.id}`;
-  try {
-    pix = await createPixPayment({
-      amountCents: totalChargeCents,
-      description: `Taxa de entrada — ${family.name}`,
-      payerSteamId: user.steamId,
-      pledgeId: tempRef,
-      notificationUrl: `${baseUrl}/api/webhooks/mercadopago`,
-    });
-  } catch (mpErr: unknown) {
-    const mpMsg = mpErr instanceof Error ? mpErr.message : JSON.stringify(mpErr);
-    console.error("MercadoPago entry fee error:", mpMsg);
-    return err("PIX_UNAVAILABLE", "Não foi possível gerar o PIX no momento. Tente novamente em alguns instantes.", 503);
+  if (totalChargeCents < ASAAS_MIN_CHARGE_CENTS) {
+    return err(
+      "ENTRY_FEE_BELOW_MINIMUM",
+      `Taxa de entrada mínima é R$ ${(Math.ceil(ASAAS_MIN_CHARGE_CENTS / (1 + ENTRY_FEE_SERVICE_RATE)) / 100).toFixed(2).replace(".", ",")}`,
+      400
+    );
   }
 
-  // PIX created — now persist the membership with payment data
+  // Create or update membership first so we have the ID for the Asaas externalReference
   const membership = existing
     ? await prisma.familyMembership.update({
         where: { id: existing.id },
-        data: {
-          status: "pending",
-          joinedAt: new Date(),
-          mpPaymentId: pix.paymentId,
-          mpStatus: pix.status,
-          mpQrCode: pix.qrCode,
-          mpQrCodeBase64: pix.qrCodeBase64,
-          mpTicketUrl: pix.ticketUrl,
-          feeChargedCents: totalChargeCents,
-        },
+        data: { status: "pending", joinedAt: new Date(), feeChargedCents: totalChargeCents },
       })
     : await prisma.familyMembership.create({
         data: {
           userId: user.id,
           familyId: params.id,
           status: "pending",
-          mpPaymentId: pix.paymentId,
-          mpStatus: pix.status,
-          mpQrCode: pix.qrCode,
-          mpQrCodeBase64: pix.qrCodeBase64,
-          mpTicketUrl: pix.ticketUrl,
           feeChargedCents: totalChargeCents,
         },
       });
 
-  // Update external_reference in MP to point to the real membership ID
-  // (best-effort, webhook uses mpPaymentId to find membership so this is optional)
-  void fetch(`https://api.mercadopago.com/v1/payments/${pix.paymentId}`, {
-    method: "PUT",
-    headers: {
-      Authorization: `Bearer ${process.env.MERCADOPAGO_ACCESS_TOKEN}`,
-      "Content-Type": "application/json",
+  // Generate PIX with the real membership ID as reference
+  let pix;
+  try {
+    pix = await createPixPayment({
+      amountCents: totalChargeCents,
+      description: `Taxa de entrada — ${family.name}`,
+      payerSteamId: user.steamId,
+      payerName: personaName,
+      externalReference: `membership:${membership.id}`,
+      notificationUrl: `${baseUrl}/api/webhooks/asaas`,
+    });
+  } catch (asaasErr: unknown) {
+    const msg = asaasErr instanceof Error ? asaasErr.message : JSON.stringify(asaasErr);
+    console.error("Asaas entry fee error:", msg);
+    return err("PIX_UNAVAILABLE", "Não foi possível gerar o PIX no momento. Tente novamente em alguns instantes.", 503);
+  }
+
+  await prisma.familyMembership.update({
+    where: { id: membership.id },
+    data: {
+      mpPaymentId: pix.paymentId,
+      mpStatus: pix.status,
+      mpQrCode: pix.qrCode,
+      mpQrCodeBase64: pix.qrCodeBase64,
+      mpTicketUrl: pix.ticketUrl,
     },
-    body: JSON.stringify({ external_reference: `membership:${membership.id}` }),
-  }).catch(() => {});
+  });
 
   return ok({
     message: "Pay the entry fee to complete your request",

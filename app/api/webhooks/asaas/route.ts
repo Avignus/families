@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getPaymentStatus, verifyWebhookSignature } from "@/lib/mercadopago";
-import { sendPixDisbursement } from "@/lib/asaas";
+import { normalizeAsaasStatus, sendPixDisbursement } from "@/lib/asaas";
 import { createNotification } from "@/lib/notifications/service";
 import { computeAndSaveReputation } from "@/lib/reputation";
 
@@ -11,50 +10,118 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null);
   if (!body) return NextResponse.json({ ok: false }, { status: 400 });
 
-  const xSignature = req.headers.get("x-signature") ?? "";
-  const xRequestId = req.headers.get("x-request-id") ?? "";
-  const dataId = String(body?.data?.id ?? "");
-
-  const hasSecret = !!process.env.MERCADOPAGO_WEBHOOK_SECRET;
-  if (hasSecret && (!xSignature || !verifyWebhookSignature({ xSignature, xRequestId, dataId }))) {
+  // Verify webhook origin
+  const token = req.headers.get("asaas-access-token") ?? "";
+  const expectedToken = process.env.ASAAS_API_KEY ?? "";
+  if (expectedToken && token !== expectedToken) {
     return NextResponse.json({ ok: false }, { status: 401 });
   }
 
-  if (body.type !== "payment" || !dataId) {
+  const paymentData = body.payment;
+  if (!paymentData?.id) return NextResponse.json({ ok: true });
+
+  const status = normalizeAsaasStatus(paymentData.status ?? "");
+  const paymentId: string = paymentData.id;
+  const externalRef: string = paymentData.externalReference ?? "";
+
+  // Route to membership or pledge handler based on externalReference prefix
+  if (externalRef.startsWith("membership:")) {
+    const membershipId = externalRef.replace("membership:", "");
+    const membership = await prisma.familyMembership.findUnique({
+      where: { id: membershipId },
+      include: {
+        family: { select: { id: true, name: true, chiefId: true, entryFeeCents: true, currency: true } },
+        user: { select: { id: true, personaName: true } },
+      },
+    });
+    if (membership) await handleMembershipPayment(membership, status);
     return NextResponse.json({ ok: true });
   }
 
-  const mpStatus = await getPaymentStatus(dataId);
-  if (!mpStatus) return NextResponse.json({ ok: true });
+  if (externalRef.startsWith("pledge:")) {
+    const pledgeId = externalRef.replace("pledge:", "");
+    await handlePledgePayment(pledgeId, paymentId, status);
+  }
 
-  // Check if this is a membership entry fee payment
-  const membership = await prisma.familyMembership.findUnique({
-    where: { mpPaymentId: dataId },
-    include: {
-      family: { select: { id: true, name: true, chiefId: true, entryFeeCents: true, currency: true } },
-      user: { select: { id: true, personaName: true } },
-    },
+  return NextResponse.json({ ok: true });
+}
+
+type MembershipWithFamily = {
+  id: string;
+  userId: string;
+  familyId: string;
+  mpStatus: string | null;
+  feePaidAt: Date | null;
+  feeChargedCents: number | null;
+  family: { id: string; name: string; chiefId: string; entryFeeCents: number; currency: string };
+  user: { id: string; personaName: string };
+};
+
+async function handleMembershipPayment(membership: MembershipWithFamily, status: string) {
+  await prisma.familyMembership.update({
+    where: { id: membership.id },
+    data: { mpStatus: status },
   });
 
-  if (membership) {
-    await handleMembershipPayment(membership, mpStatus);
-    return NextResponse.json({ ok: true });
+  if (status === "approved" && !membership.feePaidAt) {
+    await prisma.$transaction(async (tx) => {
+      await tx.familyMembership.update({
+        where: { id: membership.id },
+        data: { status: "active", feePaidAt: new Date(), joinedAt: new Date() },
+      });
+      await createNotification(tx, {
+        recipientUserId: membership.family.chiefId,
+        type: "JOIN_FEE_PAID",
+        payload: {
+          familyId: membership.family.id,
+          familyName: membership.family.name,
+          memberId: membership.userId,
+          personaName: membership.user.personaName,
+        },
+      });
+      await createNotification(tx, {
+        recipientUserId: membership.userId,
+        type: "JOIN_APPROVED",
+        payload: { familyId: membership.family.id, familyName: membership.family.name },
+      });
+    });
+
+    // Disburse entry fee to chief
+    const chief = await prisma.user.findUnique({
+      where: { id: membership.family.chiefId },
+      select: { pixKey: true },
+    });
+    if (chief?.pixKey && membership.family.entryFeeCents > 0) {
+      await sendPixDisbursement({
+        amountCents: membership.family.entryFeeCents,
+        pixKey: chief.pixKey,
+        description: `Families — Taxa de entrada em ${membership.family.name}`,
+      }).catch((err) => console.error("Entry fee disbursement error:", err));
+    }
   }
 
+  if (status === "rejected" || status === "cancelled") {
+    await prisma.familyMembership.update({
+      where: { id: membership.id },
+      data: { status: "rejected" },
+    });
+  }
+}
+
+async function handlePledgePayment(pledgeId: string, paymentId: string, status: string) {
   const pledge = await prisma.pledge.findUnique({
-    where: { mpPaymentId: dataId },
+    where: { id: pledgeId },
     include: {
       wishlistItem: { include: { family: true, owner: true } },
       pledger: true,
     },
   });
-
-  if (!pledge) return NextResponse.json({ ok: true });
+  if (!pledge) return;
 
   await prisma.$transaction(async (tx) => {
-    const updates: Record<string, unknown> = { mpStatus };
+    const updates: Record<string, unknown> = { mpStatus: status };
 
-    if (mpStatus === "approved" && !pledge.paidAt) {
+    if (status === "approved" && !pledge.paidAt) {
       updates.paidAt = new Date();
 
       if (pledge.wishlistItem.ownerUserId && pledge.wishlistItem.ownerUserId !== pledge.pledgerUserId) {
@@ -84,7 +151,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    if (mpStatus === "rejected" || mpStatus === "cancelled") {
+    if (status === "rejected" || status === "cancelled") {
       updates.status = "withdrawn";
       if (pledge.wishlistItem.status === "funded") {
         await tx.wishlistItem.update({
@@ -97,79 +164,9 @@ export async function POST(req: NextRequest) {
     await tx.pledge.update({ where: { id: pledge.id }, data: updates });
   });
 
-  // After marking as approved, recompute reputation and check for disbursement
-  if (mpStatus === "approved") {
+  if (status === "approved") {
     await computeAndSaveReputation(pledge.pledgerUserId).catch(() => {});
     await maybeDisburseFunds(pledge.wishlistItemId);
-  }
-
-  return NextResponse.json({ ok: true });
-}
-
-type MembershipWithFamily = {
-  id: string;
-  userId: string;
-  familyId: string;
-  mpStatus: string | null;
-  feePaidAt: Date | null;
-  feeChargedCents: number | null;
-  family: { id: string; name: string; chiefId: string; entryFeeCents: number; currency: string };
-  user: { id: string; personaName: string };
-};
-
-async function handleMembershipPayment(membership: MembershipWithFamily, mpStatus: string) {
-  await prisma.familyMembership.update({
-    where: { id: membership.id },
-    data: { mpStatus },
-  });
-
-  if (mpStatus === "approved" && !membership.feePaidAt) {
-    await prisma.$transaction(async (tx) => {
-      await tx.familyMembership.update({
-        where: { id: membership.id },
-        data: { status: "active", feePaidAt: new Date(), joinedAt: new Date() },
-      });
-      await createNotification(tx, {
-        recipientUserId: membership.family.chiefId,
-        type: "JOIN_FEE_PAID",
-        payload: {
-          familyId: membership.family.id,
-          familyName: membership.family.name,
-          memberId: membership.userId,
-          personaName: membership.user.personaName,
-        },
-      });
-      await createNotification(tx, {
-        recipientUserId: membership.userId,
-        type: "JOIN_APPROVED",
-        payload: { familyId: membership.family.id, familyName: membership.family.name },
-      });
-    });
-
-    // Disburse entry fee to chief (base fee only, platform keeps service fee)
-    const chief = await prisma.user.findUnique({
-      where: { id: membership.family.chiefId },
-      select: { pixKey: true, personaName: true },
-    });
-
-    if (chief?.pixKey && membership.family.entryFeeCents > 0) {
-      try {
-        await sendPixDisbursement({
-          amountCents: membership.family.entryFeeCents,
-          pixKey: chief.pixKey,
-          description: `Families — Taxa de entrada em ${membership.family.name}`,
-        });
-      } catch (err) {
-        console.error("Entry fee disbursement error:", err);
-      }
-    }
-  }
-
-  if (mpStatus === "rejected" || mpStatus === "cancelled") {
-    await prisma.familyMembership.update({
-      where: { id: membership.id },
-      data: { status: "rejected" },
-    });
   }
 }
 
@@ -182,7 +179,6 @@ async function maybeDisburseFunds(wishlistItemId: string) {
   if (!item || item.disbursedAt || item.status !== "funded") return;
   if (!item.ownerUserId || !item.owner) return;
 
-  // Check that every active pledge is paid
   const unpaid = await prisma.pledge.count({
     where: { wishlistItemId, status: "active", paidAt: null },
   });
@@ -200,7 +196,6 @@ async function maybeDisburseFunds(wishlistItemId: string) {
   const gameName = steamData?.name ?? `App #${item.steamAppId}`;
 
   if (!owner.pixKey) {
-    // Notify owner to register a PIX key
     await prisma.$transaction(async (tx) => {
       await createNotification(tx, {
         recipientUserId: owner.id,
@@ -229,7 +224,6 @@ async function maybeDisburseFunds(wishlistItemId: string) {
         where: { id: wishlistItemId },
         data: { disbursedAt: new Date(), disbursementMpId: transferId },
       });
-
       await createNotification(tx, {
         recipientUserId: owner.id,
         type: "DISBURSEMENT_SENT",
