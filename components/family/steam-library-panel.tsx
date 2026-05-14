@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Library, Heart, Users, Gift, Lock, ChevronDown, ChevronUp, AlertTriangle } from "lucide-react";
+import { Library, Heart, Users, Gift, Lock, AlertTriangle } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -87,11 +87,13 @@ function WishesTab({
   memberColors: Map<string, string>;
   memberMap: Map<string, MemberSteamData>;
 }) {
-  const [showSingles, setShowSingles] = useState(false);
+  const [filterUserId, setFilterUserId] = useState<string | null>(null);
+  const [filterIntersections, setFilterIntersections] = useState(false);
+  const [showAll, setShowAll] = useState(false);
+  const PAGE = 60;
 
-  const { crossovers, sharedOnly, singles } = useMemo(() => {
+  const allEntries = useMemo(() => {
     const map = new Map<number, UnifiedEntry>();
-
     for (const member of members) {
       if (!member.steamWishlist) continue;
       for (const game of member.steamWishlist) {
@@ -108,17 +110,21 @@ function WishesTab({
         }
       }
     }
-
-    const all = Array.from(map.values());
-    return {
-      crossovers: all.filter((e) => e.wantedBy.length >= 2 || (e.wantedBy.length >= 1 && e.isShared)),
-      sharedOnly: all.filter((e) => e.isShared && e.wantedBy.length === 0),
-      singles: all.filter((e) => !e.isShared && e.wantedBy.length === 1),
-    };
+    // Intersections first, then singles
+    return Array.from(map.values()).sort((a, b) => b.wantedBy.length - a.wantedBy.length);
   }, [members, sharedWishlistAppIds]);
 
+  const filtered = useMemo(() => {
+    let result = allEntries;
+    if (filterIntersections) result = result.filter((e) => e.wantedBy.length >= 2);
+    if (filterUserId) result = result.filter((e) => e.wantedBy.includes(filterUserId));
+    return result;
+  }, [allEntries, filterUserId, filterIntersections]);
+
+  const visible = showAll ? filtered : filtered.slice(0, PAGE);
+  const membersWithWishlist = members.filter((m) => m.steamWishlist !== null);
   const privateMembers = members.filter((m) => m.steamWishlist === null);
-  const emptyWishlistMembers = members.filter((m) => m.steamWishlist?.length === 0);
+  const intersectionCount = allEntries.filter((e) => e.wantedBy.length >= 2).length;
 
   if (members.every((m) => m.steamWishlist === null)) {
     return (
@@ -129,8 +135,14 @@ function WishesTab({
     );
   }
 
+  function setFilter(userId: string | null, intersections: boolean) {
+    setFilterUserId(userId);
+    setFilterIntersections(intersections);
+    setShowAll(false);
+  }
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {privateMembers.length > 0 && (
         <p className="text-xs text-muted-foreground flex items-center gap-1.5">
           <Lock className="h-3 w-3" />
@@ -138,77 +150,83 @@ function WishesTab({
         </p>
       )}
 
-      {/* Crossovers + shared */}
-      {crossovers.length > 0 && (
-        <section>
-          <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
-            Destaques
-          </h4>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {crossovers.map((entry) => (
-              <WishEntry
-                key={entry.appId}
-                entry={entry}
-                currentUserId={currentUserId}
-                memberColors={memberColors}
-                memberMap={memberMap}
-              />
-            ))}
-          </div>
-        </section>
-      )}
+      {/* Filter bar */}
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          onClick={() => setFilter(null, false)}
+          className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
+            !filterUserId && !filterIntersections
+              ? "bg-primary text-primary-foreground"
+              : "bg-secondary text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          Todos ({allEntries.length})
+        </button>
 
-      {/* Shared-only (in app wishlist but no one has on Steam wishlist) */}
-      {sharedOnly.length > 0 && (
-        <section>
-          <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
-            Lista Compartilhada sem correspondência Steam
-          </h4>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {sharedOnly.map((entry) => (
-              <WishEntry
-                key={entry.appId}
-                entry={entry}
-                currentUserId={currentUserId}
-                memberColors={memberColors}
-                memberMap={memberMap}
-              />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Singles — collapsed by default */}
-      {singles.length > 0 && (
-        <section>
+        {intersectionCount > 0 && (
           <button
-            onClick={() => setShowSingles((v) => !v)}
-            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            onClick={() => setFilter(null, !filterIntersections)}
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-colors border ${
+              filterIntersections
+                ? "bg-sky-600/20 text-sky-400 border-sky-600/40"
+                : "border-transparent bg-secondary text-muted-foreground hover:text-foreground"
+            }`}
           >
-            {showSingles ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-            {showSingles ? "Ocultar" : "Mostrar"} desejos individuais ({singles.length})
+            <Users className="h-3 w-3" />
+            Interseções ({intersectionCount})
           </button>
-          {showSingles && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mt-3">
-              {singles.map((entry) => (
-                <WishEntry
-                  key={entry.appId}
-                  entry={entry}
-                  currentUserId={currentUserId}
-                  memberColors={memberColors}
-                  memberMap={memberMap}
-                />
-              ))}
-            </div>
-          )}
-        </section>
-      )}
+        )}
 
-      {crossovers.length === 0 && sharedOnly.length === 0 && singles.length === 0 && (
+        {membersWithWishlist.map((m) => {
+          const count = m.steamWishlist?.length ?? 0;
+          const color = memberColors.get(m.userId) ?? "#888";
+          const active = filterUserId === m.userId;
+          return (
+            <button
+              key={m.userId}
+              onClick={() => setFilter(active ? null : m.userId, false)}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-colors"
+              style={{
+                background: active ? color + "33" : undefined,
+                border: `1px solid ${active ? color : "transparent"}`,
+                color: active ? color : undefined,
+                backgroundColor: active ? undefined : "hsl(var(--secondary))",
+              }}
+            >
+              <MemberAvatar member={m} color={color} size="xs" />
+              {m.userId === currentUserId ? "Você" : m.personaName} ({count})
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Grid */}
+      {visible.length > 0 ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {visible.map((entry) => (
+            <WishEntry
+              key={entry.appId}
+              entry={entry}
+              currentUserId={currentUserId}
+              memberColors={memberColors}
+              memberMap={memberMap}
+            />
+          ))}
+        </div>
+      ) : (
         <div className="flex flex-col items-center gap-2 py-10 text-muted-foreground text-sm">
           <Heart className="h-8 w-8 opacity-30" />
-          <p>Nenhum desejo encontrado ainda.</p>
+          <p>Nenhum desejo encontrado.</p>
         </div>
+      )}
+
+      {filtered.length > PAGE && !showAll && (
+        <button
+          onClick={() => setShowAll(true)}
+          className="w-full py-2 text-xs text-muted-foreground hover:text-foreground transition-colors border border-border/40 rounded-lg hover:border-border"
+        >
+          Mostrar mais {filtered.length - PAGE} desejos
+        </button>
       )}
     </div>
   );
