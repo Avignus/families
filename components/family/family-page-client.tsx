@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -12,8 +12,9 @@ import { WishlistItemCard } from "@/components/wishlist/wishlist-item-card";
 import { GameSearchModal } from "@/components/wishlist/game-search-modal";
 import { VotesPanel } from "@/components/votes/votes-panel";
 import { SteamLibraryPanel } from "@/components/family/steam-library-panel";
-import { Plus, ChevronDown, ChevronUp, Settings, Copy, LogIn, Gamepad2, Check, X } from "lucide-react";
+import { Plus, ChevronDown, ChevronUp, Settings, Copy, LogIn, Gamepad2, Check, X, Camera } from "lucide-react";
 import { MonthlyBudgetForm } from "@/components/family/monthly-budget-form";
+import { FamilyCoverArt } from "@/components/family-cover-art";
 import { getMemberColor, formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
 import Link from "next/link";
@@ -36,7 +37,7 @@ type WishlistItem = {
   owner: Member | null;
   totalPledgedCents: number;
   percentFunded: number;
-  steamData: { appId: number; name: string; headerImage: string; priceCents: number; currency: string; isFree: boolean } | null;
+  steamData: { appId: number; name: string; headerImage: string; priceCents: number; currency: string; isFree: boolean; comingSoon?: boolean; releaseDate?: string } | null;
   pledges: Array<{
     id: string;
     pledgerUserId: string;
@@ -59,6 +60,7 @@ type FamilyData = {
   isChief: boolean;
   currentUserId: string;
   monthlyBudgetCents: number;
+  coverImageUrl: string | null;
   memberships: Array<{ user: Member }>;
   pendingMemberships: PendingMember[];
   wishlistItems: WishlistItem[];
@@ -96,6 +98,23 @@ export function FamilyPageClient({ familyId }: { familyId: string }) {
     family?.memberships.map((m, i) => [m.user.id, getMemberColor(i)]) ?? []
   );
 
+  // Shares the same cache key as SteamLibraryPanel — no extra request
+  const { data: steamLibrary } = useQuery<{ data: { members: Array<{ userId: string; ownedGames: Array<{ appId: number }> | null }> } }>({
+    queryKey: ["steam-library", familyId],
+    queryFn: async () => {
+      const r = await fetch(`/api/families/${familyId}/steam-library`);
+      if (!r.ok) throw new Error("Failed");
+      return r.json();
+    },
+    staleTime: 5 * 60_000,
+    enabled: !!family,
+  });
+
+  const userOwnedAppIds = useMemo(() => {
+    const member = steamLibrary?.data?.members?.find((m) => m.userId === userId);
+    return new Set(member?.ownedGames?.map((g) => g.appId) ?? []);
+  }, [steamLibrary, userId]);
+
   const handleAddGame = async (result: { appId: number; name: string }) => {
     setAddGameOpen(false);
     const res = await fetch(`/api/families/${familyId}/wishlist`, {
@@ -112,7 +131,13 @@ export function FamilyPageClient({ familyId }: { familyId: string }) {
       }
       return;
     }
-    toast.success(`${result.name} adicionado à lista!`);
+    toast.success("Adicionado à lista!", {
+      description: result.name,
+      action: {
+        label: "Ver lista →",
+        onClick: () => document.getElementById("family-wishlist")?.scrollIntoView({ behavior: "smooth", block: "start" }),
+      },
+    });
     refetch();
   };
 
@@ -168,11 +193,52 @@ export function FamilyPageClient({ familyId }: { familyId: string }) {
 
   return (
     <div className="container py-8 space-y-6">
-      <Card>
-        <CardHeader className="pb-4">
-          <div className="flex items-start justify-between flex-wrap gap-3">
+      <Card className="overflow-hidden">
+        {/* Cover art banner */}
+        <div className="relative h-44 group/banner">
+          <div className="absolute inset-0">
+            {family.coverImageUrl ? (
+              <img
+                src={family.coverImageUrl}
+                alt={family.name}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <FamilyCoverArt familyId={familyId} />
+            )}
+          </div>
+          <div className="absolute inset-0 bg-gradient-to-t from-card via-card/50 to-transparent" />
+
+          {/* Chief: change cover button (appears on hover) */}
+          {family.isChief && (
+            <label className="absolute top-3 right-3 cursor-pointer opacity-0 group-hover/banner:opacity-100 transition-opacity">
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                className="sr-only"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  const form = new FormData();
+                  form.append("file", file);
+                  const res = await fetch(`/api/families/${familyId}/cover`, { method: "POST", body: form });
+                  const data = await res.json();
+                  if (!res.ok) { toast.error(data.error?.message ?? "Erro ao enviar imagem"); return; }
+                  toast.success("Capa atualizada!");
+                  refetch();
+                }}
+              />
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-black/60 text-white backdrop-blur-sm hover:bg-black/75 transition-colors">
+                <Camera className="h-3.5 w-3.5" /> Alterar capa
+              </span>
+            </label>
+          )}
+
+          <div className="absolute bottom-0 left-0 right-0 px-6 pb-4 flex items-end justify-between gap-3">
             <div>
-              <CardTitle className="text-2xl">{family.name}</CardTitle>
+              <h1 className="text-2xl font-bold leading-tight" style={{ fontFamily: "var(--font-space-grotesk)" }}>
+                {family.name}
+              </h1>
               <div className="flex items-center gap-2 mt-1">
                 <span className="text-xs text-muted-foreground font-mono">{familyId}</span>
                 <button onClick={copyId} className="text-muted-foreground hover:text-foreground">
@@ -182,13 +248,13 @@ export function FamilyPageClient({ familyId }: { familyId: string }) {
             </div>
             {family.isChief && (
               <Link href={`/families/${familyId}/admin`}>
-                <Button size="sm" variant="outline">
+                <Button size="sm" variant="outline" className="shrink-0">
                   <Settings className="h-4 w-4 mr-1" /> Administrar
                 </Button>
               </Link>
             )}
           </div>
-        </CardHeader>
+        </div>
 
         <CardContent className="space-y-6">
           {/* Members strip */}
@@ -231,7 +297,7 @@ export function FamilyPageClient({ familyId }: { familyId: string }) {
           <Separator />
 
           {/* Shared family wishlist */}
-          <div>
+          <div id="family-wishlist">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold">Lista de Desejos da Família</h3>
               <Button size="sm" variant="outline" onClick={() => setAddGameOpen(true)}>
@@ -258,6 +324,7 @@ export function FamilyPageClient({ familyId }: { familyId: string }) {
                     currentUserId={userId}
                     memberColors={memberColors}
                     onRefresh={() => refetch()}
+                    ownedByCurrentUser={userOwnedAppIds.has(item.steamAppId)}
                   />
                 ))}
               </div>
@@ -332,7 +399,8 @@ export function FamilyPageClient({ familyId }: { familyId: string }) {
                   familyId={familyId}
                   currentUserId={userId}
                   memberColors={memberColors}
-                  sharedWishlistAppIds={new Set(family.wishlistItems.map((i) => i.steamAppId))}
+                  sharedWishlistItems={family.wishlistItems}
+                  onRefresh={refetch}
                 />
               </div>
             )}

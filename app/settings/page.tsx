@@ -4,12 +4,13 @@ import { useEffect, useState, useDeferredValue } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { KeyRound, CheckCircle2, Loader2, Star, XCircle, Mail, Trash2 } from "lucide-react";
+import { KeyRound, CheckCircle2, Loader2, Star, XCircle, Mail, Trash2, Wallet } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { ReputationBadge } from "@/components/reputation-badge";
 import { getTier, TIER_LABELS } from "@/lib/reputation";
+import { formatCurrency } from "@/lib/utils";
 import { validatePixKey } from "@/lib/pix-key";
 import { toast } from "sonner";
 
@@ -19,6 +20,7 @@ export default function SettingsPage() {
   const [pixKey, setPixKey] = useState("");
   const [email, setEmail] = useState("");
   const [reputationScore, setReputationScore] = useState<number | null>(null);
+  const [creditsCents, setCreditsCents] = useState<number | null>(null);
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(false);
   const [emailSaved, setEmailSaved] = useState(false);
@@ -39,6 +41,7 @@ export default function SettingsPage() {
         setPixKey(d.data?.pixKey ?? "");
         setEmail(d.data?.email ?? "");
         setReputationScore(d.data?.reputationScore ?? 0);
+        setCreditsCents(d.data?.creditsCents ?? 0);
         setInitialLoading(false);
       });
   }, []);
@@ -132,6 +135,36 @@ export default function SettingsPage() {
               {reputationScore === 0
                 ? "Faça sua primeira contribuição para começar a construir sua reputação."
                 : `Tier: ${TIER_LABELS[getTier(reputationScore)]}`}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {creditsCents !== null && (
+        <Card className="mb-4">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Wallet className="h-4 w-4 text-primary" />
+              Créditos na plataforma
+            </CardTitle>
+            <CardDescription>
+              Gerados quando um item da wishlist é cancelado. Usados automaticamente na sua próxima contribuição.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-baseline gap-2">
+              <span
+                className="text-2xl font-bold tabular-nums"
+                style={{ color: creditsCents > 0 ? "hsl(258 82% 72%)" : undefined }}
+              >
+                {formatCurrency(creditsCents, "BRL")}
+              </span>
+              {creditsCents > 0 && (
+                <span className="text-xs text-muted-foreground">disponível para contribuições</span>
+              )}
+              {creditsCents === 0 && (
+                <span className="text-xs text-muted-foreground">sem créditos no momento</span>
+              )}
             </div>
           </CardContent>
         </Card>

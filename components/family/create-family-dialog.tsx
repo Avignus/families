@@ -35,11 +35,12 @@ export function CreateFamilyDialog() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: name.trim(), currency: "BRL" }),
       });
-      const data = await res.json();
       if (!res.ok) {
-        toast.error(data.error?.message ?? "Erro ao criar família");
+        const data = await res.json().catch(() => null);
+        toast.error(data?.error?.message ?? "Erro ao criar família");
         return;
       }
+      const data = await res.json();
       toast.success(`Família "${name}" criada!`);
       setOpen(false);
       setName("");

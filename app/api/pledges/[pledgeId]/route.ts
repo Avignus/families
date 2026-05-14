@@ -16,14 +16,19 @@ export async function DELETE(_req: NextRequest, { params }: { params: { pledgeId
       wishlistItem: {
         include: { family: true },
       },
+      pledger: { select: { id: true, personaName: true } },
     },
   });
 
   if (!pledge) return err("NOT_FOUND", "Pledge not found", 404);
-  if (pledge.pledgerUserId !== user.id) return err("FORBIDDEN", "Only the pledger can withdraw their pledge", 403);
+
+  const isPledger = pledge.pledgerUserId === user.id;
+  const isItemOwner = pledge.wishlistItem.ownerUserId === user.id;
+
+  if (!isPledger && !isItemOwner) return err("FORBIDDEN", "Only the pledger or item owner can remove this pledge", 403);
   if (pledge.status !== "active") return err("INVALID_STATE", "Pledge is not active");
-  if (pledge.wishlistItem.status === "purchased") return err("INVALID_STATE", "Cannot withdraw pledge for a purchased item", 400);
-  if (pledge.wishlistItem.disbursedAt) return err("INVALID_STATE", "Cannot withdraw pledge after funds have been disbursed to the owner", 400);
+  if (pledge.wishlistItem.status === "purchased") return err("INVALID_STATE", "Cannot remove pledge for a purchased item", 400);
+  if (pledge.wishlistItem.disbursedAt) return err("INVALID_STATE", "Cannot remove pledge after funds have been disbursed to the owner", 400);
 
   const steamData = await getAppDetails(pledge.wishlistItem.steamAppId);
   const gameName = steamData?.name ?? `App #${pledge.wishlistItem.steamAppId}`;
@@ -41,39 +46,66 @@ export async function DELETE(_req: NextRequest, { params }: { params: { pledgeId
       });
     }
 
-    // Return credits that were used for this pledge
-    if (pledge.creditsCentsUsed > 0) {
-      await creditWallet(tx, user.id, pledge.creditsCentsUsed, "pledge_withdrawn", pledge.id);
-    }
-
-    if (pledge.wishlistItem.ownerUserId) {
+    if (isPledger) {
+      // Voluntary withdrawal: return credits, keep service fee
+      if (pledge.creditsCentsUsed > 0) {
+        await creditWallet(tx, pledge.pledgerUserId, pledge.creditsCentsUsed, "pledge_withdrawn", pledge.id);
+      }
+      // Notify item owner
+      if (pledge.wishlistItem.ownerUserId) {
+        await createNotification(tx, {
+          recipientUserId: pledge.wishlistItem.ownerUserId,
+          type: "PLEDGE_WITHDRAWN",
+          payload: {
+            pledgeId: pledge.id,
+            itemId: pledge.wishlistItemId,
+            familyId: pledge.wishlistItem.familyId,
+            familyName: pledge.wishlistItem.family.name,
+            ownerUserId: pledge.wishlistItem.ownerUserId,
+            gameName,
+            pledgerId: user.id,
+            personaName: user.personaName,
+            amountCents: pledge.amountCents,
+            currency: pledge.wishlistItem.currency,
+          },
+        });
+      }
+    } else {
+      // Owner-initiated removal: full refund to pledger wallet (money stays on platform)
+      const creditAmount = (pledge.paidAt ? (pledge.mpAmountCents ?? 0) : 0) + pledge.creditsCentsUsed;
+      if (creditAmount > 0) {
+        await creditWallet(tx, pledge.pledgerUserId, creditAmount, "pledge_removed_by_owner", pledge.id);
+      }
+      // Notify the pledger
       await createNotification(tx, {
-        recipientUserId: pledge.wishlistItem.ownerUserId,
+        recipientUserId: pledge.pledgerUserId,
         type: "PLEDGE_WITHDRAWN",
         payload: {
           pledgeId: pledge.id,
           itemId: pledge.wishlistItemId,
           familyId: pledge.wishlistItem.familyId,
           familyName: pledge.wishlistItem.family.name,
-          ownerUserId: pledge.wishlistItem.ownerUserId,
+          ownerUserId: pledge.wishlistItem.ownerUserId ?? "",
           gameName,
-          pledgerId: user.id,
-          personaName: user.personaName,
+          pledgerId: pledge.pledgerUserId,
+          personaName: pledge.pledger.personaName,
           amountCents: pledge.amountCents,
           currency: pledge.wishlistItem.currency,
+          removedByOwner: true,
         },
       });
     }
   });
 
-  // Refund PIX portion (amountCents - credits) if payment was confirmed; keep service fee
-  const pixPortion = pledge.amountCents - pledge.creditsCentsUsed;
-  if (pledge.paidAt && pledge.mpPaymentId && pixPortion > 0) {
-    try {
-      await refundPayment(pledge.mpPaymentId, pixPortion);
-    } catch (e) {
-      console.error("Refund error on pledge withdrawal:", e);
-      // Withdrawal succeeds regardless — refund failure is handled manually
+  // PIX bank refund only for voluntary pledger withdrawal (keep service fee)
+  if (isPledger) {
+    const pixPortion = pledge.amountCents - pledge.creditsCentsUsed;
+    if (pledge.paidAt && pledge.mpPaymentId && pixPortion > 0) {
+      try {
+        await refundPayment(pledge.mpPaymentId, pixPortion);
+      } catch (e) {
+        console.error("Refund error on pledge withdrawal:", e);
+      }
     }
   }
 

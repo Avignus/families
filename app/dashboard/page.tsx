@@ -3,10 +3,11 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { Users, AlertTriangle, Gamepad2, Heart } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CreateFamilyDialog } from "@/components/family/create-family-dialog";
 import { JoinFamilyDialog } from "@/components/family/join-family-dialog";
+import { FamilyCoverArt } from "@/components/family-cover-art";
 
 export const dynamic = "force-dynamic";
 
@@ -116,11 +117,22 @@ export default async function DashboardPage() {
             const pendingCount = pendingMap.get(family.id) ?? 0;
             return (
               <Link key={family.id} href={`/families/${family.id}`}>
-                <Card className={`hover:border-primary/50 transition-colors cursor-pointer h-full ${pendingCount > 0 ? "border-amber-500/40" : ""}`}>
-                  <CardHeader className="pb-2">
-                    <div className="flex items-start justify-between">
-                      <CardTitle className="text-lg">{family.name}</CardTitle>
-                      <div className="flex items-center gap-1.5">
+                <Card className={`hover:border-primary/50 transition-all cursor-pointer h-full overflow-hidden group ${pendingCount > 0 ? "border-amber-500/40" : ""}`}>
+                  {/* Cover art banner */}
+                  <div className="relative h-28 overflow-hidden">
+                    <div className="absolute inset-0 transition-transform duration-300 group-hover:scale-105">
+                      {family.coverImageUrl ? (
+                        <img src={family.coverImageUrl} alt={family.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <FamilyCoverArt familyId={family.id} />
+                      )}
+                    </div>
+                    <div className="absolute inset-0 bg-gradient-to-t from-card via-card/50 to-transparent" />
+                    <div className="absolute bottom-0 left-0 right-0 px-4 pb-3 flex items-end justify-between gap-2">
+                      <CardTitle className="text-base leading-tight" style={{ fontFamily: "var(--font-space-grotesk)" }}>
+                        {family.name}
+                      </CardTitle>
+                      <div className="flex items-center gap-1.5 shrink-0">
                         {pendingCount > 0 && (
                           <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30">
                             {pendingCount} pendente{pendingCount > 1 ? "s" : ""}
@@ -131,9 +143,9 @@ export default async function DashboardPage() {
                         )}
                       </div>
                     </div>
-                  </CardHeader>
-                  <CardContent className="space-y-2">
-                    <div className="flex gap-4 text-sm text-muted-foreground">
+                  </div>
+                  <CardContent className="pt-3 pb-4 space-y-1.5">
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
                       <span className="flex items-center gap-1">
                         <Users className="h-3.5 w-3.5" />
                         {family._count.memberships} membro{family._count.memberships !== 1 ? "s" : ""}
@@ -148,9 +160,6 @@ export default async function DashboardPage() {
                           {wishlistCount} na lista
                         </span>
                       )}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      Moeda: {family.currency}
                     </div>
                   </CardContent>
                 </Card>

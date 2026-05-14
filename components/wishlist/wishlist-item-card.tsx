@@ -5,7 +5,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { formatCurrency, getMemberColor } from "@/lib/utils";
 import { PledgeModal } from "./pledge-modal";
-import { ShoppingCart, Minus, Sparkles, RefreshCw, Clock, PackageOpen, CheckCircle2 } from "lucide-react";
+import { ShoppingCart, Minus, X, Sparkles, RefreshCw, Clock, PackageOpen, CheckCircle2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 type Pledger = {
@@ -56,6 +56,8 @@ type Props = {
 
 export function WishlistItemCard({ item, currentUserId, memberColors, onRefresh, ownedByCurrentUser = false }: Props) {
   const [pledgeOpen, setPledgeOpen] = useState(false);
+  const [removeConfirm, setRemoveConfirm] = useState(false);
+  const [removing, setRemoving] = useState(false);
 
   const isOwner = item.ownerUserId === currentUserId;
   const remaining = item.targetPriceCents - item.totalPledgedCents;
@@ -93,6 +95,28 @@ export function WishlistItemCard({ item, currentUserId, memberColors, onRefresh,
     if (!res.ok) { toast.error(data.error?.message ?? "Erro"); return; }
     toast.success("Contribuição cancelada");
     onRefresh();
+  };
+
+  const handleRemovePledge = async (pledgeId: string) => {
+    const res = await fetch(`/api/pledges/${pledgeId}`, { method: "DELETE" });
+    const data = await res.json();
+    if (!res.ok) { toast.error(data.error?.message ?? "Erro"); return; }
+    toast.success("Contribuição removida");
+    onRefresh();
+  };
+
+  const handleRemoveItem = async () => {
+    setRemoving(true);
+    try {
+      const res = await fetch(`/api/wishlist/${item.id}`, { method: "DELETE" });
+      const data = await res.json();
+      if (!res.ok) { toast.error(data.error?.message ?? "Erro ao remover"); return; }
+      toast.success(`${gameName} removido da lista`);
+      onRefresh();
+    } finally {
+      setRemoving(false);
+      setRemoveConfirm(false);
+    }
   };
 
   return (
@@ -251,9 +275,18 @@ export function WishlistItemCard({ item, currentUserId, memberColors, onRefresh,
                         <button
                           onClick={() => handleWithdrawPledge(pledge.id)}
                           className="text-muted-foreground/50 hover:text-destructive transition-colors ml-0.5"
-                          title="Cancelar contribuição"
+                          title="Cancelar minha contribuição"
                         >
                           <Minus className="h-3 w-3" />
+                        </button>
+                      )}
+                      {!isMyPledge && isOwner && (item.status === "open" || item.status === "funded") && (
+                        <button
+                          onClick={() => handleRemovePledge(pledge.id)}
+                          className="text-muted-foreground/50 hover:text-destructive transition-colors ml-0.5"
+                          title="Remover contribuição"
+                        >
+                          <X className="h-3 w-3" />
                         </button>
                       )}
                     </div>
@@ -303,6 +336,33 @@ export function WishlistItemCard({ item, currentUserId, memberColors, onRefresh,
               <ShoppingCart className="h-3 w-3 mr-1" />
               Marcar como Comprado
             </Button>
+          )}
+          {isOwner && !isPurchased && (
+            removeConfirm ? (
+              <div className="flex gap-1">
+                <button
+                  onClick={handleRemoveItem}
+                  disabled={removing}
+                  className="h-8 px-2.5 rounded-md text-xs font-semibold bg-destructive/20 hover:bg-destructive/30 text-destructive border border-destructive/30 transition-colors"
+                >
+                  {removing ? "…" : "Confirmar"}
+                </button>
+                <button
+                  onClick={() => setRemoveConfirm(false)}
+                  className="h-8 px-2 rounded-md text-xs text-muted-foreground hover:text-foreground border border-border/40 hover:border-border transition-colors"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setRemoveConfirm(true)}
+                className="h-8 w-8 rounded-md flex items-center justify-center text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 border border-transparent hover:border-destructive/20 transition-colors"
+                title="Remover da lista"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            )
           )}
         </div>
       </div>

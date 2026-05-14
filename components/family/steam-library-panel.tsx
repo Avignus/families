@@ -4,12 +4,14 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Library, Heart, Users, Gift, Lock, AlertTriangle } from "lucide-react";
+import { Library, Heart, Users, Gift, Lock, AlertTriangle, Plus, Clock, CheckCircle2 } from "lucide-react";
+import { PledgeModal } from "@/components/wishlist/pledge-modal";
+import { toast } from "sonner";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type OwnedGame = { appId: number; name: string; playtimeMinutes: number };
-type WishlistGame = { appId: number; name: string };
+type WishlistGame = { appId: number; name: string; comingSoon: boolean; releaseDate: string; isFree: boolean };
 
 type MemberSteamData = {
   userId: string;
@@ -20,12 +22,21 @@ type MemberSteamData = {
   steamWishlist: WishlistGame[] | null;
 };
 
+type SharedWishlistItem = {
+  id: string;
+  steamAppId: number;
+  status: string;
+  targetPriceCents: number;
+  totalPledgedCents: number;
+  currency: string;
+};
+
 type Props = {
   familyId: string;
   currentUserId: string;
   memberColors: Map<string, string>;
-  /** appIds already tracked in the family shared wishlist */
-  sharedWishlistAppIds: Set<number>;
+  sharedWishlistItems: SharedWishlistItem[];
+  onRefresh: () => void;
 };
 
 type Tab = "wishes" | "library";
@@ -70,27 +81,40 @@ function MemberAvatar({
 type UnifiedEntry = {
   appId: number;
   name: string;
-  wantedBy: string[]; // userIds who have it on Steam wishlist
-  isShared: boolean;  // in family shared wishlist
+  wantedBy: string[];
+  isShared: boolean;
+  comingSoon: boolean;
+  releaseDate: string;
+  isFree: boolean;
+  ownedByCurrentUser: boolean;
 };
 
 function WishesTab({
   members,
-  sharedWishlistAppIds,
+  sharedWishlistMap,
   currentUserId,
   memberColors,
   memberMap,
+  familyId,
+  onRefresh,
 }: {
   members: MemberSteamData[];
-  sharedWishlistAppIds: Set<number>;
+  sharedWishlistMap: Map<number, SharedWishlistItem>;
   currentUserId: string;
   memberColors: Map<string, string>;
   memberMap: Map<string, MemberSteamData>;
+  familyId: string;
+  onRefresh: () => void;
 }) {
   const [filterUserId, setFilterUserId] = useState<string | null>(null);
   const [filterIntersections, setFilterIntersections] = useState(false);
   const [showAll, setShowAll] = useState(false);
   const PAGE = 60;
+
+  const currentUserOwnedAppIds = useMemo(() => {
+    const member = memberMap.get(currentUserId);
+    return new Set(member?.ownedGames?.map((g) => g.appId) ?? []);
+  }, [memberMap, currentUserId]);
 
   const allEntries = useMemo(() => {
     const map = new Map<number, UnifiedEntry>();
@@ -105,14 +129,17 @@ function WishesTab({
             appId: game.appId,
             name: game.name,
             wantedBy: [member.userId],
-            isShared: sharedWishlistAppIds.has(game.appId),
+            isShared: sharedWishlistMap.has(game.appId),
+            comingSoon: game.comingSoon,
+            releaseDate: game.releaseDate,
+            isFree: game.isFree,
+            ownedByCurrentUser: currentUserOwnedAppIds.has(game.appId),
           });
         }
       }
     }
-    // Intersections first, then singles
     return Array.from(map.values()).sort((a, b) => b.wantedBy.length - a.wantedBy.length);
-  }, [members, sharedWishlistAppIds]);
+  }, [members, sharedWishlistMap, currentUserOwnedAppIds]);
 
   const filtered = useMemo(() => {
     let result = allEntries;
@@ -210,6 +237,9 @@ function WishesTab({
               currentUserId={currentUserId}
               memberColors={memberColors}
               memberMap={memberMap}
+              sharedItem={sharedWishlistMap.get(entry.appId) ?? null}
+              familyId={familyId}
+              onRefresh={onRefresh}
             />
           ))}
         </div>
@@ -237,71 +267,165 @@ function WishEntry({
   currentUserId,
   memberColors,
   memberMap,
+  sharedItem,
+  familyId,
+  onRefresh,
 }: {
   entry: UnifiedEntry;
   currentUserId: string;
   memberColors: Map<string, string>;
   memberMap: Map<string, MemberSteamData>;
+  sharedItem: SharedWishlistItem | null;
+  familyId: string;
+  onRefresh: () => void;
 }) {
+  const [pledgeOpen, setPledgeOpen] = useState(false);
+  const [adding, setAdding] = useState(false);
+
   const isCrossover = entry.wantedBy.length >= 2;
   const isMine = entry.wantedBy.includes(currentUserId);
 
-  return (
-    <div className="group relative rounded-xl overflow-hidden border border-border/50 bg-card hover:border-primary/30 hover:shadow-[0_4px_16px_hsl(0_0%_0%/0.3)] transition-all duration-200">
-      {/* Cover */}
-      <div className="relative h-[80px]">
-        <img
-          src={headerImage(entry.appId)}
-          alt={entry.name}
-          className="w-full h-full object-cover transition-all duration-300 group-hover:brightness-110 group-hover:saturate-[1.1]"
-          onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-card via-card/30 to-transparent" />
+  const remaining = sharedItem ? sharedItem.targetPriceCents - sharedItem.totalPledgedCents : 0;
+  const canPledge = sharedItem?.status === "open" && remaining > 0 && !entry.ownedByCurrentUser && !entry.isFree;
 
-        {/* Badges top-right */}
-        <div className="absolute top-2 right-2 flex flex-col items-end gap-1">
-          {entry.isShared && (
-            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-violet-600/90 text-white">
-              <Gift className="h-2.5 w-2.5" />
-              Lista Compartilhada
-            </span>
+  const handleAdd = async () => {
+    setAdding(true);
+    try {
+      const res = await fetch(`/api/families/${familyId}/wishlist`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ steamAppId: entry.appId }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error?.message ?? "Erro ao adicionar jogo");
+        return;
+      }
+      toast.success("Adicionado à lista!", {
+        description: entry.name,
+        action: {
+          label: "Ver lista →",
+          onClick: () => document.getElementById("family-wishlist")?.scrollIntoView({ behavior: "smooth", block: "start" }),
+        },
+      });
+      onRefresh();
+    } finally {
+      setAdding(false);
+    }
+  };
+
+  return (
+    <>
+      <div className="group relative rounded-xl overflow-hidden border border-border/50 bg-card hover:border-primary/30 hover:shadow-[0_4px_16px_hsl(0_0%_0%/0.3)] transition-all duration-200">
+        {/* Cover */}
+        <div className="relative h-[80px]">
+          <img
+            src={headerImage(entry.appId)}
+            alt={entry.name}
+            className="w-full h-full object-cover transition-all duration-300 group-hover:brightness-110 group-hover:saturate-[1.1]"
+            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-card via-card/30 to-transparent" />
+
+          {/* Badges top-right */}
+          <div className="absolute top-2 right-2 flex flex-col items-end gap-1">
+            {entry.isShared && (
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-violet-600/90 text-white">
+                <Gift className="h-2.5 w-2.5" />
+                Lista Compartilhada
+              </span>
+            )}
+            {entry.comingSoon && (
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-sky-600/85 text-white">
+                <Clock className="h-2.5 w-2.5" />
+                Em breve{entry.releaseDate && entry.releaseDate !== "Em breve" ? ` · ${entry.releaseDate}` : ""}
+              </span>
+            )}
+            {entry.isFree && (
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-teal-600/85 text-white">
+                Gratuito
+              </span>
+            )}
+            {entry.ownedByCurrentUser && !entry.isFree && (
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-600/85 text-white">
+                <CheckCircle2 className="h-2.5 w-2.5" />
+                Você já tem
+              </span>
+            )}
+            {!entry.ownedByCurrentUser && isCrossover && (
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-sky-600/90 text-white">
+                <Users className="h-2.5 w-2.5" />
+                Cruzamento · {entry.wantedBy.length} querem
+              </span>
+            )}
+            {!entry.ownedByCurrentUser && isMine && !isCrossover && (
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-600/90 text-white">
+                <Heart className="h-2.5 w-2.5" />
+                Você quer
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Info */}
+        <div className="px-3 py-2.5 space-y-2">
+          <p className="text-xs font-semibold leading-tight line-clamp-1">{entry.name}</p>
+
+          {entry.wantedBy.length > 0 && (
+            <div className="flex items-center gap-1">
+              {entry.wantedBy.map((uid) => {
+                const m = memberMap.get(uid);
+                if (!m) return null;
+                const color = memberColors.get(uid) ?? "#888";
+                return <MemberAvatar key={uid} member={m} color={color} size="xs" />;
+              })}
+              <span className="text-[10px] text-muted-foreground ml-0.5">
+                {entry.wantedBy.length === 1
+                  ? memberMap.get(entry.wantedBy[0])?.personaName ?? ""
+                  : `${entry.wantedBy.length} membros`}
+              </span>
+            </div>
           )}
-          {isCrossover && (
-            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-sky-600/90 text-white">
-              <Users className="h-2.5 w-2.5" />
-              Cruzamento · {entry.wantedBy.length} querem
-            </span>
+
+          {/* Actions */}
+          {!entry.isShared && !entry.ownedByCurrentUser && !entry.isFree && (
+            <button
+              onClick={handleAdd}
+              disabled={adding}
+              className="w-full h-7 rounded-md text-[11px] font-semibold border border-dashed border-border/60 text-muted-foreground hover:border-primary/40 hover:text-primary transition-colors flex items-center justify-center gap-1"
+            >
+              <Plus className="h-3 w-3" />
+              {adding ? "Adicionando..." : "Adicionar à Lista"}
+            </button>
           )}
-          {isMine && !isCrossover && (
-            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-600/90 text-white">
-              <Heart className="h-2.5 w-2.5" />
-              Você quer
-            </span>
+          {canPledge && (
+            <button
+              onClick={() => setPledgeOpen(true)}
+              className="w-full h-7 rounded-md text-[11px] font-semibold text-white transition-all hover:opacity-90"
+              style={{
+                background: "linear-gradient(135deg, hsl(258 82% 60%), hsl(258 82% 50%))",
+                boxShadow: "0 0 10px hsl(258 82% 66% / 0.2)",
+              }}
+            >
+              Contribuir
+            </button>
           )}
         </div>
       </div>
 
-      {/* Info */}
-      <div className="px-3 py-2.5 space-y-2">
-        <p className="text-xs font-semibold leading-tight line-clamp-1">{entry.name}</p>
-
-        {entry.wantedBy.length > 0 && (
-          <div className="flex items-center gap-1">
-            {entry.wantedBy.map((uid) => {
-              const m = memberMap.get(uid);
-              if (!m) return null;
-              const color = memberColors.get(uid) ?? "#888";
-              return <MemberAvatar key={uid} member={m} color={color} size="xs" />;
-            })}
-            <span className="text-[10px] text-muted-foreground ml-0.5">
-              {entry.wantedBy.length === 1
-                ? memberMap.get(entry.wantedBy[0])?.personaName ?? ""
-                : `${entry.wantedBy.length} membros`}
-            </span>
-          </div>
-        )}
-      </div>
-    </div>
+      {sharedItem && canPledge && (
+        <PledgeModal
+          open={pledgeOpen}
+          onOpenChange={setPledgeOpen}
+          itemId={sharedItem.id}
+          gameName={entry.name}
+          targetPriceCents={sharedItem.targetPriceCents}
+          totalPledgedCents={sharedItem.totalPledgedCents}
+          currency={sharedItem.currency}
+          onSuccess={onRefresh}
+        />
+      )}
+    </>
   );
 }
 
@@ -494,7 +618,7 @@ function LibraryGameCard({
 
 // ─── Root panel ───────────────────────────────────────────────────────────────
 
-export function SteamLibraryPanel({ familyId, currentUserId, memberColors, sharedWishlistAppIds }: Props) {
+export function SteamLibraryPanel({ familyId, currentUserId, memberColors, sharedWishlistItems, onRefresh }: Props) {
   const [tab, setTab] = useState<Tab>("library");
 
   const { data, isLoading } = useQuery({
@@ -512,6 +636,10 @@ export function SteamLibraryPanel({ familyId, currentUserId, memberColors, share
   const memberMap = useMemo(
     () => new Map(members.map((m) => [m.userId, m])),
     [members]
+  );
+  const sharedWishlistMap = useMemo(
+    () => new Map(sharedWishlistItems.map((i) => [i.steamAppId, i])),
+    [sharedWishlistItems]
   );
 
   return (
@@ -560,10 +688,12 @@ export function SteamLibraryPanel({ familyId, currentUserId, memberColors, share
           {tab === "wishes" ? (
             <WishesTab
               members={members}
-              sharedWishlistAppIds={sharedWishlistAppIds}
+              sharedWishlistMap={sharedWishlistMap}
               currentUserId={currentUserId}
               memberColors={memberColors}
               memberMap={memberMap}
+              familyId={familyId}
+              onRefresh={onRefresh}
             />
           ) : (
             <LibraryTab

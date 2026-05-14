@@ -1,7 +1,8 @@
 import { NextRequest } from "next/server";
 import { requireSession, isApiError, ok, err } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
-import { getOwnedGames, getSteamWishlist, STEAM_KEY_ERROR } from "@/lib/steam";
+import { getOwnedGames, getSteamWishlist, getAppDetails, STEAM_KEY_ERROR } from "@/lib/steam";
+import type { SteamAppDetails } from "@/lib/steam";
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   const user = await requireSession();
@@ -54,5 +55,46 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     })
   );
 
-  return ok({ members, steamKeyInvalid });
+  // Enrich wishlist games with comingSoon / releaseDate from cache (single batch query)
+  const allWishlistAppIds = [
+    ...new Set(members.flatMap((m) => m.steamWishlist?.map((g) => g.appId) ?? [])),
+  ];
+  const appCacheEntries = allWishlistAppIds.length > 0
+    ? await prisma.steamAppCache.findMany({
+        where: { steamAppId: { in: allWishlistAppIds } },
+        select: { steamAppId: true, payload: true },
+      })
+    : [];
+  const appMetaMap = new Map(
+    appCacheEntries.map((e) => {
+      const p = e.payload as Partial<SteamAppDetails>;
+      return [e.steamAppId, { comingSoon: p.comingSoon ?? false, releaseDate: p.releaseDate ?? "", isFree: p.isFree ?? false }];
+    })
+  );
+
+  // Re-fetch games whose cache entry is missing the comingSoon field (pre-migration entries)
+  const cachedPayloads = new Map(appCacheEntries.map((e) => [e.steamAppId, e.payload as Partial<SteamAppDetails>]));
+  const staleIds = allWishlistAppIds.filter(
+    (id) => cachedPayloads.get(id)?.comingSoon === undefined
+  );
+  if (staleIds.length > 0) {
+    await Promise.allSettled(
+      staleIds.map(async (id) => {
+        const details = await getAppDetails(id);
+        if (details) {
+          appMetaMap.set(id, { comingSoon: details.comingSoon, releaseDate: details.releaseDate, isFree: details.isFree });
+        }
+      })
+    );
+  }
+
+  const enrichedMembers = members.map((m) => ({
+    ...m,
+    steamWishlist: m.steamWishlist?.map((g) => ({
+      ...g,
+      ...(appMetaMap.get(g.appId) ?? { comingSoon: false, releaseDate: "" }),
+    })) ?? null,
+  }));
+
+  return ok({ members: enrichedMembers, steamKeyInvalid });
 }

@@ -43,6 +43,7 @@ model Family {
   description   String?
   maxMembers    Int?
   entryFeeCents Int      @default(0)
+  coverImageUrl String?
 
   memberships   FamilyMembership[]
   wishlistItems WishlistItem[]

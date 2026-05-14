@@ -15,25 +15,30 @@ export async function POST(req: NextRequest) {
   const body = await parseBody(req, CreateFamilySchema);
   if (isApiError(body)) return body;
 
-  const family = await prisma.$transaction(async (tx) => {
-    const f = await tx.family.create({
-      data: {
-        name: body.name,
-        currency: body.currency,
-        chiefId: user.id,
-      },
+  try {
+    const family = await prisma.$transaction(async (tx) => {
+      const f = await tx.family.create({
+        data: {
+          name: body.name,
+          currency: body.currency,
+          chiefId: user.id,
+        },
+      });
+      await tx.familyMembership.create({
+        data: {
+          userId: user.id,
+          familyId: f.id,
+          status: "active",
+        },
+      });
+      return f;
     });
-    await tx.familyMembership.create({
-      data: {
-        userId: user.id,
-        familyId: f.id,
-        status: "active",
-      },
-    });
-    return f;
-  });
 
-  return ok(family, 201);
+    return ok(family, 201);
+  } catch (e) {
+    console.error("Create family error:", e);
+    return err("INTERNAL_ERROR", "Erro ao criar família", 500);
+  }
 }
 
 export async function GET() {

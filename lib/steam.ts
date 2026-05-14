@@ -18,6 +18,8 @@ export type SteamAppDetails = {
   currency: string;
   shortDescription: string;
   isFree: boolean;
+  comingSoon: boolean;
+  releaseDate: string;
 };
 
 export async function getPlayerSummaries(steamIds: string[]): Promise<SteamPlayerSummary[]> {
@@ -56,7 +58,10 @@ export async function getAppDetails(appId: number, country = DEFAULT_COUNTRY): P
     if (!res.ok) return null;
     const data = await res.json();
     const appData = data[String(appId)];
-    if (!appData?.success) return null;
+    if (!appData?.success) {
+      // App unavailable/delisted — fall back to stale cache rather than losing the name
+      return cached ? (cached.payload as unknown as SteamAppDetails) : null;
+    }
 
     const d = appData.data;
     const payload: SteamAppDetails = {
@@ -68,6 +73,8 @@ export async function getAppDetails(appId: number, country = DEFAULT_COUNTRY): P
       currency: d.price_overview?.currency ?? country,
       shortDescription: d.short_description ?? "",
       isFree: d.is_free ?? false,
+      comingSoon: d.release_date?.coming_soon ?? false,
+      releaseDate: d.release_date?.date ?? "",
     };
 
     await prisma.steamAppCache.upsert({
@@ -163,7 +170,10 @@ export async function getSteamWishlist(steamId: string): Promise<SteamWishlistGa
   });
   if (cached) {
     const age = Date.now() - cached.fetchedAt.getTime();
-    if (age < WISHLIST_CACHE_TTL_MS) return cached.payload as unknown as SteamWishlistGame[];
+    const payload = cached.payload as unknown as SteamWishlistGame[];
+    // Treat cache as stale if any game still has an unresolved App # name
+    const hasUnresolved = Array.isArray(payload) && payload.some((g) => g.name.startsWith("App #"));
+    if (age < WISHLIST_CACHE_TTL_MS && !hasUnresolved) return payload;
   }
 
   try {
@@ -182,13 +192,37 @@ export async function getSteamWishlist(steamId: string): Promise<SteamWishlistGa
     // Empty array means wishlist is empty or private
     if (items.length === 0) return [];
 
-    // IWishlistService doesn't return names — resolve them from local catalog cache
+    // IWishlistService doesn't return names — resolve from catalog, then app detail cache
     const appIds = items.map((i) => i.appid);
     const catalogEntries = await prisma.steamAppCatalog.findMany({
       where: { appId: { in: appIds } },
       select: { appId: true, name: true },
     });
     const nameMap = new Map(catalogEntries.map((e) => [e.appId, e.name]));
+
+    // For apps not in catalog, try steamAppCache (populated by getAppDetails)
+    const missingIds = appIds.filter((id) => !nameMap.has(id));
+    if (missingIds.length > 0) {
+      const detailCacheEntries = await prisma.steamAppCache.findMany({
+        where: { steamAppId: { in: missingIds } },
+        select: { steamAppId: true, payload: true },
+      });
+      for (const entry of detailCacheEntries) {
+        const name = (entry.payload as { name?: string })?.name;
+        if (name) nameMap.set(entry.steamAppId, name);
+      }
+    }
+
+    // For apps still unknown, fetch from Steam API in parallel
+    const stillMissing = appIds.filter((id) => !nameMap.has(id));
+    if (stillMissing.length > 0) {
+      const results = await Promise.allSettled(stillMissing.map((id) => getAppDetails(id)));
+      results.forEach((result, i) => {
+        if (result.status === "fulfilled" && result.value?.name) {
+          nameMap.set(stillMissing[i], result.value.name);
+        }
+      });
+    }
 
     const games: SteamWishlistGame[] = appIds.map((appId) => ({
       appId,

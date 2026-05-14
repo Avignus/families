@@ -312,7 +312,7 @@ export default async function CatalogFamilyPage({ params }: { params: { id: stri
         <CatalogSteamPanel
           familyId={params.id}
           members={family.memberships.map((m) => ({ id: m.user.id }))}
-          wishlistAppIds={family.wishlistItems.map((i) => i.steamAppId)}
+          wishlistItems={family.wishlistItems}
         />
       </div>
     </div>

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
 import { useEffect, useState } from "react";
-import { Bell, LogOut, Settings, Globe } from "lucide-react";
+import { Bell, LogOut, Settings, Globe, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useNotifications } from "@/components/notifications/notification-provider";
 import { FamiliesLogo } from "./logo";
-import { formatRelativeTime } from "@/lib/utils";
+import { formatRelativeTime, formatCurrency } from "@/lib/utils";
 import { getNotificationContent } from "@/lib/notifications/templates";
 
 export function Navbar() {
@@ -21,10 +21,18 @@ export function Navbar() {
   const { unreadCount, recent, markRead } = useNotifications();
   const [freshName, setFreshName] = useState<string | null>(null);
   const [freshAvatar, setFreshAvatar] = useState<string | null>(null);
+  const [creditsCents, setCreditsCents] = useState<number | null>(null);
 
   const sessionUser = session?.user as {
     id?: string; personaName?: string; avatarMedium?: string; name?: string; image?: string;
   } | undefined;
+
+  useEffect(() => {
+    fetch("/api/me")
+      .then((r) => r.json())
+      .then((d) => { if (d.data?.creditsCents != null) setCreditsCents(d.data.creditsCents); })
+      .catch(() => {});
+  }, []);
 
   // Auto-refresh profile when JWT has fallback Steam name
   useEffect(() => {
@@ -156,6 +164,12 @@ export function Navbar() {
                 <div className="flex flex-col gap-0.5">
                   <span className="font-semibold text-sm">{user.personaName ?? user.name}</span>
                   <span className="text-xs text-muted-foreground">Steam account</span>
+                  {creditsCents != null && creditsCents > 0 && (
+                    <span className="flex items-center gap-1 text-xs font-medium mt-0.5" style={{ color: "hsl(258 82% 72%)" }}>
+                      <Wallet className="h-3 w-3" />
+                      {formatCurrency(creditsCents, "BRL")} em créditos
+                    </span>
+                  )}
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator className="bg-border/60" />
