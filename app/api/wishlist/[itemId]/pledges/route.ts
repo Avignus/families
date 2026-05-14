@@ -155,7 +155,6 @@ export async function POST(req: NextRequest, { params }: { params: { itemId: str
     const baseUrl = getAppBaseUrl(req);
     const mpAmountCents = Math.ceil(result.pixPortion * (1 + SERVICE_FEE_RATE));
 
-    let pixData = null;
     try {
       const pix = await createPixPayment({
         amountCents: mpAmountCents,
@@ -178,19 +177,30 @@ export async function POST(req: NextRequest, { params }: { params: { itemId: str
         },
       });
 
-      pixData = pix;
-    } catch (mpError) {
-      console.error("Asaas error:", mpError);
-    }
+      return ok({
+        pledge: result.pledge,
+        isFunded: result.isFunded,
+        newTotal: result.newTotal,
+        percent: result.percent,
+        pix,
+        creditsUsed: result.creditsUsed,
+      }, 201);
 
-    return ok({
-      pledge: result.pledge,
-      isFunded: result.isFunded,
-      newTotal: result.newTotal,
-      percent: result.percent,
-      pix: pixData,
-      creditsUsed: result.creditsUsed,
-    }, 201);
+    } catch (mpError) {
+      console.error("Asaas PIX creation error:", mpError);
+
+      // Rollback: remove pledge and revert item status so the user can try again
+      await prisma.pledge.delete({ where: { id: result.pledge.id } }).catch(() => {});
+      if (result.isFunded) {
+        await prisma.wishlistItem.update({
+          where: { id: params.itemId },
+          data: { status: "open" },
+        }).catch(() => {});
+      }
+
+      const message = mpError instanceof Error ? mpError.message : "Erro ao criar pagamento PIX";
+      return err("PAYMENT_ERROR", message, 502);
+    }
 
   } catch (e: unknown) {
     const error = e as Error & { code?: string; status?: number };
