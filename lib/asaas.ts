@@ -14,14 +14,23 @@ export type PixPaymentResult = {
 };
 
 function getBaseUrl(): string {
-  const key = process.env.ASAAS_API_KEY ?? "";
+  let key = "";
+  try { key = getApiKey(); } catch {}
   const isSandbox = key.includes("_hmlg_") || key.startsWith("$aas_test") || key.startsWith("$aas_sandbox");
   return isSandbox ? "https://sandbox.asaas.com/api/v3" : "https://api.asaas.com/v3";
 }
 
+function getApiKey(): string {
+  // ASAAS_API_KEY_B64 is the base64-encoded key (avoids $ expansion issues in some environments)
+  const b64 = process.env.ASAAS_API_KEY_B64;
+  if (b64) return Buffer.from(b64, "base64").toString("utf-8");
+  const raw = process.env.ASAAS_API_KEY;
+  if (raw) return raw;
+  throw new Error("ASAAS_API_KEY não configurada");
+}
+
 async function asaasRequest<T = unknown>(path: string, options: RequestInit = {}): Promise<T> {
-  const apiKey = process.env.ASAAS_API_KEY;
-  if (!apiKey) throw new Error("ASAAS_API_KEY não configurada");
+  const apiKey = getApiKey();
 
   const res = await fetch(`${getBaseUrl()}${path}`, {
     ...options,
@@ -169,4 +178,18 @@ export async function sendPixDisbursement(params: {
     }),
   });
   return String(data.id);
+}
+
+export type AsaasTransfer = {
+  id: string;
+  status: string;
+  value: number;
+  pixAddressKey: string;
+  pixAddressKeyType: string;
+  description: string;
+  transferDate: string;
+};
+
+export async function getTransferStatus(transferId: string): Promise<AsaasTransfer> {
+  return asaasRequest<AsaasTransfer>(`/transfers/${transferId}`);
 }
