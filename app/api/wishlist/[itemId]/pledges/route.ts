@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
 import { requireSession, isApiError, ok, err, parseBody } from "@/lib/api";
+import { getAppBaseUrl } from "@/lib/utils";
 import { prisma } from "@/lib/prisma";
 import { createNotification } from "@/lib/notifications/service";
 import { getAppDetails } from "@/lib/steam";
@@ -151,7 +152,7 @@ export async function POST(req: NextRequest, { params }: { params: { itemId: str
     }
 
     // Create PIX payment for the remaining portion (outside transaction)
-    const baseUrl = process.env.APP_BASE_URL ?? "http://localhost:3000";
+    const baseUrl = getAppBaseUrl(req);
     const mpAmountCents = Math.ceil(result.pixPortion * (1 + SERVICE_FEE_RATE));
 
     let pixData = null;

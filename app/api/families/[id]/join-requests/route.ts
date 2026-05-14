@@ -3,6 +3,7 @@ import { requireSession, isApiError, ok, err } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { createNotification } from "@/lib/notifications/service";
 import { createPixPayment, ENTRY_FEE_SERVICE_RATE, ASAAS_MIN_CHARGE_CENTS } from "@/lib/asaas";
+import { getAppBaseUrl } from "@/lib/utils";
 import { getPlayerSummaries } from "@/lib/steam";
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
@@ -110,7 +111,7 @@ async function handlePost(req: NextRequest, params: { id: string }) {
     return ok({ message: "Join request sent" }, 201);
   }
 
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? req.headers.get("origin") ?? "";
+  const baseUrl = getAppBaseUrl(req);
   const totalChargeCents = Math.ceil(family.entryFeeCents * (1 + ENTRY_FEE_SERVICE_RATE));
 
   if (totalChargeCents < ASAAS_MIN_CHARGE_CENTS) {
