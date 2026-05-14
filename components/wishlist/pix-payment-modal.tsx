@@ -162,7 +162,7 @@ export function PixPaymentModal({
             {pix.ticketUrl && (
               <a href={pix.ticketUrl} target="_blank" rel="noopener noreferrer"
                 className="flex items-center justify-center gap-1.5 text-xs text-primary hover:underline">
-                <ExternalLink className="h-3 w-3" /> Abrir no MercadoPago
+                <ExternalLink className="h-3 w-3" /> Abrir link de pagamento
               </a>
             )}
 

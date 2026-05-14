@@ -45,6 +45,7 @@ model Family {
   maxMembers    Int?
   entryFeeCents Int      @default(0)
   coverImageUrl String?
+  inviteToken   String?  @unique
 
   memberships   FamilyMembership[]
   wishlistItems WishlistItem[]

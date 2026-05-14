@@ -9,7 +9,8 @@ import { MemberActions } from "@/components/family/member-actions";
 import { CatalogSettingsForm } from "@/components/family/catalog-settings-form";
 import { ReputationBadge } from "@/components/reputation-badge";
 import { DeleteFamilyButton } from "@/components/family/delete-family-button";
-import { ArrowLeft, Crown, Users, Globe } from "lucide-react";
+import { InviteLinkPanel } from "@/components/family/invite-link-panel";
+import { ArrowLeft, Crown, Users, Globe, Link2 } from "lucide-react";
 import Link from "next/link";
 
 export default async function AdminPage({ params }: { params: { id: string } }) {
@@ -161,16 +162,20 @@ export default async function AdminPage({ params }: { params: { id: string } }) 
         </CardContent>
       </Card>
 
-      {/* Family ID share */}
+      {/* Invite link */}
       <Card>
-        <CardContent className="pt-4">
-          <p className="text-sm font-medium mb-1">ID da Família</p>
-          <div className="flex items-center gap-2">
-            <code className="text-xs bg-secondary px-2 py-1 rounded flex-1 truncate">{params.id}</code>
-          </div>
-          <p className="text-xs text-muted-foreground mt-1">
-            Compartilhe este ID para que outras pessoas possam solicitar entrada.
-          </p>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Link2 className="h-4 w-4" />
+            Link de Convite
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <InviteLinkPanel
+            familyId={params.id}
+            initialToken={family.inviteToken ?? null}
+            appUrl={process.env.NEXT_PUBLIC_APP_URL ?? process.env.NEXTAUTH_URL ?? ""}
+          />
         </CardContent>
       </Card>
 

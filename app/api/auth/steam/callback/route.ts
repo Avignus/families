@@ -84,7 +84,11 @@ export async function GET(req: NextRequest) {
     maxAge: 30 * 24 * 60 * 60,
   });
 
-  const response = NextResponse.redirect(`${BASE_URL}/dashboard`);
+  // Redirect to callbackUrl if set, otherwise dashboard
+  const callbackUrl = req.cookies.get("steam_callback_url")?.value;
+  const destination = callbackUrl?.startsWith("/") ? `${BASE_URL}${callbackUrl}` : `${BASE_URL}/dashboard`;
+
+  const response = NextResponse.redirect(destination);
   const secure = BASE_URL.startsWith("https");
   const cookieName = secure ? "__Secure-next-auth.session-token" : "next-auth.session-token";
 
@@ -95,6 +99,9 @@ export async function GET(req: NextRequest) {
     path: "/",
     maxAge: 30 * 24 * 60 * 60,
   });
+
+  // Clear the callback cookie
+  response.cookies.delete("steam_callback_url");
 
   return response;
 }
