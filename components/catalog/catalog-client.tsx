@@ -31,6 +31,8 @@ type Family = {
   gameCovers: string[];
   myStatus: string | null;
   libraryStats: LibraryStats | null;
+  gameNames: string[];
+  gameNamesLabel: "missing" | "library";
 };
 
 type PixData = {
@@ -445,6 +447,34 @@ function FamilyCard({
                 </span>
               </>
             )}
+          </div>
+        )}
+
+        {/* Game name chips */}
+        {(family.gameNames ?? []).length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {family.gameNamesLabel === "missing" ? (
+              <span className="text-[10px] font-medium text-primary/80 self-center shrink-0">
+                você ganharia:
+              </span>
+            ) : (
+              <span className="text-[10px] font-medium text-muted-foreground/60 self-center shrink-0">
+                possui:
+              </span>
+            )}
+            {(family.gameNames ?? []).slice(0, 3).map((name) => (
+              <span
+                key={name}
+                className={`text-[10px] px-1.5 py-0.5 rounded-full truncate max-w-[110px] ${
+                  family.gameNamesLabel === "missing"
+                    ? "bg-primary/10 text-primary/90"
+                    : "bg-muted/50 text-muted-foreground"
+                }`}
+                title={name}
+              >
+                {name}
+              </span>
+            ))}
           </div>
         )}
 

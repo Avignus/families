@@ -74,12 +74,14 @@ export default async function CatalogPage({
     orderBy: { createdAt: "desc" },
   });
 
-  // Compute library stats when user is logged in or game filters are active
+  // Compute library stats when user is logged in or game filters are active.
+  // familyAppIdsMap is also used for cover images, so it's declared outside the block.
   const familyLibraryStats = new Map<string, LibraryStats>();
+  const familyAppIdsMap = new Map<string, Set<number>>();
+  // Hoisted so the game-names section below can reference it
+  const userAppIds = new Set<number>();
 
   if (currentSteamId || hasGameFilters) {
-    // Load current user's Steam library
-    const userAppIds = new Set<number>();
     if (currentSteamId) {
       const userCache = await prisma.steamUserCache.findUnique({
         where: { userId_type: { userId: currentSteamId, type: "library" } },
@@ -90,6 +92,7 @@ export default async function CatalogPage({
         if (Array.isArray(games)) games.forEach((g) => userAppIds.add(g.appId));
       }
     }
+
 
     // Batch-load all active memberships for all families
     const allMemberships = await prisma.familyMembership.findMany({
@@ -124,14 +127,15 @@ export default async function CatalogPage({
 
     for (const family of allFamilies) {
       const memberSteamIds = familyMemberMap.get(family.id) ?? [];
-      const familyAppIds = new Set<number>();
+      const appIds = new Set<number>();
       for (const steamId of memberSteamIds) {
-        steamLibMap.get(steamId)?.forEach((id) => familyAppIds.add(id));
+        steamLibMap.get(steamId)?.forEach((id) => appIds.add(id));
       }
+      familyAppIdsMap.set(family.id, appIds);
 
-      const totalGames = familyAppIds.size;
+      const totalGames = appIds.size;
       let ownedGames = 0;
-      for (const appId of familyAppIds) {
+      for (const appId of appIds) {
         if (userAppIds.has(appId)) ownedGames++;
       }
 
@@ -162,21 +166,135 @@ export default async function CatalogPage({
   const skip = (page - 1) * PAGE_SIZE;
   const pagedFamilies = filteredFamilies.slice(skip, skip + PAGE_SIZE);
 
-  // Load wishlist cover images only for the paginated slice
+  // For paginated families whose library data wasn't loaded above (anonymous user,
+  // no game filters), load it now so covers can use owned games too.
+  const familiesToLoad = pagedFamilies.filter((f) => !familyAppIdsMap.has(f.id));
+  if (familiesToLoad.length > 0) {
+    const mships = await prisma.familyMembership.findMany({
+      where: { familyId: { in: familiesToLoad.map((f) => f.id) }, status: "active" },
+      select: { familyId: true, user: { select: { steamId: true } } },
+    });
+    const steamIds = [...new Set(mships.map((m) => m.user.steamId))];
+    const libMap = new Map<string, Set<number>>();
+    if (steamIds.length > 0) {
+      const caches = await prisma.steamUserCache.findMany({
+        where: { userId: { in: steamIds }, type: "library" },
+        select: { userId: true, payload: true },
+      });
+      for (const cache of caches) {
+        const games = cache.payload as Array<{ appId: number }>;
+        const ids = new Set<number>();
+        if (Array.isArray(games)) games.forEach((g) => ids.add(g.appId));
+        libMap.set(cache.userId, ids);
+      }
+    }
+    for (const family of familiesToLoad) {
+      const memberSteamIds = mships
+        .filter((m) => m.familyId === family.id)
+        .map((m) => m.user.steamId);
+      const ids = new Set<number>();
+      for (const steamId of memberSteamIds) {
+        libMap.get(steamId)?.forEach((id) => ids.add(id));
+      }
+      familyAppIdsMap.set(family.id, ids);
+    }
+  }
+
+  // Determine which game names to surface per paginated family:
+  // - Logged-in + has missing games → names of games they'd gain (up to 4)
+  // - Otherwise → sample of library games for context (up to 4, hash-offset per family)
+  const gameNameAppIdsPerFamily = new Map<string, { ids: number[]; label: "missing" | "library" }>();
+  for (const f of pagedFamilies) {
+    const stats = familyLibraryStats.get(f.id);
+    const libIds = familyAppIdsMap.get(f.id);
+    if (!libIds || libIds.size === 0) continue;
+
+    if (currentSteamId && stats && stats.missingGames > 0) {
+      const missing: number[] = [];
+      for (const id of libIds) {
+        if (!userAppIds.has(id)) { missing.push(id); if (missing.length >= 4) break; }
+      }
+      gameNameAppIdsPerFamily.set(f.id, { ids: missing, label: "missing" });
+    } else {
+      let h = 5381;
+      for (let i = 0; i < f.id.length; i++) h = (((h << 5) + h) ^ f.id.charCodeAt(i)) >>> 0;
+      const arr = [...libIds];
+      const offset = h % arr.length;
+      const sample = [
+        ...arr.slice(offset, offset + 4),
+        ...arr.slice(0, Math.max(0, offset + 4 - arr.length)),
+      ].slice(0, 4);
+      gameNameAppIdsPerFamily.set(f.id, { ids: sample, label: "library" });
+    }
+  }
+
+  // Batch-lookup names from SteamAppCatalog (single query for all paged families)
+  const allNameIds = [
+    ...new Set([...gameNameAppIdsPerFamily.values()].flatMap((v) => v.ids)),
+  ];
+  const nameRows = allNameIds.length > 0
+    ? await prisma.steamAppCatalog.findMany({
+        where: { appId: { in: allNameIds } },
+        select: { appId: true, name: true },
+      })
+    : [];
+  const nameMap = new Map(nameRows.map((r) => [r.appId, r.name]));
+
+  // Load cover images for the paginated slice.
+  // Priority: library games (cached) → wishlist games → client falls back to hash SVG.
   const items = await Promise.all(
     pagedFamilies.map(async (f) => {
       const memberCount = f._count.memberships;
+
+      // Wishlist games first (family-specific, so each card looks different)
       const wishlistItems = await prisma.wishlistItem.findMany({
         where: { familyId: f.id, status: { not: "cancelled" } },
         select: { steamAppId: true },
         take: 4,
         orderBy: { createdAt: "desc" },
       });
-      const covers = await Promise.all(
-        wishlistItems.map((item) =>
-          getAppDetails(item.steamAppId).then((d) => d?.headerImage ?? null)
+      const wishlistCovers = (
+        await Promise.all(
+          wishlistItems.map((item) =>
+            getAppDetails(item.steamAppId).then((d) => d?.headerImage ?? null)
+          )
         )
-      );
+      ).filter(Boolean) as string[];
+
+      let covers: string[] = wishlistCovers;
+
+      // Fill remaining slots from library games (cached only).
+      // Use a hash offset so different families sample different games.
+      if (covers.length < 4) {
+        const libraryIds = familyAppIdsMap.get(f.id);
+        if (libraryIds && libraryIds.size > 0) {
+          const libArr = [...libraryIds];
+          // Deterministic offset per family for visual variety
+          let h = 5381;
+          for (let i = 0; i < f.id.length; i++) h = (((h << 5) + h) ^ f.id.charCodeAt(i)) >>> 0;
+          const offset = h % libArr.length;
+          const sampleIds = [
+            ...libArr.slice(offset, offset + 200),
+            ...libArr.slice(0, Math.max(0, offset + 200 - libArr.length)),
+          ].slice(0, 200);
+          const wishlistAppIds = new Set(wishlistItems.map((w) => w.steamAppId));
+          const excludeIds = [...wishlistAppIds];
+          const cached = await prisma.steamAppCache.findMany({
+            where: {
+              steamAppId: {
+                in: sampleIds,
+                ...(excludeIds.length > 0 ? { notIn: excludeIds } : {}),
+              },
+            },
+            select: { payload: true },
+            take: 4 - covers.length,
+          });
+          const libCovers = cached
+            .map((c) => (c.payload as Record<string, unknown>)?.headerImage as string | undefined ?? "")
+            .filter(Boolean);
+          covers = [...covers, ...libCovers];
+        }
+      }
       const myMembership =
         currentUserId &&
         "memberships" in f &&
@@ -197,9 +315,13 @@ export default async function CatalogPage({
         spotsLeft: f.maxMembers ? f.maxMembers - memberCount : null,
         isFull: f.maxMembers ? memberCount >= f.maxMembers : false,
         chief: f.chief,
-        gameCovers: covers.filter((c): c is string => Boolean(c)),
+        gameCovers: covers,
         myStatus: myMembership?.status ?? null,
         libraryStats: familyLibraryStats.get(f.id) ?? null,
+        gameNames: (gameNameAppIdsPerFamily.get(f.id)?.ids ?? [])
+          .map((id) => nameMap.get(id))
+          .filter(Boolean) as string[],
+        gameNamesLabel: gameNameAppIdsPerFamily.get(f.id)?.label ?? "library",
       };
     })
   );
