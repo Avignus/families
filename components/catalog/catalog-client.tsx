@@ -3,13 +3,18 @@
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useState, useTransition } from "react";
 import { formatCurrency } from "@/lib/utils";
-import { Users, Lock, Unlock, Crown, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Users, Lock, Unlock, Crown, Search, ChevronLeft, ChevronRight,
+  SlidersHorizontal, X, Gamepad2, CheckCircle2, PlusCircle,
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { PixPaymentModal } from "@/components/wishlist/pix-payment-modal";
 import Link from "next/link";
 import { FamilyCoverArt } from "@/components/family-cover-art";
+
+type LibraryStats = { totalGames: number; ownedGames: number; missingGames: number };
 
 type Family = {
   id: string;
@@ -25,6 +30,7 @@ type Family = {
   chief: { id: string; personaName: string; avatarUrl: string; avatarMedium: string };
   gameCovers: string[];
   myStatus: string | null;
+  libraryStats: LibraryStats | null;
 };
 
 type PixData = {
@@ -34,6 +40,17 @@ type PixData = {
   paymentId: string;
 };
 
+type Filters = {
+  minPrice: string;
+  maxPrice: string;
+  minGames: string;
+  maxGames: string;
+  minOwned: string;
+  maxOwned: string;
+  minMissing: string;
+  maxMissing: string;
+};
+
 type Props = {
   families: Family[];
   isLoggedIn: boolean;
@@ -41,9 +58,10 @@ type Props = {
   page: number;
   pageSize: number;
   query: string;
+  filters: Filters;
 };
 
-export function CatalogClient({ families, isLoggedIn, total, page, pageSize, query }: Props) {
+export function CatalogClient({ families, isLoggedIn, total, page, pageSize, query, filters }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -52,19 +70,50 @@ export function CatalogClient({ families, isLoggedIn, total, page, pageSize, que
   const [loading, setLoading] = useState<string | null>(null);
   const [pixModal, setPixModal] = useState<{ family: Family; pix: PixData } | null>(null);
   const [localStatus, setLocalStatus] = useState<Record<string, string>>({});
+  const [filtersOpen, setFiltersOpen] = useState(() => {
+    return Object.values(filters).some((v) => v !== "");
+  });
+
+  const [minPrice, setMinPrice] = useState(filters.minPrice);
+  const [maxPrice, setMaxPrice] = useState(filters.maxPrice);
+  const [minGames, setMinGames] = useState(filters.minGames);
+  const [maxGames, setMaxGames] = useState(filters.maxGames);
+  const [minOwned, setMinOwned] = useState(filters.minOwned);
+  const [maxOwned, setMaxOwned] = useState(filters.maxOwned);
+  const [minMissing, setMinMissing] = useState(filters.minMissing);
+  const [maxMissing, setMaxMissing] = useState(filters.maxMissing);
 
   const totalPages = Math.ceil(total / pageSize);
 
-  const navigate = (q: string, p: number) => {
-    const params = new URLSearchParams(searchParams.toString());
-    if (q) params.set("q", q); else params.delete("q");
-    if (p > 1) params.set("page", String(p)); else params.delete("page");
+  const activeFilterCount = [
+    minPrice || maxPrice,
+    minGames || maxGames,
+    minOwned || maxOwned,
+    minMissing || maxMissing,
+  ].filter(Boolean).length;
+
+  const navigate = (q: string, p: number, overrides?: Partial<Filters>) => {
+    const f: Filters = { minPrice, maxPrice, minGames, maxGames, minOwned, maxOwned, minMissing, maxMissing, ...overrides };
+    const params = new URLSearchParams();
+    if (q) params.set("q", q);
+    if (p > 1) params.set("page", String(p));
+    (Object.entries(f) as [keyof Filters, string][]).forEach(([k, v]) => {
+      if (v) params.set(k, v);
+    });
     startTransition(() => router.push(`${pathname}?${params.toString()}`));
   };
 
-  const handleSearch = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     navigate(search, 1);
+  };
+
+  const clearFilters = () => {
+    setMinPrice(""); setMaxPrice("");
+    setMinGames(""); setMaxGames("");
+    setMinOwned(""); setMaxOwned("");
+    setMinMissing(""); setMaxMissing("");
+    navigate(search, 1, { minPrice: "", maxPrice: "", minGames: "", maxGames: "", minOwned: "", maxOwned: "", minMissing: "", maxMissing: "" });
   };
 
   const handleJoin = async (family: Family) => {
@@ -91,7 +140,7 @@ export function CatalogClient({ families, isLoggedIn, total, page, pageSize, que
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-5xl mx-auto px-4 py-10 space-y-8">
+      <div className="max-w-5xl mx-auto px-4 py-10 space-y-6">
         <div className="space-y-1">
           <h1 className="text-2xl font-bold" style={{ fontFamily: "var(--font-space-grotesk)" }}>
             Catálogo de Famílias
@@ -101,19 +150,169 @@ export function CatalogClient({ families, isLoggedIn, total, page, pageSize, que
           </p>
         </div>
 
-        <form onSubmit={handleSearch} className="relative max-w-sm flex gap-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar por nome ou ID..."
-              className="pl-9"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
+        <form onSubmit={handleSubmit} className="space-y-3">
+          {/* Search row */}
+          <div className="flex gap-2">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar por nome ou ID..."
+                className="pl-9"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+            <Button type="submit" variant="secondary" size="sm" disabled={isPending}>
+              Buscar
+            </Button>
+            <Button
+              type="button"
+              variant={filtersOpen ? "secondary" : "outline"}
+              size="sm"
+              onClick={() => setFiltersOpen((v) => !v)}
+              className="gap-1.5"
+            >
+              <SlidersHorizontal className="h-4 w-4" />
+              Filtros
+              {activeFilterCount > 0 && (
+                <span className="ml-0.5 inline-flex items-center justify-center h-4 w-4 rounded-full text-[10px] font-bold"
+                  style={{ background: "hsl(258 82% 60%)", color: "white" }}>
+                  {activeFilterCount}
+                </span>
+              )}
+            </Button>
+            {activeFilterCount > 0 && (
+              <Button type="button" variant="ghost" size="sm" onClick={clearFilters} className="gap-1 text-muted-foreground">
+                <X className="h-3.5 w-3.5" />
+                Limpar
+              </Button>
+            )}
           </div>
-          <Button type="submit" variant="secondary" size="sm" disabled={isPending}>
-            Buscar
-          </Button>
+
+          {/* Filter panel */}
+          {filtersOpen && (
+            <div className="rounded-lg border border-border/60 bg-card/50 p-4 space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Price filter */}
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Preço de entrada (R$)</p>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      placeholder="Mín"
+                      min="0"
+                      step="0.01"
+                      className="h-8 text-sm"
+                      value={minPrice}
+                      onChange={(e) => setMinPrice(e.target.value)}
+                    />
+                    <span className="text-muted-foreground text-sm flex-shrink-0">—</span>
+                    <Input
+                      type="number"
+                      placeholder="Máx"
+                      min="0"
+                      step="0.01"
+                      className="h-8 text-sm"
+                      value={maxPrice}
+                      onChange={(e) => setMaxPrice(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                {/* Total games filter */}
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-1">
+                    <Gamepad2 className="h-3.5 w-3.5" /> Jogos na família
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      placeholder="Mín"
+                      min="0"
+                      className="h-8 text-sm"
+                      value={minGames}
+                      onChange={(e) => setMinGames(e.target.value)}
+                    />
+                    <span className="text-muted-foreground text-sm flex-shrink-0">—</span>
+                    <Input
+                      type="number"
+                      placeholder="Máx"
+                      min="0"
+                      className="h-8 text-sm"
+                      value={maxGames}
+                      onChange={(e) => setMaxGames(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                {/* Games I own (intersection) */}
+                <div className="space-y-2">
+                  <p className={`text-xs font-medium uppercase tracking-wide flex items-center gap-1 ${isLoggedIn ? "text-muted-foreground" : "text-muted-foreground/40"}`}>
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+                    Jogos que você tem
+                    {!isLoggedIn && <span className="text-[10px] normal-case font-normal">(requer login)</span>}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      placeholder="Mín"
+                      min="0"
+                      className="h-8 text-sm"
+                      disabled={!isLoggedIn}
+                      value={minOwned}
+                      onChange={(e) => setMinOwned(e.target.value)}
+                    />
+                    <span className="text-muted-foreground text-sm flex-shrink-0">—</span>
+                    <Input
+                      type="number"
+                      placeholder="Máx"
+                      min="0"
+                      className="h-8 text-sm"
+                      disabled={!isLoggedIn}
+                      value={maxOwned}
+                      onChange={(e) => setMaxOwned(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                {/* Games I don't own (difference) */}
+                <div className="space-y-2">
+                  <p className={`text-xs font-medium uppercase tracking-wide flex items-center gap-1 ${isLoggedIn ? "text-muted-foreground" : "text-muted-foreground/40"}`}>
+                    <PlusCircle className="h-3.5 w-3.5 text-primary" />
+                    Jogos que você não tem
+                    {!isLoggedIn && <span className="text-[10px] normal-case font-normal">(requer login)</span>}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      placeholder="Mín"
+                      min="0"
+                      className="h-8 text-sm"
+                      disabled={!isLoggedIn}
+                      value={minMissing}
+                      onChange={(e) => setMinMissing(e.target.value)}
+                    />
+                    <span className="text-muted-foreground text-sm flex-shrink-0">—</span>
+                    <Input
+                      type="number"
+                      placeholder="Máx"
+                      min="0"
+                      className="h-8 text-sm"
+                      disabled={!isLoggedIn}
+                      value={maxMissing}
+                      onChange={(e) => setMaxMissing(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end">
+                <Button type="submit" size="sm" disabled={isPending}>
+                  Aplicar filtros
+                </Button>
+              </div>
+            </div>
+          )}
         </form>
 
         {families.length === 0 ? (
@@ -128,6 +327,7 @@ export function CatalogClient({ families, isLoggedIn, total, page, pageSize, que
                 family={family}
                 loading={loading === family.id}
                 myStatus={localStatus[family.id] ?? family.myStatus}
+                isLoggedIn={isLoggedIn}
                 onJoin={handleJoin}
               />
             ))}
@@ -172,14 +372,16 @@ export function CatalogClient({ families, isLoggedIn, total, page, pageSize, que
 }
 
 function FamilyCard({
-  family, loading, myStatus, onJoin,
+  family, loading, myStatus, isLoggedIn, onJoin,
 }: {
   family: Family;
   loading: boolean;
   myStatus: string | null;
+  isLoggedIn: boolean;
   onJoin: (f: Family) => void;
 }) {
   const hasFee = family.entryFeeCents > 0;
+  const stats = family.libraryStats;
 
   const statusLabel = () => {
     if (myStatus === "active") return { text: "Membro", color: "text-emerald-400" };
@@ -223,6 +425,28 @@ function FamilyCard({
           <span className="truncate max-w-[100px]">{family.chief.personaName}</span>
           <Crown className="h-3 w-3 text-amber-400 flex-shrink-0" />
         </div>
+
+        {/* Library stats */}
+        {stats !== null && (
+          <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs">
+            <span className="flex items-center gap-1 text-muted-foreground">
+              <Gamepad2 className="h-3 w-3" />
+              {stats.totalGames} jogos
+            </span>
+            {isLoggedIn && (
+              <>
+                <span className="flex items-center gap-1 text-emerald-500">
+                  <CheckCircle2 className="h-3 w-3" />
+                  {stats.ownedGames} seus
+                </span>
+                <span className="flex items-center gap-1 text-primary">
+                  <PlusCircle className="h-3 w-3" />
+                  {stats.missingGames} novos
+                </span>
+              </>
+            )}
+          </div>
+        )}
 
         <div className="flex items-center justify-between text-xs">
           <div className="flex items-center gap-1 text-muted-foreground">
