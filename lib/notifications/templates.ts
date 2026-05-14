@@ -88,6 +88,27 @@ const templates: Record<Locale, Templates> = {
       body: (p) => `Distribuímos ${p.totalFormatted} do seu orçamento em ${p.pledgeCount} ${Number(p.pledgeCount) === 1 ? "jogo" : "jogos"} em "${p.familyName}". Revise e pague para confirmar.`,
       link: (p) => `/families/${p.familyId}`,
     },
+    PRICE_DROPPED: {
+      title: () => "Preço caiu!",
+      body: (p) => p.surplusCents
+        ? `"${p.gameName}" baixou para ${p.newPriceFormatted}. ${p.surplusFormatted} foram creditados na sua carteira.`
+        : `"${p.gameName}" em "${p.familyName}" baixou para ${p.newPriceFormatted}.`,
+      link: (p) => `/families/${p.familyId}`,
+    },
+    PRICE_INCREASED: {
+      title: () => "Preço subiu",
+      body: (p) => p.reverted
+        ? `"${p.gameName}" subiu para ${p.newPriceFormatted} e voltou para aberto — faltam ${p.missingFormatted} para financiar.`
+        : `"${p.gameName}" subiu para ${p.newPriceFormatted}. Faltam mais ${p.missingFormatted} para financiar.`,
+      link: (p) => `/families/${p.familyId}`,
+    },
+    ITEM_GONE_FREE: {
+      title: () => "Jogo ficou gratuito!",
+      body: (p) => p.refundFormatted
+        ? `"${p.gameName}" passou a ser gratuito na Steam. Sua contribuição de ${p.refundFormatted} foi estornada para sua carteira.`
+        : `"${p.gameName}" passou a ser gratuito na Steam. O item foi removido da lista.`,
+      link: (p) => `/families/${p.familyId}`,
+    },
   },
   en: {
     JOIN_REQUEST: {
@@ -162,6 +183,27 @@ const templates: Record<Locale, Templates> = {
     AUTO_PLEDGED: {
       title: () => "Auto-pledges created!",
       body: (p) => `We distributed ${p.totalFormatted} of your budget across ${p.pledgeCount} ${Number(p.pledgeCount) === 1 ? "game" : "games"} in "${p.familyName}". Review and pay to confirm.`,
+      link: (p) => `/families/${p.familyId}`,
+    },
+    PRICE_DROPPED: {
+      title: () => "Price dropped!",
+      body: (p) => p.surplusCents
+        ? `"${p.gameName}" dropped to ${p.newPriceFormatted}. ${p.surplusFormatted} were credited to your wallet.`
+        : `"${p.gameName}" in "${p.familyName}" dropped to ${p.newPriceFormatted}.`,
+      link: (p) => `/families/${p.familyId}`,
+    },
+    PRICE_INCREASED: {
+      title: () => "Price increased",
+      body: (p) => p.reverted
+        ? `"${p.gameName}" rose to ${p.newPriceFormatted} and is back to open — ${p.missingFormatted} more needed.`
+        : `"${p.gameName}" rose to ${p.newPriceFormatted}. ${p.missingFormatted} more needed.`,
+      link: (p) => `/families/${p.familyId}`,
+    },
+    ITEM_GONE_FREE: {
+      title: () => "Game went free!",
+      body: (p) => p.refundFormatted
+        ? `"${p.gameName}" is now free on Steam. Your contribution of ${p.refundFormatted} was refunded to your wallet.`
+        : `"${p.gameName}" is now free on Steam. The item was removed from the list.`,
       link: (p) => `/families/${p.familyId}`,
     },
   },
