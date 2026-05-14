@@ -31,9 +31,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             {children}
           </main>
           <footer className="border-t border-border/40 py-4 mt-8">
-            <p className="text-center text-xs text-muted-foreground">
-              &copy; {new Date().getFullYear()} RAPOZOTECH SOLUCOES INTELIGENTES LTDA &mdash; CNPJ 61.992.849/0001-83 &mdash; Todos os direitos reservados.
-            </p>
+            <div className="flex flex-col items-center gap-1">
+              <p className="text-center text-xs text-muted-foreground">
+                &copy; {new Date().getFullYear()} RAPOZOTECH SOLUCOES INTELIGENTES LTDA &mdash; CNPJ 61.992.849/0001-83
+              </p>
+              <div className="flex gap-4 text-xs text-muted-foreground/70">
+                <a href="/terms" className="hover:text-muted-foreground transition-colors">Termos de Uso</a>
+                <a href="/privacy" className="hover:text-muted-foreground transition-colors">Política de Privacidade</a>
+                <a href="mailto:contato@families.app" className="hover:text-muted-foreground transition-colors">Contato</a>
+              </div>
+            </div>
           </footer>
         </Providers>
       </body>

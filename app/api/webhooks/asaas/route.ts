@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
   // Verify webhook origin via authToken configured in Asaas webhook settings
   const token = req.headers.get("asaas-access-token") ?? "";
   const expectedToken = process.env.ASAAS_WEBHOOK_SECRET ?? "";
-  if (expectedToken && token !== expectedToken) {
+  if (!expectedToken || token !== expectedToken) {
     return NextResponse.json({ ok: false }, { status: 401 });
   }
 

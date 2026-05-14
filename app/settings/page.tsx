@@ -4,7 +4,8 @@ import { useEffect, useState, useDeferredValue } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { KeyRound, CheckCircle2, Loader2, Star, XCircle, Mail } from "lucide-react";
+import { KeyRound, CheckCircle2, Loader2, Star, XCircle, Mail, Trash2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { ReputationBadge } from "@/components/reputation-badge";
 import { getTier, TIER_LABELS } from "@/lib/reputation";
 import { validatePixKey } from "@/lib/pix-key";
@@ -19,6 +20,8 @@ export default function SettingsPage() {
   const [emailSaved, setEmailSaved] = useState(false);
   const [emailLoading, setEmailLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const router = useRouter();
 
   const emailValid = !email.trim() || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 
@@ -56,6 +59,19 @@ export default function SettingsPage() {
     }
     setSaved(true);
     toast.success("Chave PIX salva!");
+  }
+
+  async function handleDeleteAccount() {
+    if (!confirm("Tem certeza? Esta ação é irreversível e excluirá todos os seus dados.")) return;
+    setDeleteLoading(true);
+    const res = await fetch("/api/me/account", { method: "DELETE" });
+    if (res.ok) {
+      router.push("/api/auth/signout?callbackUrl=/");
+    } else {
+      const data = await res.json();
+      toast.error(data.error?.message ?? "Erro ao excluir conta");
+      setDeleteLoading(false);
+    }
   }
 
   async function handleSaveEmail(e: React.FormEvent) {
@@ -236,6 +252,29 @@ export default function SettingsPage() {
               </div>
             </form>
           )}
+        </CardContent>
+      </Card>
+
+      <Card className="mt-4 border-destructive/30">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base text-destructive">
+            <Trash2 className="h-4 w-4" />
+            Excluir conta
+          </CardTitle>
+          <CardDescription>
+            Remove permanentemente sua conta e dados pessoais. Transações financeiras são retidas
+            conforme obrigações legais. Esta ação não pode ser desfeita.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button
+            variant="destructive"
+            onClick={handleDeleteAccount}
+            disabled={deleteLoading}
+          >
+            {deleteLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            Excluir minha conta
+          </Button>
         </CardContent>
       </Card>
     </div>

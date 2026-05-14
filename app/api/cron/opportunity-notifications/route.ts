@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 // Vercel Cron calls with Authorization: Bearer <CRON_SECRET>
 function isAuthorized(req: NextRequest) {
   const secret = process.env.CRON_SECRET;
-  if (!secret) return true;
+  if (!secret) return false;
   return req.headers.get("authorization") === `Bearer ${secret}`;
 }
 
