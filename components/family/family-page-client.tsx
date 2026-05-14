@@ -37,6 +37,8 @@ type WishlistItem = {
   owner: Member | null;
   totalPledgedCents: number;
   percentFunded: number;
+  priceAlert: "low" | "high" | null;
+  priceAvgCents: number | null;
   steamData: { appId: number; name: string; headerImage: string; priceCents: number; currency: string; isFree: boolean; comingSoon?: boolean; releaseDate?: string } | null;
   pledges: Array<{
     id: string;
@@ -325,6 +327,8 @@ export function FamilyPageClient({ familyId }: { familyId: string }) {
                     memberColors={memberColors}
                     onRefresh={() => refetch()}
                     ownedByCurrentUser={userOwnedAppIds.has(item.steamAppId)}
+                    priceAlert={item.priceAlert}
+                    priceAvgCents={item.priceAvgCents}
                   />
                 ))}
               </div>

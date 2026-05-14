@@ -109,6 +109,16 @@ const templates: Record<Locale, Templates> = {
         : `"${p.gameName}" passou a ser gratuito na Steam. O item foi removido da lista.`,
       link: (p) => `/families/${p.familyId}`,
     },
+    PRICE_ALERT_LOW: {
+      title: () => "🔥 Preço mínimo histórico!",
+      body: (p) => `"${p.gameName}" está por ${p.priceFormatted} — ${p.percentBelow}% abaixo da média histórica de ${p.avgFormatted}. Bom momento para comprar!`,
+      link: (p) => `/families/${p.familyId}`,
+    },
+    PRICE_ALERT_HIGH: {
+      title: () => "⚠️ Jogo acima da média",
+      body: (p) => `"${p.gameName}" está por ${p.priceFormatted} — ${p.percentAbove}% acima da média histórica de ${p.avgFormatted}. Pode valer esperar.`,
+      link: (p) => `/families/${p.familyId}`,
+    },
   },
   en: {
     JOIN_REQUEST: {
@@ -204,6 +214,16 @@ const templates: Record<Locale, Templates> = {
       body: (p) => p.refundFormatted
         ? `"${p.gameName}" is now free on Steam. Your contribution of ${p.refundFormatted} was refunded to your wallet.`
         : `"${p.gameName}" is now free on Steam. The item was removed from the list.`,
+      link: (p) => `/families/${p.familyId}`,
+    },
+    PRICE_ALERT_LOW: {
+      title: () => "🔥 Historic low price!",
+      body: (p) => `"${p.gameName}" is at ${p.priceFormatted} — ${p.percentBelow}% below its historical average of ${p.avgFormatted}. Great time to buy!`,
+      link: (p) => `/families/${p.familyId}`,
+    },
+    PRICE_ALERT_HIGH: {
+      title: () => "⚠️ Game above average",
+      body: (p) => `"${p.gameName}" is at ${p.priceFormatted} — ${p.percentAbove}% above its historical average of ${p.avgFormatted}. Might be worth waiting.`,
       link: (p) => `/families/${p.familyId}`,
     },
   },

@@ -52,9 +52,11 @@ type Props = {
   memberColors: Map<string, string>;
   onRefresh: () => void;
   ownedByCurrentUser?: boolean;
+  priceAlert?: "low" | "high" | null;
+  priceAvgCents?: number | null;
 };
 
-export function WishlistItemCard({ item, currentUserId, memberColors, onRefresh, ownedByCurrentUser = false }: Props) {
+export function WishlistItemCard({ item, currentUserId, memberColors, onRefresh, ownedByCurrentUser = false, priceAlert, priceAvgCents }: Props) {
   const [pledgeOpen, setPledgeOpen] = useState(false);
   const [removeConfirm, setRemoveConfirm] = useState(false);
   const [removing, setRemoving] = useState(false);
@@ -174,6 +176,22 @@ export function WishlistItemCard({ item, currentUserId, memberColors, onRefresh,
           {ownedByCurrentUser && !isPurchased && (
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-600/85 text-white">
               <CheckCircle2 className="h-3 w-3" /> Você já tem
+            </span>
+          )}
+          {priceAlert === "low" && !isFunded && !isPurchased && (
+            <span
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-orange-500/90 text-white"
+              title={priceAvgCents ? `Média histórica: ${formatCurrency(priceAvgCents, item.currency)}` : undefined}
+            >
+              🔥 Mínimo histórico
+            </span>
+          )}
+          {priceAlert === "high" && !isFunded && !isPurchased && (
+            <span
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-zinc-500/80 text-zinc-200"
+              title={priceAvgCents ? `Média histórica: ${formatCurrency(priceAvgCents, item.currency)}` : undefined}
+            >
+              ⚠️ Acima da média
             </span>
           )}
         </div>

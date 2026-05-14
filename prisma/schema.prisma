@@ -19,6 +19,7 @@ model User {
   email            String?  @unique
   reputationScore  Int      @default(0)
   creditsCents     Int      @default(0)
+  isPremium        Boolean  @default(false)
   createdAt        DateTime @default(now())
 
   memberships        FamilyMembership[]
@@ -183,6 +184,16 @@ model WalletTransaction {
   @@index([userId, createdAt])
 }
 
+model SteamPriceHistory {
+  id         String   @id @default(cuid())
+  steamAppId Int
+  priceCents Int
+  currency   String
+  recordedAt DateTime @default(now())
+
+  @@index([steamAppId, recordedAt])
+}
+
 model PlatformRevenue {
   id          String   @id @default(cuid())
   amountCents Int
@@ -269,4 +280,6 @@ enum NotificationType {
   PRICE_DROPPED
   PRICE_INCREASED
   ITEM_GONE_FREE
+  PRICE_ALERT_LOW
+  PRICE_ALERT_HIGH
 }

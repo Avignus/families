@@ -82,11 +82,30 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     return err("FORBIDDEN", "Not a member of this family", 403);
   }
 
-  // Enrich wishlist items with cached Steam data
+  // Enrich wishlist items with cached Steam data + price intelligence
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - 90);
+
   const enrichedItems = await Promise.all(
     family.wishlistItems.map(async (item) => {
       const steamData = await getAppDetails(item.steamAppId);
       const totalPledged = item.pledges.reduce((s, p) => s + p.amountCents, 0);
+
+      // Price intelligence: compute avg from 90-day history (if enough samples)
+      let priceAlert: "low" | "high" | null = null;
+      let priceAvgCents: number | null = null;
+      const history = await prisma.steamPriceHistory.findMany({
+        where: { steamAppId: item.steamAppId, recordedAt: { gte: cutoff } },
+        select: { priceCents: true },
+      });
+      if (history.length >= 30 && steamData && steamData.priceCents > 0) {
+        const avg = Math.round(history.reduce((s, h) => s + h.priceCents, 0) / history.length);
+        priceAvgCents = avg;
+        const ratio = steamData.priceCents / avg;
+        if (ratio <= 0.80) priceAlert = "low";
+        else if (ratio >= 1.20) priceAlert = "high";
+      }
+
       return {
         ...item,
         steamData,
@@ -94,6 +113,8 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
         percentFunded: item.targetPriceCents > 0
           ? Math.round((totalPledged / item.targetPriceCents) * 100)
           : 0,
+        priceAlert,
+        priceAvgCents,
         pledges: item.pledges.map((p) => ({
           ...p,
           percent: item.targetPriceCents > 0

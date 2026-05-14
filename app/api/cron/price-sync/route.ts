@@ -7,11 +7,13 @@ import { formatCurrency } from "@/lib/notifications/templates";
 
 export const dynamic = "force-dynamic";
 
-// Minimum relative price change to trigger a sync (2%)
-const THRESHOLD = 0.02;
+const PRICE_CHANGE_THRESHOLD = 0.02;  // 2% minimum change to trigger pledge sync
+const MIN_SAMPLES = 30;               // minimum history records before firing price alerts
+const HISTORY_DAYS = 90;              // rolling window for average
+const ALERT_LOW_THRESHOLD = 0.80;     // ≤80% of avg → historic low
+const ALERT_HIGH_THRESHOLD = 1.20;    // ≥120% of avg → above average
+const ALERT_COOLDOWN_DAYS = 7;        // don't re-alert same user for same game within 7 days
 
-// Platform fee on surplus, in basis points (default 10% = 1000 bps)
-// Set PLATFORM_SURPLUS_FEE_BPS in env to override
 function getSurplusFeeBps(): number {
   const bps = parseInt(process.env.PLATFORM_SURPLUS_FEE_BPS ?? "1000", 10);
   return isNaN(bps) || bps < 0 || bps > 10000 ? 1000 : bps;
@@ -39,8 +41,27 @@ export async function GET(req: NextRequest) {
 
   const log: string[] = [];
 
+  // ── Phase 1: fetch fresh prices + record snapshots ──────────────────────
+  // Deduplicate by steamAppId — only fetch each game once per run
+  const uniqueAppIds = [...new Set(items.map(i => i.steamAppId))];
+  const priceMap = new Map<number, Awaited<ReturnType<typeof getAppDetails>>>();
+
+  for (const appId of uniqueAppIds) {
+    const data = await getAppDetails(appId);
+    if (!data) continue;
+    priceMap.set(appId, data);
+
+    // Record snapshot for every priced, non-free game
+    if (!data.isFree && data.priceCents > 0) {
+      await prisma.steamPriceHistory.create({
+        data: { steamAppId: appId, priceCents: data.priceCents, currency: data.currency },
+      });
+    }
+  }
+
+  // ── Phase 2: pledge sync (price changed) ────────────────────────────────
   for (const item of items) {
-    const steamData = await getAppDetails(item.steamAppId);
+    const steamData = priceMap.get(item.steamAppId);
     if (!steamData) continue;
 
     const oldPrice = item.targetPriceCents;
@@ -49,10 +70,9 @@ export async function GET(req: NextRequest) {
     const gameName = steamData.name;
     const familyId = item.family.id;
     const familyName = item.family.name;
-
     const totalPledged = item.pledges.reduce((s, p) => s + p.amountCents, 0);
 
-    // ── Game went free ──────────────────────────────────────────────────────
+    // ── Game went free ────────────────────────────────────────────────────
     if (steamData.isFree && oldPrice > 0) {
       await prisma.$transaction(async (tx) => {
         await tx.wishlistItem.update({ where: { id: item.id }, data: { status: "cancelled" } });
@@ -66,15 +86,9 @@ export async function GET(req: NextRequest) {
           await createNotification(tx, {
             recipientUserId: pledge.pledgerUserId,
             type: "ITEM_GONE_FREE",
-            payload: {
-              gameName,
-              familyId,
-              familyName,
-              refundFormatted: refundAmount > 0 ? formatCurrency(refundAmount, currency) : "",
-            },
+            payload: { gameName, familyId, familyName, refundFormatted: refundAmount > 0 ? formatCurrency(refundAmount, currency) : "" },
           });
         }
-
         if (item.ownerUserId) {
           await createNotification(tx, {
             recipientUserId: item.ownerUserId,
@@ -83,18 +97,15 @@ export async function GET(req: NextRequest) {
           });
         }
       });
-
-      log.push(`[FREE] ${gameName} → cancelled, ${item.pledges.length} pledges refunded`);
+      log.push(`[FREE] ${gameName} → cancelled`);
       continue;
     }
 
-    // Skip free games with no price change and items without pledges
     if (!newPrice || newPrice === oldPrice) continue;
-
     const delta = Math.abs(newPrice - oldPrice) / oldPrice;
-    if (delta < THRESHOLD) continue;
+    if (delta < PRICE_CHANGE_THRESHOLD) continue;
 
-    // ── Price dropped ───────────────────────────────────────────────────────
+    // ── Price dropped ─────────────────────────────────────────────────────
     if (newPrice < oldPrice) {
       const rawSurplus = Math.max(0, totalPledged - newPrice);
       const feeBps = getSurplusFeeBps();
@@ -106,120 +117,167 @@ export async function GET(req: NextRequest) {
       await prisma.$transaction(async (tx) => {
         await tx.wishlistItem.update({
           where: { id: item.id },
-          data: {
-            targetPriceCents: newPrice,
-            status: nowFunded && wasOpen ? "funded" : item.status,
-          },
+          data: { targetPriceCents: newPrice, status: nowFunded && wasOpen ? "funded" : item.status },
         });
 
-        // Record platform fee
         if (platformFee > 0) {
           await tx.platformRevenue.create({
-            data: {
-              amountCents: platformFee,
-              reason: "surplus_fee",
-              metadata: { itemId: item.id, gameName, oldPrice, newPrice, rawSurplus, feeBps },
-            },
+            data: { amountCents: platformFee, reason: "surplus_fee", metadata: { itemId: item.id, gameName, oldPrice, newPrice, rawSurplus, feeBps } },
           });
         }
 
-        // Credit distributable surplus proportionally to pledgers
         let distributed = 0;
         for (const pledge of item.pledges) {
-          const pledgerShare = distributableSurplus > 0
-            ? Math.floor(distributableSurplus * pledge.amountCents / totalPledged)
-            : 0;
-          distributed += pledgerShare;
-          if (pledgerShare > 0) {
-            await creditWallet(tx, pledge.pledgerUserId, pledgerShare, "price_dropped", item.id);
-          }
+          const share = distributableSurplus > 0 ? Math.floor(distributableSurplus * pledge.amountCents / totalPledged) : 0;
+          distributed += share;
+          if (share > 0) await creditWallet(tx, pledge.pledgerUserId, share, "price_dropped", item.id);
           await createNotification(tx, {
             recipientUserId: pledge.pledgerUserId,
             type: "PRICE_DROPPED",
-            payload: {
-              gameName, familyId, familyName,
-              newPriceFormatted: formatCurrency(newPrice, currency),
-              surplusCents: pledgerShare,
-              surplusFormatted: pledgerShare > 0 ? formatCurrency(pledgerShare, currency) : "",
-            },
+            payload: { gameName, familyId, familyName, newPriceFormatted: formatCurrency(newPrice, currency), surplusCents: share, surplusFormatted: share > 0 ? formatCurrency(share, currency) : "" },
           });
         }
 
-        // Any rounding remainder goes to platform revenue (not users)
         const remainder = distributableSurplus - distributed;
         if (remainder > 0) {
           await tx.platformRevenue.create({
-            data: {
-              amountCents: remainder,
-              reason: "surplus_fee",
-              metadata: { itemId: item.id, gameName, note: "rounding_remainder" },
-            },
+            data: { amountCents: remainder, reason: "surplus_fee", metadata: { itemId: item.id, gameName, note: "rounding_remainder" } },
           });
         }
 
-        // Notify owner if not already notified as a pledger
         if (item.ownerUserId && !item.pledges.some(p => p.pledgerUserId === item.ownerUserId)) {
           await createNotification(tx, {
             recipientUserId: item.ownerUserId,
             type: "PRICE_DROPPED",
-            payload: {
-              gameName, familyId, familyName,
-              newPriceFormatted: formatCurrency(newPrice, currency),
-              surplusCents: 0,
-              surplusFormatted: "",
-            },
+            payload: { gameName, familyId, familyName, newPriceFormatted: formatCurrency(newPrice, currency), surplusCents: 0, surplusFormatted: "" },
           });
         }
 
-        // Auto-fund if now covered and was open
         if (nowFunded && wasOpen && item.ownerUserId) {
           await createNotification(tx, {
             recipientUserId: item.ownerUserId,
             type: "ITEM_FUNDED",
-            payload: { gameName, familyId, familyName: item.family.name, ownerUserId: item.ownerUserId ?? "", itemId: item.id },
+            payload: { gameName, familyId, familyName, ownerUserId: item.ownerUserId ?? "", itemId: item.id },
           });
         }
       });
-
       log.push(`[DROP] ${gameName}: ${oldPrice}→${newPrice}, surplus ${rawSurplus} (fee ${platformFee}, distributed ${distributableSurplus})`);
     }
 
-    // ── Price increased ─────────────────────────────────────────────────────
+    // ── Price increased ───────────────────────────────────────────────────
     else {
       const wasFunded = item.status === "funded";
       const reverted = wasFunded && totalPledged < newPrice;
-      const missing = newPrice - totalPledged;
 
       await prisma.$transaction(async (tx) => {
         await tx.wishlistItem.update({
           where: { id: item.id },
-          data: {
-            targetPriceCents: newPrice,
-            status: reverted ? "open" : item.status,
-          },
+          data: { targetPriceCents: newPrice, status: reverted ? "open" : item.status },
         });
 
-        const notifyUserIds = new Set<string>();
-        if (item.ownerUserId) notifyUserIds.add(item.ownerUserId);
-        item.pledges.forEach(p => notifyUserIds.add(p.pledgerUserId));
+        const notifyIds = new Set<string>();
+        if (item.ownerUserId) notifyIds.add(item.ownerUserId);
+        item.pledges.forEach(p => notifyIds.add(p.pledgerUserId));
 
-        for (const userId of notifyUserIds) {
+        for (const userId of notifyIds) {
           await createNotification(tx, {
             recipientUserId: userId,
             type: "PRICE_INCREASED",
             payload: {
               gameName, familyId, familyName,
               newPriceFormatted: formatCurrency(newPrice, currency),
-              missingFormatted: formatCurrency(Math.max(0, missing), currency),
+              missingFormatted: formatCurrency(Math.max(0, newPrice - totalPledged), currency),
               reverted: reverted ? "1" : "",
             },
           });
         }
       });
-
-      log.push(`[RISE] ${gameName}: ${oldPrice}→${newPrice}${reverted ? " (reverted to open)" : ""}`);
+      log.push(`[RISE] ${gameName}: ${oldPrice}→${newPrice}${reverted ? " (reverted)" : ""}`);
     }
   }
 
-  return NextResponse.json({ ok: true, processed: items.length, changes: log });
+  // ── Phase 3: price intelligence alerts for premium users ─────────────────
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - HISTORY_DAYS);
+  const alertCooloff = new Date();
+  alertCooloff.setDate(alertCooloff.getDate() - ALERT_COOLDOWN_DAYS);
+
+  for (const appId of uniqueAppIds) {
+    const steamData = priceMap.get(appId);
+    if (!steamData || steamData.isFree || !steamData.priceCents) continue;
+
+    const history = await prisma.steamPriceHistory.findMany({
+      where: { steamAppId: appId, recordedAt: { gte: cutoff } },
+      select: { priceCents: true },
+    });
+
+    if (history.length < MIN_SAMPLES) continue;
+
+    const avg = Math.round(history.reduce((s, h) => s + h.priceCents, 0) / history.length);
+    const current = steamData.priceCents;
+    const ratio = current / avg;
+
+    const alertType = ratio <= ALERT_LOW_THRESHOLD
+      ? "PRICE_ALERT_LOW" as const
+      : ratio >= ALERT_HIGH_THRESHOLD
+      ? "PRICE_ALERT_HIGH" as const
+      : null;
+
+    if (!alertType) continue;
+
+    const percentDiff = Math.round(Math.abs(1 - ratio) * 100);
+
+    // Find premium members in families that have this game on their wishlist
+    const premiumUsers = await prisma.user.findMany({
+      where: {
+        isPremium: true,
+        memberships: {
+          some: {
+            status: "active",
+            family: { wishlistItems: { some: { steamAppId: appId, status: { in: ["open", "funded"] } } } },
+          },
+        },
+      },
+      select: { id: true },
+    });
+
+    if (premiumUsers.length === 0) continue;
+
+    // Get a familyId for the link (first family this game appears in)
+    const sampleItem = items.find(i => i.steamAppId === appId);
+    const familyId = sampleItem?.family.id ?? "";
+    const currency = sampleItem?.family.currency ?? steamData.currency;
+
+    for (const { id: userId } of premiumUsers) {
+      // Cooldown check: skip if already alerted this user for this game recently
+      const recentAlert = await prisma.notification.findFirst({
+        where: {
+          recipientUserId: userId,
+          type: alertType,
+          createdAt: { gte: alertCooloff },
+          payload: { path: ["steamAppId"], equals: appId },
+        },
+      });
+      if (recentAlert) continue;
+
+      await createNotification(prisma, {
+        recipientUserId: userId,
+        type: alertType,
+        payload: {
+          gameName: steamData.name,
+          familyId,
+          steamAppId: appId,
+          priceFormatted: formatCurrency(current, currency),
+          avgFormatted: formatCurrency(avg, currency),
+          ...(alertType === "PRICE_ALERT_LOW"
+            ? { percentBelow: percentDiff }
+            : { percentAbove: percentDiff }),
+        },
+      });
+    }
+
+    log.push(`[ALERT ${alertType}] ${steamData.name}: ${current} vs avg ${avg} (${percentDiff}% diff), notified ${premiumUsers.length} premium users`);
+  }
+
+  return NextResponse.json({ ok: true, processed: items.length, snapshots: uniqueAppIds.length, changes: log });
 }
