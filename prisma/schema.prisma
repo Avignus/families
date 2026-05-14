@@ -183,6 +183,16 @@ model WalletTransaction {
   @@index([userId, createdAt])
 }
 
+model PlatformRevenue {
+  id          String   @id @default(cuid())
+  amountCents Int
+  reason      String   // "surplus_fee" | future reasons
+  metadata    Json?    // contextual data (itemId, gameName, etc.)
+  createdAt   DateTime @default(now())
+
+  @@index([reason, createdAt])
+}
+
 model SteamAppCache {
   steamAppId Int      @id
   payload    Json

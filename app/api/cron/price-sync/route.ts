@@ -10,6 +10,13 @@ export const dynamic = "force-dynamic";
 // Minimum relative price change to trigger a sync (2%)
 const THRESHOLD = 0.02;
 
+// Platform fee on surplus, in basis points (default 10% = 1000 bps)
+// Set PLATFORM_SURPLUS_FEE_BPS in env to override
+function getSurplusFeeBps(): number {
+  const bps = parseInt(process.env.PLATFORM_SURPLUS_FEE_BPS ?? "1000", 10);
+  return isNaN(bps) || bps < 0 || bps > 10000 ? 1000 : bps;
+}
+
 function isAuthorized(req: NextRequest) {
   const secret = process.env.CRON_SECRET;
   if (!secret) return false;
@@ -89,7 +96,10 @@ export async function GET(req: NextRequest) {
 
     // ── Price dropped ───────────────────────────────────────────────────────
     if (newPrice < oldPrice) {
-      const surplus = Math.max(0, totalPledged - newPrice);
+      const rawSurplus = Math.max(0, totalPledged - newPrice);
+      const feeBps = getSurplusFeeBps();
+      const platformFee = rawSurplus > 0 ? Math.floor(rawSurplus * feeBps / 10000) : 0;
+      const distributableSurplus = rawSurplus - platformFee;
       const wasOpen = item.status === "open";
       const nowFunded = totalPledged >= newPrice;
 
@@ -102,15 +112,26 @@ export async function GET(req: NextRequest) {
           },
         });
 
-        // Credit surplus proportionally to pledgers
+        // Record platform fee
+        if (platformFee > 0) {
+          await tx.platformRevenue.create({
+            data: {
+              amountCents: platformFee,
+              reason: "surplus_fee",
+              metadata: { itemId: item.id, gameName, oldPrice, newPrice, rawSurplus, feeBps },
+            },
+          });
+        }
+
+        // Credit distributable surplus proportionally to pledgers
         let distributed = 0;
         for (const pledge of item.pledges) {
-          const pledgerSurplus = surplus > 0
-            ? Math.floor(surplus * pledge.amountCents / totalPledged)
+          const pledgerShare = distributableSurplus > 0
+            ? Math.floor(distributableSurplus * pledge.amountCents / totalPledged)
             : 0;
-          distributed += pledgerSurplus;
-          if (pledgerSurplus > 0) {
-            await creditWallet(tx, pledge.pledgerUserId, pledgerSurplus, "price_dropped", item.id);
+          distributed += pledgerShare;
+          if (pledgerShare > 0) {
+            await creditWallet(tx, pledge.pledgerUserId, pledgerShare, "price_dropped", item.id);
           }
           await createNotification(tx, {
             recipientUserId: pledge.pledgerUserId,
@@ -118,16 +139,22 @@ export async function GET(req: NextRequest) {
             payload: {
               gameName, familyId, familyName,
               newPriceFormatted: formatCurrency(newPrice, currency),
-              surplusCents: pledgerSurplus,
-              surplusFormatted: pledgerSurplus > 0 ? formatCurrency(pledgerSurplus, currency) : "",
+              surplusCents: pledgerShare,
+              surplusFormatted: pledgerShare > 0 ? formatCurrency(pledgerShare, currency) : "",
             },
           });
         }
 
-        // Any rounding remainder goes to the item owner
-        const remainder = surplus - distributed;
-        if (remainder > 0 && item.ownerUserId) {
-          await creditWallet(tx, item.ownerUserId, remainder, "price_dropped", item.id);
+        // Any rounding remainder goes to platform revenue (not users)
+        const remainder = distributableSurplus - distributed;
+        if (remainder > 0) {
+          await tx.platformRevenue.create({
+            data: {
+              amountCents: remainder,
+              reason: "surplus_fee",
+              metadata: { itemId: item.id, gameName, note: "rounding_remainder" },
+            },
+          });
         }
 
         // Notify owner if not already notified as a pledger
@@ -154,7 +181,7 @@ export async function GET(req: NextRequest) {
         }
       });
 
-      log.push(`[DROP] ${gameName}: ${oldPrice}→${newPrice}, surplus ${surplus} distributed`);
+      log.push(`[DROP] ${gameName}: ${oldPrice}→${newPrice}, surplus ${rawSurplus} (fee ${platformFee}, distributed ${distributableSurplus})`);
     }
 
     // ── Price increased ─────────────────────────────────────────────────────
