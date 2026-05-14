@@ -4,7 +4,8 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Library, Heart, Users, Gift, Lock, AlertTriangle, Plus, Clock, CheckCircle2 } from "lucide-react";
+import { Library, Heart, Users, Gift, Lock, AlertTriangle, Plus, Clock, CheckCircle2, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { formatCurrency } from "@/lib/utils";
 import { PledgeModal } from "@/components/wishlist/pledge-modal";
 import { toast } from "sonner";
@@ -112,6 +113,7 @@ function WishesTab({
   const [filterUserId, setFilterUserId] = useState<string | null>(null);
   const [filterIntersections, setFilterIntersections] = useState(false);
   const [showAll, setShowAll] = useState(false);
+  const [search, setSearch] = useState("");
   const PAGE = 60;
 
   const currentUserOwnedAppIds = useMemo(() => {
@@ -150,8 +152,9 @@ function WishesTab({
     let result = allEntries;
     if (filterIntersections) result = result.filter((e) => e.wantedBy.length >= 2);
     if (filterUserId) result = result.filter((e) => e.wantedBy.includes(filterUserId));
+    if (search.trim()) result = result.filter((e) => e.name.toLowerCase().includes(search.toLowerCase()));
     return result;
-  }, [allEntries, filterUserId, filterIntersections]);
+  }, [allEntries, filterUserId, filterIntersections, search]);
 
   const visible = showAll ? filtered : filtered.slice(0, PAGE);
   const membersWithWishlist = members.filter((m) => m.steamWishlist !== null);
@@ -175,6 +178,17 @@ function WishesTab({
 
   return (
     <div className="space-y-4">
+      {/* Search */}
+      <div className="relative max-w-xs">
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+        <Input
+          placeholder="Buscar jogo..."
+          className="pl-8 h-8 text-sm"
+          value={search}
+          onChange={(e) => { setSearch(e.target.value); setShowAll(false); }}
+        />
+      </div>
+
       {privateMembers.length > 0 && (
         <p className="text-xs text-muted-foreground flex items-center gap-1.5">
           <Lock className="h-3 w-3" />
@@ -467,6 +481,7 @@ function LibraryTab({
 }) {
   const [filterUserId, setFilterUserId] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
+  const [search, setSearch] = useState("");
   const PAGE = 60;
 
   const games: LibraryEntry[] = useMemo(() => {
@@ -491,7 +506,11 @@ function LibraryTab({
     return Array.from(map.values()).sort((a, b) => b.totalPlaytime - a.totalPlaytime);
   }, [members]);
 
-  const filtered = filterUserId ? games.filter((g) => g.ownedBy.includes(filterUserId)) : games;
+  const filtered = useMemo(() => {
+    let result = filterUserId ? games.filter((g) => g.ownedBy.includes(filterUserId)) : games;
+    if (search.trim()) result = result.filter((g) => g.name.toLowerCase().includes(search.toLowerCase()));
+    return result;
+  }, [games, filterUserId, search]);
   const visible = showAll ? filtered : filtered.slice(0, PAGE);
 
   const privateMembers = members.filter((m) => m.ownedGames === null);
@@ -508,6 +527,17 @@ function LibraryTab({
 
   return (
     <div className="space-y-4">
+      {/* Search */}
+      <div className="relative max-w-xs">
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+        <Input
+          placeholder="Buscar jogo..."
+          className="pl-8 h-8 text-sm"
+          value={search}
+          onChange={(e) => { setSearch(e.target.value); setShowAll(false); }}
+        />
+      </div>
+
       {/* Member filter */}
       <div className="flex flex-wrap items-center gap-2">
         <button
