@@ -1,12 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { formatCurrency, getMemberColor } from "@/lib/utils";
 import { PledgeModal } from "./pledge-modal";
-import { ShoppingCart, Minus, Sparkles, RefreshCw } from "lucide-react";
+import { ShoppingCart, Minus, Sparkles, RefreshCw, Clock, PackageOpen, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 
 type Pledger = {
@@ -31,6 +30,8 @@ type SteamData = {
   priceCents: number;
   currency: string;
   isFree: boolean;
+  comingSoon?: boolean;
+  releaseDate?: string;
 };
 
 type Props = {
@@ -50,9 +51,10 @@ type Props = {
   currentUserId: string;
   memberColors: Map<string, string>;
   onRefresh: () => void;
+  ownedByCurrentUser?: boolean;
 };
 
-export function WishlistItemCard({ item, currentUserId, memberColors, onRefresh }: Props) {
+export function WishlistItemCard({ item, currentUserId, memberColors, onRefresh, ownedByCurrentUser = false }: Props) {
   const [pledgeOpen, setPledgeOpen] = useState(false);
 
   const isOwner = item.ownerUserId === currentUserId;
@@ -60,10 +62,13 @@ export function WishlistItemCard({ item, currentUserId, memberColors, onRefresh 
   const gameName = item.steamData?.name ?? `App #${item.steamAppId}`;
   const isFunded = item.status === "funded";
   const isPurchased = item.status === "purchased";
+  const comingSoon = item.steamData?.comingSoon ?? false;
+  const noPriceDefined = !item.steamData?.isFree && item.targetPriceCents === 0;
 
   const priceChanged =
     item.steamData &&
     !item.steamData.isFree &&
+    item.targetPriceCents > 0 &&
     Math.abs(item.steamData.priceCents - item.targetPriceCents) / item.targetPriceCents > 0.05;
 
   const handleMarkPurchased = async () => {
@@ -107,7 +112,7 @@ export function WishlistItemCard({ item, currentUserId, memberColors, onRefresh 
           <img
             src={item.steamData.headerImage}
             alt={gameName}
-            className="w-full h-full object-cover transition-all duration-300 group-hover:brightness-110 group-hover:saturate-[1.1]"
+            className={`w-full h-full object-cover transition-all duration-300 group-hover:brightness-110 group-hover:saturate-[1.1] ${comingSoon ? "opacity-80" : ""}`}
           />
         ) : (
           <div className="w-full h-full bg-secondary flex items-center justify-center">
@@ -117,8 +122,8 @@ export function WishlistItemCard({ item, currentUserId, memberColors, onRefresh 
         {/* Gradient overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-card via-card/20 to-transparent" />
 
-        {/* Status badge */}
-        <div className="absolute top-2 right-2">
+        {/* Badges top-right — status stacked */}
+        <div className="absolute top-2 right-2 flex flex-col items-end gap-1">
           {isFunded && (
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold funded-pulse"
               style={{ background: "hsl(258 82% 66% / 0.9)", color: "white" }}>
@@ -128,6 +133,23 @@ export function WishlistItemCard({ item, currentUserId, memberColors, onRefresh 
           {isPurchased && (
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/80 text-white">
               <ShoppingCart className="h-3 w-3" /> Comprado
+            </span>
+          )}
+          {comingSoon && !isFunded && !isPurchased && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-sky-600/85 text-white">
+              <Clock className="h-3 w-3" />
+              Em breve
+              {item.steamData?.releaseDate && item.steamData.releaseDate !== "Em breve" ? ` · ${item.steamData.releaseDate}` : ""}
+            </span>
+          )}
+          {noPriceDefined && !comingSoon && !isFunded && !isPurchased && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-zinc-600/85 text-zinc-300">
+              <PackageOpen className="h-3 w-3" /> Sem preço
+            </span>
+          )}
+          {ownedByCurrentUser && !isPurchased && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-600/85 text-white">
+              <CheckCircle2 className="h-3 w-3" /> Você já tem
             </span>
           )}
         </div>
@@ -141,7 +163,11 @@ export function WishlistItemCard({ item, currentUserId, memberColors, onRefresh 
           </h3>
           <div className="flex items-center justify-between mt-0.5">
             <p className="text-xs text-muted-foreground">
-              {item.steamData?.isFree ? "Gratuito" : formatCurrency(item.targetPriceCents, item.currency)}
+              {item.steamData?.isFree
+                ? "Gratuito"
+                : noPriceDefined
+                ? "Preço a definir"
+                : formatCurrency(item.targetPriceCents, item.currency)}
             </p>
             {item.owner && (
               <div className="flex items-center gap-1">
@@ -168,7 +194,7 @@ export function WishlistItemCard({ item, currentUserId, memberColors, onRefresh 
           </div>
         )}
 
-        {!item.steamData?.isFree && (
+        {!item.steamData?.isFree && !noPriceDefined && (
           <div className="space-y-2">
             {/* Stats row */}
             <div className="flex justify-between text-xs">
@@ -221,7 +247,7 @@ export function WishlistItemCard({ item, currentUserId, memberColors, onRefresh 
                         {formatCurrency(pledge.amountCents, item.currency)}
                         <span className="text-muted-foreground/60"> ({pledge.percent}%)</span>
                       </span>
-                      {isMyPledge && item.status === "open" && (
+                      {isMyPledge && (item.status === "open" || item.status === "funded") && (
                         <button
                           onClick={() => handleWithdrawPledge(pledge.id)}
                           className="text-muted-foreground/50 hover:text-destructive transition-colors ml-0.5"
@@ -240,7 +266,7 @@ export function WishlistItemCard({ item, currentUserId, memberColors, onRefresh 
 
         {/* Actions */}
         <div className="flex gap-2 pt-0.5">
-          {item.status === "open" && item.targetPriceCents === 0 && !item.steamData?.isFree && isOwner && (
+          {item.status === "open" && noPriceDefined && isOwner && (
             <button
               onClick={handleUpdatePrice}
               className="flex-1 h-8 rounded-md text-xs font-semibold border border-amber-500/40 text-amber-400 hover:bg-amber-500/10 transition-colors flex items-center justify-center gap-1.5"
@@ -249,7 +275,7 @@ export function WishlistItemCard({ item, currentUserId, memberColors, onRefresh 
               Atualizar preço da Steam
             </button>
           )}
-          {item.status === "open" && remaining > 0 && (
+          {item.status === "open" && remaining > 0 && !ownedByCurrentUser && (
             <button
               onClick={() => setPledgeOpen(true)}
               className="flex-1 h-8 rounded-md text-xs font-semibold text-white transition-all hover:opacity-90 active:scale-[0.98]"
@@ -261,7 +287,13 @@ export function WishlistItemCard({ item, currentUserId, memberColors, onRefresh 
               Contribuir
             </button>
           )}
-          {isFunded && (isOwner) && (
+          {item.status === "open" && remaining > 0 && ownedByCurrentUser && (
+            <div className="flex-1 h-8 rounded-md text-xs font-medium border border-emerald-500/30 text-emerald-400/70 flex items-center justify-center gap-1.5 cursor-default select-none">
+              <CheckCircle2 className="h-3 w-3" />
+              Você já tem este jogo
+            </div>
+          )}
+          {isFunded && isOwner && (
             <Button
               size="sm"
               variant="outline"

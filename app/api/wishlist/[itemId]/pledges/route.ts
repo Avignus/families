@@ -5,6 +5,8 @@ import { prisma } from "@/lib/prisma";
 import { createNotification } from "@/lib/notifications/service";
 import { getAppDetails } from "@/lib/steam";
 import { createPixPayment, SERVICE_FEE_RATE, ASAAS_MIN_CHARGE_CENTS } from "@/lib/asaas";
+import { debitWallet } from "@/lib/wallet";
+import { maybeDisburseFunds } from "@/lib/disbursement";
 
 const PledgeSchema = z.object({
   amountCents: z.number().int().positive(),
@@ -59,16 +61,39 @@ export async function POST(req: NextRequest, { params }: { params: { itemId: str
         );
       }
 
-      // Create pledge first (pending payment)
+      // Determine credits vs PIX split
+      const dbUser = await tx.user.findUnique({ where: { id: user.id }, select: { creditsCents: true } });
+      const availableCredits = dbUser?.creditsCents ?? 0;
+      const creditsUsed = Math.min(availableCredits, body.amountCents);
+      const pixPortion = body.amountCents - creditsUsed;
+
+      // Validate PIX minimum before doing anything irreversible
+      if (pixPortion > 0) {
+        const mpAmountCents = Math.ceil(pixPortion * (1 + SERVICE_FEE_RATE));
+        if (mpAmountCents < ASAAS_MIN_CHARGE_CENTS) {
+          const minPledge = Math.ceil(ASAAS_MIN_CHARGE_CENTS / (1 + SERVICE_FEE_RATE));
+          throw Object.assign(
+            new Error(`Contribuição mínima via PIX é R$ ${(minPledge / 100).toFixed(2).replace(".", ",")}${creditsUsed > 0 ? ` (você tem R$ ${(creditsUsed / 100).toFixed(2)} em créditos já aplicados)` : ""}`),
+            { code: "BELOW_MINIMUM", status: 400 }
+          );
+        }
+      }
+
       const pledge = await tx.pledge.create({
         data: {
           wishlistItemId: params.itemId,
           pledgerUserId: user.id,
           amountCents: body.amountCents,
+          creditsCentsUsed: creditsUsed,
           status: "active",
-          mpStatus: "pending",
+          mpStatus: pixPortion === 0 ? "approved" : "pending",
+          paidAt: pixPortion === 0 ? new Date() : null,
         },
       });
+
+      if (creditsUsed > 0) {
+        await debitWallet(tx, user.id, creditsUsed, "pledge_payment", pledge.id);
+      }
 
       const newTotal = currentTotal + body.amountCents;
       const isFunded = newTotal >= wishlistItem.targetPriceCents;
@@ -81,7 +106,7 @@ export async function POST(req: NextRequest, { params }: { params: { itemId: str
       const gameName = steamData?.name ?? `App #${wishlistItem.steamAppId}`;
       const percent = Math.round((body.amountCents / wishlistItem.targetPriceCents) * 100);
 
-      if (wishlistItem.ownerUserId && wishlistItem.ownerUserId !== user.id && user.id !== wishlistItem.ownerUserId) {
+      if (wishlistItem.ownerUserId && wishlistItem.ownerUserId !== user.id) {
         await createNotification(tx, {
           recipientUserId: wishlistItem.ownerUserId,
           type: "PLEDGE_RECEIVED",
@@ -116,24 +141,20 @@ export async function POST(req: NextRequest, { params }: { params: { itemId: str
         });
       }
 
-      return { pledge, isFunded, newTotal, percent, gameName, wishlistItem };
+      return { pledge, isFunded, newTotal, percent, gameName, wishlistItem, creditsUsed, pixPortion };
     });
 
-    // Create PIX payment outside the transaction (external API call)
-    const baseUrl = process.env.APP_BASE_URL ?? "http://localhost:3000";
-    // Pledger pays amountCents + service fee; owner receives amountCents in full
-    const mpAmountCents = Math.ceil(body.amountCents * (1 + SERVICE_FEE_RATE));
-
-    if (mpAmountCents < ASAAS_MIN_CHARGE_CENTS) {
-      const minPledge = Math.ceil(ASAAS_MIN_CHARGE_CENTS / (1 + SERVICE_FEE_RATE));
-      return err(
-        "BELOW_MINIMUM",
-        `Contribuição mínima é R$ ${(minPledge / 100).toFixed(2).replace(".", ",")}`,
-        400
-      );
+    // Fully covered by credits — no PIX charge needed
+    if (result.pixPortion === 0) {
+      maybeDisburseFunds(params.itemId).catch(() => {});
+      return ok({ pledge: result.pledge, isFunded: result.isFunded, newTotal: result.newTotal, percent: result.percent, pix: null }, 201);
     }
-    let pixData = null;
 
+    // Create PIX payment for the remaining portion (outside transaction)
+    const baseUrl = process.env.APP_BASE_URL ?? "http://localhost:3000";
+    const mpAmountCents = Math.ceil(result.pixPortion * (1 + SERVICE_FEE_RATE));
+
+    let pixData = null;
     try {
       const pix = await createPixPayment({
         amountCents: mpAmountCents,
@@ -158,7 +179,6 @@ export async function POST(req: NextRequest, { params }: { params: { itemId: str
 
       pixData = pix;
     } catch (mpError) {
-      // Payment creation failure doesn't block the pledge — log and continue
       console.error("Asaas error:", mpError);
     }
 
@@ -168,6 +188,7 @@ export async function POST(req: NextRequest, { params }: { params: { itemId: str
       newTotal: result.newTotal,
       percent: result.percent,
       pix: pixData,
+      creditsUsed: result.creditsUsed,
     }, 201);
 
   } catch (e: unknown) {
@@ -177,3 +198,4 @@ export async function POST(req: NextRequest, { params }: { params: { itemId: str
     return err("INTERNAL_ERROR", "Erro interno ao processar contribuição", 500);
   }
 }
+

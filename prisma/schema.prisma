@@ -18,15 +18,17 @@ model User {
   pixKey           String?  @unique
   email            String?  @unique
   reputationScore  Int      @default(0)
+  creditsCents     Int      @default(0)
   createdAt        DateTime @default(now())
 
-  memberships   FamilyMembership[]
-  wishlistItems WishlistItem[]
-  pledges       Pledge[]
-  notifications Notification[]
-  chiefOf       Family[]          @relation("ChiefFamilies")
-  votesOpened   Vote[]
-  ballots       VoteBallot[]
+  memberships        FamilyMembership[]
+  wishlistItems      WishlistItem[]
+  pledges            Pledge[]
+  notifications      Notification[]
+  chiefOf            Family[]             @relation("ChiefFamilies")
+  votesOpened        Vote[]
+  ballots            VoteBallot[]
+  walletTransactions WalletTransaction[]
 }
 
 model Family {
@@ -105,9 +107,11 @@ model Pledge {
   status         PledgeStatus  @default(active)
   createdAt      DateTime      @default(now())
 
-  // MercadoPago payment tracking
+  creditsCentsUsed Int           @default(0)
+
+  // Payment tracking
   mpPaymentId    String?       @unique
-  mpAmountCents  Int?          // actual charged amount (contribution + service fee)
+  mpAmountCents  Int?          // actual PIX charged amount (pixPortion + service fee)
   mpStatus       String?       // pending, approved, rejected, cancelled
   mpQrCode       String?       // PIX QR code (copy & paste)
   mpQrCodeBase64 String?       // QR code image
@@ -162,6 +166,20 @@ model Notification {
 
   @@index([recipientUserId, readAt])
   @@index([recipientUserId, createdAt])
+}
+
+model WalletTransaction {
+  id          String   @id @default(cuid())
+  userId      String
+  amountCents Int
+  type        String   // "credit" | "debit"
+  reason      String   // "pledge_payment" | "pledge_withdrawn" | "item_cancelled"
+  pledgeId    String?
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId, createdAt])
 }
 
 model SteamAppCache {

@@ -95,6 +95,7 @@ export async function GET() {
     pixKey: dbUser.pixKey,
     email: dbUser.email,
     reputationScore: dbUser.reputationScore,
+    creditsCents: dbUser.creditsCents,
     families: dbUser.memberships.map((m) => ({
       id: m.family.id,
       name: m.family.name,
