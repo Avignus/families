@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useSearchParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "next-auth/react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -71,6 +72,9 @@ type FamilyData = {
 export function FamilyPageClient({ familyId }: { familyId: string }) {
   const { data: session } = useSession();
   const userId = (session?.user as { id?: string })?.id ?? "";
+  const searchParams = useSearchParams();
+  const pledgeItemId = searchParams.get("pledge") ?? null;
+  const pledgePct = searchParams.get("pct") ? Math.min(100, Math.max(1, parseInt(searchParams.get("pct")!))) : undefined;
 
   const { data, isLoading, error, refetch } = useQuery<{ data: FamilyData }, { status: number; code: string }>({
     queryKey: ["family", familyId],
@@ -323,12 +327,15 @@ export function FamilyPageClient({ familyId }: { familyId: string }) {
                   <WishlistItemCard
                     key={item.id}
                     item={item}
+                    familyId={familyId}
                     currentUserId={userId}
                     memberColors={memberColors}
                     onRefresh={() => refetch()}
                     ownedByCurrentUser={userOwnedAppIds.has(item.steamAppId)}
                     priceAlert={item.priceAlert}
                     priceAvgCents={item.priceAvgCents}
+                    autoOpen={item.id === pledgeItemId}
+                    initialPct={item.id === pledgeItemId ? pledgePct : undefined}
                   />
                 ))}
               </div>

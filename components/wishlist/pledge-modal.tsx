@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
@@ -26,13 +26,20 @@ type Props = {
   totalPledgedCents: number;
   currency: string;
   onSuccess: () => void;
+  initialAmountCents?: number;
 };
 
 export function PledgeModal({
   open, onOpenChange, itemId, gameName,
-  targetPriceCents, totalPledgedCents, currency, onSuccess,
+  targetPriceCents, totalPledgedCents, currency, onSuccess, initialAmountCents,
 }: Props) {
   const [amountStr, setAmountStr] = useState("");
+
+  useEffect(() => {
+    if (open && initialAmountCents && initialAmountCents > 0) {
+      setAmountStr((initialAmountCents / 100).toFixed(2));
+    }
+  }, [open, initialAmountCents]);
   const [loading, setLoading] = useState(false);
   const [pixOpen, setPixOpen] = useState(false);
   const [pixData, setPixData] = useState<PixData | null>(null);
