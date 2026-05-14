@@ -30,7 +30,11 @@ export function Navbar() {
   useEffect(() => {
     fetch("/api/me")
       .then((r) => r.json())
-      .then((d) => { if (d.data?.creditsCents != null) setCreditsCents(d.data.creditsCents); })
+      .then((d) => {
+        if (d.data?.creditsCents != null) setCreditsCents(d.data.creditsCents);
+        if (d.data?.avatarMedium) setFreshAvatar(d.data.avatarMedium);
+        if (d.data?.personaName && !d.data.personaName.startsWith("Steam user")) setFreshName(d.data.personaName);
+      })
       .catch(() => {});
   }, []);
 
