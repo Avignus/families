@@ -5,13 +5,14 @@ import { useQuery } from "@tanstack/react-query";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Library, Heart, Users, Gift, Lock, AlertTriangle, Plus, Clock, CheckCircle2 } from "lucide-react";
+import { formatCurrency } from "@/lib/utils";
 import { PledgeModal } from "@/components/wishlist/pledge-modal";
 import { toast } from "sonner";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type OwnedGame = { appId: number; name: string; playtimeMinutes: number };
-type WishlistGame = { appId: number; name: string; comingSoon: boolean; releaseDate: string; isFree: boolean };
+type WishlistGame = { appId: number; name: string; comingSoon: boolean; releaseDate: string; isFree: boolean; priceCents: number; currency: string };
 
 type MemberSteamData = {
   userId: string;
@@ -86,6 +87,8 @@ type UnifiedEntry = {
   comingSoon: boolean;
   releaseDate: string;
   isFree: boolean;
+  priceCents: number;
+  currency: string;
   ownedByCurrentUser: boolean;
 };
 
@@ -133,6 +136,8 @@ function WishesTab({
             comingSoon: game.comingSoon,
             releaseDate: game.releaseDate,
             isFree: game.isFree,
+            priceCents: game.priceCents,
+            currency: game.currency,
             ownedByCurrentUser: currentUserOwnedAppIds.has(game.appId),
           });
         }
@@ -369,7 +374,18 @@ function WishEntry({
 
         {/* Info */}
         <div className="px-3 py-2.5 space-y-2">
-          <p className="text-xs font-semibold leading-tight line-clamp-1">{entry.name}</p>
+          <div className="flex items-start justify-between gap-1">
+            <p className="text-xs font-semibold leading-tight line-clamp-1">{entry.name}</p>
+            <p className="text-[11px] text-muted-foreground shrink-0">
+              {entry.isFree
+                ? "Gratuito"
+                : entry.priceCents > 0
+                ? formatCurrency(entry.priceCents, entry.currency)
+                : entry.comingSoon
+                ? "Por anunciar"
+                : ""}
+            </p>
+          </div>
 
           {entry.wantedBy.length > 0 && (
             <div className="flex items-center gap-1">

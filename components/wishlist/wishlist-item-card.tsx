@@ -191,7 +191,7 @@ export function WishlistItemCard({ item, currentUserId, memberColors, onRefresh,
                 ? "Gratuito"
                 : noPriceDefined
                 ? "Preço a definir"
-                : formatCurrency(item.targetPriceCents, item.currency)}
+                : formatCurrency(item.steamData?.priceCents ?? item.targetPriceCents, item.currency)}
             </p>
             {item.owner && (
               <div className="flex items-center gap-1">
@@ -212,12 +212,6 @@ export function WishlistItemCard({ item, currentUserId, memberColors, onRefresh,
           </div>
         </div>
 
-        {priceChanged && (
-          <div className="text-[11px] text-amber-400/90 bg-amber-400/8 border border-amber-400/20 rounded-md px-2 py-1.5">
-            Preço atual na Steam: <strong>{formatCurrency(item.steamData!.priceCents, item.currency)}</strong>
-          </div>
-        )}
-
         {!item.steamData?.isFree && !noPriceDefined && (
           <div className="space-y-2">
             {/* Stats row */}
@@ -225,6 +219,11 @@ export function WishlistItemCard({ item, currentUserId, memberColors, onRefresh,
               <span className="text-muted-foreground">
                 {formatCurrency(item.totalPledgedCents, item.currency)}
                 <span className="text-muted-foreground/50"> / {formatCurrency(item.targetPriceCents, item.currency)}</span>
+                {priceChanged && (
+                  <span className="ml-1 text-amber-400/80" title={`Alvo registrado: ${formatCurrency(item.targetPriceCents, item.currency)}`}>
+                    ↑
+                  </span>
+                )}
               </span>
               <span
                 className="font-bold tabular-nums"

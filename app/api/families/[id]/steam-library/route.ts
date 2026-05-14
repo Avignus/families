@@ -68,7 +68,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   const appMetaMap = new Map(
     appCacheEntries.map((e) => {
       const p = e.payload as Partial<SteamAppDetails>;
-      return [e.steamAppId, { comingSoon: p.comingSoon ?? false, releaseDate: p.releaseDate ?? "", isFree: p.isFree ?? false }];
+      return [e.steamAppId, { comingSoon: p.comingSoon ?? false, releaseDate: p.releaseDate ?? "", isFree: p.isFree ?? false, priceCents: p.priceCents ?? 0, currency: p.currency ?? "BRL" }];
     })
   );
 
@@ -82,7 +82,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
       staleIds.map(async (id) => {
         const details = await getAppDetails(id);
         if (details) {
-          appMetaMap.set(id, { comingSoon: details.comingSoon, releaseDate: details.releaseDate, isFree: details.isFree });
+          appMetaMap.set(id, { comingSoon: details.comingSoon, releaseDate: details.releaseDate, isFree: details.isFree, priceCents: details.priceCents, currency: details.currency });
         }
       })
     );
@@ -92,7 +92,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     ...m,
     steamWishlist: m.steamWishlist?.map((g) => ({
       ...g,
-      ...(appMetaMap.get(g.appId) ?? { comingSoon: false, releaseDate: "" }),
+      ...(appMetaMap.get(g.appId) ?? { comingSoon: false, releaseDate: "", isFree: false, priceCents: 0, currency: "BRL" }),
     })) ?? null,
   }));
 
