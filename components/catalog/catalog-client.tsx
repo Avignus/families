@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { PixPaymentModal } from "@/components/wishlist/pix-payment-modal";
 import Link from "next/link";
 import { FamilyCoverArt } from "@/components/family-cover-art";
+import { useLanguage } from "@/lib/i18n/context";
 
 type LibraryStats = { totalGames: number; ownedGames: number; missingGames: number };
 
@@ -64,6 +65,7 @@ type Props = {
 };
 
 export function CatalogClient({ families, isLoggedIn, total, page, pageSize, query, filters }: Props) {
+  const { t } = useLanguage();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -119,20 +121,20 @@ export function CatalogClient({ families, isLoggedIn, total, page, pageSize, que
   };
 
   const handleJoin = async (family: Family) => {
-    if (!isLoggedIn) { toast.error("Faça login para entrar em uma família"); return; }
+    if (!isLoggedIn) { toast.error(t.catalog.loginToJoin); return; }
     setLoading(family.id);
     try {
       const res = await fetch(`/api/families/${family.id}/join-requests`, { method: "POST" });
       const text = await res.text();
       const data = text ? JSON.parse(text) : {};
       if (!res.ok) {
-        toast.error(data.error?.message ?? "Erro ao solicitar entrada");
+        toast.error(data.error?.message ?? t.catalog.errorJoining);
         return;
       }
       if (data.data?.pendingPayment && data.data?.pix) {
         setPixModal({ family, pix: data.data.pix });
       } else {
-        toast.success("Solicitação enviada! Aguarde aprovação do líder.");
+        toast.success(t.catalog.requestSent);
         setLocalStatus((prev) => ({ ...prev, [family.id]: "pending" }));
       }
     } finally {
@@ -145,10 +147,10 @@ export function CatalogClient({ families, isLoggedIn, total, page, pageSize, que
       <div className="max-w-5xl mx-auto px-4 py-10 space-y-6">
         <div className="space-y-1">
           <h1 className="text-2xl font-bold" style={{ fontFamily: "var(--font-space-grotesk)" }}>
-            Catálogo de Famílias
+            {t.catalog.title}
           </h1>
           <p className="text-sm text-muted-foreground">
-            {total} {total === 1 ? "família" : "famílias"} encontradas
+            {t.catalog.found(total)}
           </p>
         </div>
 
@@ -158,14 +160,14 @@ export function CatalogClient({ families, isLoggedIn, total, page, pageSize, que
             <div className="relative flex-1 max-w-sm">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Buscar por nome ou ID..."
+                placeholder={t.catalog.searchPlaceholder}
                 className="pl-9"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
             <Button type="submit" variant="secondary" size="sm" disabled={isPending}>
-              Buscar
+              {t.catalog.search}
             </Button>
             <Button
               type="button"
@@ -175,7 +177,7 @@ export function CatalogClient({ families, isLoggedIn, total, page, pageSize, que
               className="gap-1.5"
             >
               <SlidersHorizontal className="h-4 w-4" />
-              Filtros
+              {t.catalog.filters}
               {activeFilterCount > 0 && (
                 <span className="ml-0.5 inline-flex items-center justify-center h-4 w-4 rounded-full text-[10px] font-bold"
                   style={{ background: "hsl(258 82% 60%)", color: "white" }}>
@@ -186,7 +188,7 @@ export function CatalogClient({ families, isLoggedIn, total, page, pageSize, que
             {activeFilterCount > 0 && (
               <Button type="button" variant="ghost" size="sm" onClick={clearFilters} className="gap-1 text-muted-foreground">
                 <X className="h-3.5 w-3.5" />
-                Limpar
+                {t.catalog.clear}
               </Button>
             )}
           </div>
@@ -197,11 +199,11 @@ export function CatalogClient({ families, isLoggedIn, total, page, pageSize, que
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {/* Price filter */}
                 <div className="space-y-2">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Preço de entrada (R$)</p>
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{t.catalog.entryPriceFilter}</p>
                   <div className="flex items-center gap-2">
                     <Input
                       type="number"
-                      placeholder="Mín"
+                      placeholder={t.catalog.min}
                       min="0"
                       step="0.01"
                       className="h-8 text-sm"
@@ -211,7 +213,7 @@ export function CatalogClient({ families, isLoggedIn, total, page, pageSize, que
                     <span className="text-muted-foreground text-sm flex-shrink-0">—</span>
                     <Input
                       type="number"
-                      placeholder="Máx"
+                      placeholder={t.catalog.max}
                       min="0"
                       step="0.01"
                       className="h-8 text-sm"
@@ -224,12 +226,12 @@ export function CatalogClient({ families, isLoggedIn, total, page, pageSize, que
                 {/* Total games filter */}
                 <div className="space-y-2">
                   <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-1">
-                    <Gamepad2 className="h-3.5 w-3.5" /> Jogos na família
+                    <Gamepad2 className="h-3.5 w-3.5" /> {t.catalog.gamesInFamily}
                   </p>
                   <div className="flex items-center gap-2">
                     <Input
                       type="number"
-                      placeholder="Mín"
+                      placeholder={t.catalog.min}
                       min="0"
                       className="h-8 text-sm"
                       value={minGames}
@@ -238,7 +240,7 @@ export function CatalogClient({ families, isLoggedIn, total, page, pageSize, que
                     <span className="text-muted-foreground text-sm flex-shrink-0">—</span>
                     <Input
                       type="number"
-                      placeholder="Máx"
+                      placeholder={t.catalog.max}
                       min="0"
                       className="h-8 text-sm"
                       value={maxGames}
@@ -251,13 +253,13 @@ export function CatalogClient({ families, isLoggedIn, total, page, pageSize, que
                 <div className="space-y-2">
                   <p className={`text-xs font-medium uppercase tracking-wide flex items-center gap-1 ${isLoggedIn ? "text-muted-foreground" : "text-muted-foreground/40"}`}>
                     <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-                    Jogos que você tem
-                    {!isLoggedIn && <span className="text-[10px] normal-case font-normal">(requer login)</span>}
+                    {t.catalog.gamesYouHave}
+                    {!isLoggedIn && <span className="text-[10px] normal-case font-normal">{t.catalog.requiresLogin}</span>}
                   </p>
                   <div className="flex items-center gap-2">
                     <Input
                       type="number"
-                      placeholder="Mín"
+                      placeholder={t.catalog.min}
                       min="0"
                       className="h-8 text-sm"
                       disabled={!isLoggedIn}
@@ -267,7 +269,7 @@ export function CatalogClient({ families, isLoggedIn, total, page, pageSize, que
                     <span className="text-muted-foreground text-sm flex-shrink-0">—</span>
                     <Input
                       type="number"
-                      placeholder="Máx"
+                      placeholder={t.catalog.max}
                       min="0"
                       className="h-8 text-sm"
                       disabled={!isLoggedIn}
@@ -281,13 +283,13 @@ export function CatalogClient({ families, isLoggedIn, total, page, pageSize, que
                 <div className="space-y-2">
                   <p className={`text-xs font-medium uppercase tracking-wide flex items-center gap-1 ${isLoggedIn ? "text-muted-foreground" : "text-muted-foreground/40"}`}>
                     <PlusCircle className="h-3.5 w-3.5 text-primary" />
-                    Jogos que você não tem
-                    {!isLoggedIn && <span className="text-[10px] normal-case font-normal">(requer login)</span>}
+                    {t.catalog.gamesYouDontHave}
+                    {!isLoggedIn && <span className="text-[10px] normal-case font-normal">{t.catalog.requiresLogin}</span>}
                   </p>
                   <div className="flex items-center gap-2">
                     <Input
                       type="number"
-                      placeholder="Mín"
+                      placeholder={t.catalog.min}
                       min="0"
                       className="h-8 text-sm"
                       disabled={!isLoggedIn}
@@ -297,7 +299,7 @@ export function CatalogClient({ families, isLoggedIn, total, page, pageSize, que
                     <span className="text-muted-foreground text-sm flex-shrink-0">—</span>
                     <Input
                       type="number"
-                      placeholder="Máx"
+                      placeholder={t.catalog.max}
                       min="0"
                       className="h-8 text-sm"
                       disabled={!isLoggedIn}
@@ -310,7 +312,7 @@ export function CatalogClient({ families, isLoggedIn, total, page, pageSize, que
 
               <div className="flex justify-end">
                 <Button type="submit" size="sm" disabled={isPending}>
-                  Aplicar filtros
+                  {t.catalog.applyFilters}
                 </Button>
               </div>
             </div>
@@ -319,7 +321,7 @@ export function CatalogClient({ families, isLoggedIn, total, page, pageSize, que
 
         {families.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-16">
-            Nenhuma família encontrada{query ? ` para "${query}"` : ""}.
+            {t.catalog.noFamilies(query)}
           </p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -365,7 +367,7 @@ export function CatalogClient({ families, isLoggedIn, total, page, pageSize, que
           onOpenChange={(v) => { if (!v) setPixModal(null); }}
           amountCents={pixModal.family.entryFeeCents}
           currency={pixModal.family.currency}
-          gameName={`Entrada em ${pixModal.family.name}`}
+          gameName={t.catalogJoinBtn.entryInto(pixModal.family.name)}
           pix={pixModal.pix}
         />
       )}
@@ -382,13 +384,14 @@ function FamilyCard({
   isLoggedIn: boolean;
   onJoin: (f: Family) => void;
 }) {
+  const { t } = useLanguage();
   const hasFee = family.entryFeeCents > 0;
   const stats = family.libraryStats;
 
   const statusLabel = () => {
-    if (myStatus === "active") return { text: "Membro", color: "text-emerald-400" };
-    if (myStatus === "pending") return { text: "Solicitação enviada", color: "text-amber-400" };
-    if (myStatus === "rejected") return { text: "Rejeitado", color: "text-destructive" };
+    if (myStatus === "active") return { text: t.catalog.member, color: "text-emerald-400" };
+    if (myStatus === "pending") return { text: t.catalog.requestPending, color: "text-amber-400" };
+    if (myStatus === "rejected") return { text: t.catalog.rejected, color: "text-destructive" };
     return null;
   };
 
@@ -502,11 +505,11 @@ function FamilyCard({
             <span className={`text-xs font-semibold ${status.color}`}>{status.text}</span>
           ) : !family.isPublic ? (
             <div className="flex items-center gap-1 text-xs text-muted-foreground">
-              <Lock className="h-3.5 w-3.5" /> Família privada
+              <Lock className="h-3.5 w-3.5" /> {t.catalog.privateFamily}
             </div>
           ) : family.isFull ? (
             <div className="flex items-center gap-1 text-xs text-muted-foreground">
-              <Lock className="h-3.5 w-3.5" /> Sem vagas
+              <Lock className="h-3.5 w-3.5" /> {t.catalog.noSlots}
             </div>
           ) : (
             <button
@@ -518,8 +521,8 @@ function FamilyCard({
               {loading
                 ? "..."
                 : hasFee
-                ? `Entrar · ${formatCurrency(family.entryFeeCents, family.currency)}`
-                : "Pedir entrada"}
+                ? t.catalogJoinBtn.join(formatCurrency(family.entryFeeCents, family.currency))
+                : t.catalog.joinRequest}
             </button>
           )}
         </div>

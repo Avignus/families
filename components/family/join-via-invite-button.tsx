@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/utils";
 import { PixPaymentModal } from "@/components/wishlist/pix-payment-modal";
+import { useLanguage } from "@/lib/i18n/context";
 
 type PixData = { qrCode: string; qrCodeBase64: string; ticketUrl: string; paymentId: string };
 
@@ -17,6 +18,7 @@ export function JoinViaInviteButton({
   currency: string;
 }) {
   const router = useRouter();
+  const { t } = useLanguage();
   const [loading, setLoading] = useState(false);
   const [pixModal, setPixModal] = useState<PixData | null>(null);
 
@@ -26,13 +28,13 @@ export function JoinViaInviteButton({
       const res = await fetch(`/api/families/${familyId}/join-requests`, { method: "POST" });
       const data = await res.json();
       if (!res.ok) {
-        toast.error(data.error?.message ?? "Erro ao solicitar entrada");
+        toast.error(data.error?.message ?? t.catalogJoinBtn.error);
         return;
       }
       if (data.data?.pendingPayment && data.data?.pix) {
         setPixModal(data.data.pix);
       } else {
-        toast.success("Solicitação enviada! Aguarde aprovação do líder.");
+        toast.success(t.catalogJoinBtn.success);
         router.push("/dashboard");
       }
     } finally {
@@ -51,10 +53,10 @@ export function JoinViaInviteButton({
         style={{ background: "linear-gradient(135deg, hsl(258 82% 60%), hsl(258 82% 50%))" }}
       >
         {loading
-          ? "Aguarde..."
+          ? "..."
           : hasFee
-          ? `Entrar · ${formatCurrency(entryFeeCents, currency)}`
-          : "Pedir entrada"}
+          ? t.catalogJoinBtn.join(formatCurrency(entryFeeCents, currency))
+          : t.catalogJoinBtn.request}
       </button>
 
       {pixModal && (
@@ -63,7 +65,7 @@ export function JoinViaInviteButton({
           onOpenChange={(v) => { if (!v) setPixModal(null); }}
           amountCents={entryFeeCents}
           currency={currency}
-          gameName={`Entrada em ${familyName}`}
+          gameName={t.catalogJoinBtn.entryInto(familyName)}
           pix={pixModal}
         />
       )}

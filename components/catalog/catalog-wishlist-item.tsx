@@ -1,5 +1,8 @@
+"use client";
+
 import { formatCurrency } from "@/lib/utils";
 import { ShoppingCart, Sparkles } from "lucide-react";
+import { useLanguage } from "@/lib/i18n/context";
 
 type Props = {
   item: {
@@ -24,6 +27,7 @@ type Props = {
 };
 
 export function CatalogWishlistItem({ item }: Props) {
+  const { t } = useLanguage();
   const isFunded = item.status === "funded";
   const isPurchased = item.status === "purchased";
   const gameName = item.steam?.name ?? `App #${item.steamAppId}`;
@@ -49,7 +53,7 @@ export function CatalogWishlistItem({ item }: Props) {
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
-            <span className="text-muted-foreground text-xs">Sem imagem</span>
+            <span className="text-muted-foreground text-xs">{t.catalogWishlistItem.noImage}</span>
           </div>
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-card via-card/20 to-transparent" />
@@ -60,12 +64,12 @@ export function CatalogWishlistItem({ item }: Props) {
               className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold"
               style={{ background: "hsl(258 82% 66% / 0.9)", color: "white" }}
             >
-              <Sparkles className="h-3 w-3" /> Financiado
+              <Sparkles className="h-3 w-3" /> {t.catalogWishlistItem.funded}
             </span>
           )}
           {isPurchased && (
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/80 text-white">
-              <ShoppingCart className="h-3 w-3" /> Comprado
+              <ShoppingCart className="h-3 w-3" /> {t.catalogWishlistItem.purchased}
             </span>
           )}
         </div>
@@ -82,7 +86,7 @@ export function CatalogWishlistItem({ item }: Props) {
           </h3>
           <div className="flex items-center justify-between mt-0.5">
             <p className="text-xs text-muted-foreground">
-              {item.steam?.isFree ? "Gratuito" : formatCurrency(item.targetPriceCents, item.currency)}
+              {item.steam?.isFree ? t.catalogWishlistItem.free : formatCurrency(item.targetPriceCents, item.currency)}
             </p>
             {item.owner && (
               <div className="flex items-center gap-1">

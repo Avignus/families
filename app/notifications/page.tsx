@@ -8,21 +8,11 @@ import { Badge } from "@/components/ui/badge";
 import { formatRelativeTime } from "@/lib/utils";
 import { Bell, CheckCheck } from "lucide-react";
 import Link from "next/link";
-
-const NOTIFICATION_LABELS: Record<string, string> = {
-  JOIN_REQUEST: "Solicitação de entrada",
-  JOIN_APPROVED: "Entrada aprovada",
-  JOIN_REJECTED: "Entrada recusada",
-  PLEDGE_RECEIVED: "Nova contribuição",
-  PLEDGE_WITHDRAWN: "Contribuição cancelada",
-  ITEM_FUNDED: "Jogo financiado!",
-  ITEM_PURCHASED: "Jogo comprado!",
-  VOTE_OPENED: "Nova votação",
-  VOTE_CLOSED: "Votação encerrada",
-};
+import { useLanguage } from "@/lib/i18n/context";
 
 export default function NotificationsPage() {
   const { recent, unreadCount, markRead, markAllRead, refetch } = useNotifications();
+  const { t } = useLanguage();
 
   useEffect(() => {
     if (unreadCount > 0) markAllRead();
@@ -42,12 +32,12 @@ export default function NotificationsPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold flex items-center gap-2">
           <Bell className="h-6 w-6" />
-          Notificações
+          {t.notif.title}
           {unreadCount > 0 && <Badge>{unreadCount}</Badge>}
         </h1>
         {unreadCount > 0 && (
           <Button size="sm" variant="outline" onClick={markAllRead}>
-            <CheckCheck className="h-4 w-4 mr-1" /> Marcar todas como lidas
+            <CheckCheck className="h-4 w-4 mr-1" /> {t.notif.markAllRead}
           </Button>
         )}
       </div>
@@ -56,7 +46,7 @@ export default function NotificationsPage() {
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-16 gap-3">
             <Bell className="h-10 w-10 text-muted-foreground" />
-            <p className="text-muted-foreground">Nenhuma notificação</p>
+            <p className="text-muted-foreground">{t.notif.none}</p>
           </CardContent>
         </Card>
       ) : (
@@ -75,7 +65,7 @@ export default function NotificationsPage() {
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-medium text-muted-foreground mb-0.5">
-                      {NOTIFICATION_LABELS[n.type] ?? n.type}
+                      {(t.notif.types as Record<string, string>)[n.type] ?? n.type}
                     </p>
                     <p className="text-sm">
                       {payload.gameName && (

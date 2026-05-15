@@ -8,6 +8,7 @@ import { GameSearchModal } from "@/components/wishlist/game-search-modal";
 import { formatCurrency } from "@/lib/utils";
 import { ThumbsUp, ThumbsDown, Minus, Plus } from "lucide-react";
 import { toast } from "sonner";
+import { useLanguage } from "@/lib/i18n/context";
 
 type VoteData = {
   id: string;
@@ -21,6 +22,7 @@ type VoteData = {
 };
 
 export function VotesPanel({ familyId, currency }: { familyId: string; currency: string }) {
+  const { t } = useLanguage();
   const [searchOpen, setSearchOpen] = useState(false);
 
   const { data, refetch } = useQuery<{ data: VoteData[] }>({
@@ -41,10 +43,10 @@ export function VotesPanel({ familyId, currency }: { familyId: string; currency:
     });
     const data = await res.json();
     if (!res.ok) {
-      toast.error(data.error?.message ?? "Erro ao criar votação");
+      toast.error(data.error?.message ?? t.votes.error);
       return;
     }
-    toast.success("Votação aberta!");
+    toast.success(t.votes.success);
     refetch();
   };
 
@@ -69,19 +71,19 @@ export function VotesPanel({ familyId, currency }: { familyId: string; currency:
     <div className="space-y-4">
       <div className="flex justify-end">
         <Button size="sm" variant="outline" onClick={() => setSearchOpen(true)}>
-          <Plus className="h-4 w-4 mr-1" /> Iniciar Votação
+          <Plus className="h-4 w-4 mr-1" /> {t.votes.start}
         </Button>
       </div>
 
       {votes.length === 0 && (
         <p className="text-sm text-muted-foreground text-center py-4">
-          Nenhuma votação ainda. Inicie uma para decidir qual jogo comprar juntos!
+          {t.votes.noVotes}
         </p>
       )}
 
       {activeVotes.length > 0 && (
         <div className="space-y-3">
-          <h4 className="text-sm font-medium text-muted-foreground">Votações Abertas</h4>
+          <h4 className="text-sm font-medium text-muted-foreground">{t.votes.openSection}</h4>
           {activeVotes.map((vote) => (
             <VoteCard key={vote.id} vote={vote} onBallot={castBallot} />
           ))}
@@ -90,7 +92,7 @@ export function VotesPanel({ familyId, currency }: { familyId: string; currency:
 
       {closedVotes.length > 0 && (
         <div className="space-y-3">
-          <h4 className="text-sm font-medium text-muted-foreground">Encerradas</h4>
+          <h4 className="text-sm font-medium text-muted-foreground">{t.votes.closedSection}</h4>
           {closedVotes.map((vote) => (
             <VoteCard key={vote.id} vote={vote} onBallot={castBallot} />
           ))}
@@ -101,7 +103,7 @@ export function VotesPanel({ familyId, currency }: { familyId: string; currency:
         open={searchOpen}
         onOpenChange={setSearchOpen}
         onSelect={handleStartVote}
-        title="Votar em qual jogo comprar"
+        title={t.votes.searchTitle}
       />
     </div>
   );
@@ -114,7 +116,7 @@ function VoteCard({
   vote: VoteData;
   onBallot: (id: string, choice: "yes" | "no" | "abstain") => void;
 }) {
-  const total = vote.tally.yes + vote.tally.no + vote.tally.abstain;
+  const { t } = useLanguage();
   const isOpen = vote.status === "open";
   const closesDate = new Date(vote.closesAt);
 
@@ -133,7 +135,7 @@ function VoteCard({
             {vote.steamData?.name ?? `App #${vote.steamAppId}`}
           </span>
           <Badge variant={isOpen ? "default" : "secondary"} className="text-xs">
-            {isOpen ? "Aberta" : "Encerrada"}
+            {isOpen ? t.votes.open : t.votes.closed}
           </Badge>
         </div>
         <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
@@ -141,7 +143,7 @@ function VoteCard({
           <span>✗ {vote.tally.no}</span>
           <span>— {vote.tally.abstain}</span>
           {isOpen && (
-            <span>até {closesDate.toLocaleDateString("pt-BR")}</span>
+            <span>{t.votes.until(closesDate.toLocaleDateString(t.dateLocale))}</span>
           )}
         </div>
       </div>
@@ -154,7 +156,7 @@ function VoteCard({
               variant={vote.myBallot === choice ? "default" : "outline"}
               className="h-7 w-7"
               onClick={() => onBallot(vote.id, choice)}
-              title={choice === "yes" ? "Sim" : choice === "no" ? "Não" : "Abster"}
+              title={choice === "yes" ? t.votes.yes : choice === "no" ? t.votes.no : t.votes.abstain}
             >
               {choice === "yes" ? <ThumbsUp className="h-3 w-3" /> :
                choice === "no" ? <ThumbsDown className="h-3 w-3" /> :

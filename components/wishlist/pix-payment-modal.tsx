@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/utils";
 import { Copy, Check, ExternalLink, QrCode, Clock, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
+import { useLanguage } from "@/lib/i18n/context";
 
 type PixData = {
   qrCode: string;
@@ -24,8 +25,8 @@ type Props = {
   currency: string;
   gameName: string;
   pix: PixData | null;
-  pollUrl?: string;           // endpoint to poll for confirmation
-  onConfirmed?: () => void;   // called when payment is confirmed
+  pollUrl?: string;
+  onConfirmed?: () => void;
 };
 
 function useCountdown(expiresAt?: string) {
@@ -57,11 +58,11 @@ function useCountdown(expiresAt?: string) {
 export function PixPaymentModal({
   open, onOpenChange, amountCents, currency, gameName, pix, pollUrl, onConfirmed,
 }: Props) {
+  const { t } = useLanguage();
   const [copied, setCopied] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
   const countdown = useCountdown(pix?.expiresAt);
 
-  // Poll for payment confirmation
   useEffect(() => {
     if (!open || !pollUrl || confirmed) return;
 
@@ -73,7 +74,7 @@ export function PixPaymentModal({
         if (data.data?.paid || data.data?.membershipStatus === "active") {
           setConfirmed(true);
           clearInterval(id);
-          toast.success("Pagamento confirmado!");
+          toast.success(t.pix.confirmed);
           setTimeout(() => {
             onOpenChange(false);
             onConfirmed?.();
@@ -89,7 +90,7 @@ export function PixPaymentModal({
     if (!pix?.qrCode) return;
     await navigator.clipboard.writeText(pix.qrCode);
     setCopied(true);
-    toast.success("Código PIX copiado!");
+    toast.success(t.pix.codeCopied);
     setTimeout(() => setCopied(false), 3000);
   };
 
@@ -101,40 +102,38 @@ export function PixPaymentModal({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <QrCode className="h-5 w-5 text-primary" />
-            Pagar via PIX
+            {t.pix.title}
           </DialogTitle>
           <DialogDescription>
-            {formatCurrency(amountCents, currency)} para <strong>{gameName}</strong>
+            {t.pix.for(formatCurrency(amountCents, currency), gameName)}
           </DialogDescription>
         </DialogHeader>
 
         {confirmed ? (
           <div className="py-8 flex flex-col items-center gap-3 text-center">
             <CheckCircle2 className="h-12 w-12 text-emerald-400" />
-            <p className="font-semibold text-emerald-400">Pagamento confirmado!</p>
-            <p className="text-sm text-muted-foreground">Redirecionando…</p>
+            <p className="font-semibold text-emerald-400">{t.pix.confirmed}</p>
+            <p className="text-sm text-muted-foreground">{t.pix.redirecting}</p>
           </div>
         ) : !pix ? (
           <div className="py-6 text-center space-y-2">
             <p className="text-sm text-muted-foreground">
-              O pagamento via PIX não está configurado neste ambiente.
+              {t.pix.notConfigured}
             </p>
           </div>
         ) : (
           <div className="space-y-4">
-            {/* Countdown */}
             {countdown !== null ? (
               <div className="flex items-center justify-center gap-1.5 text-xs font-mono">
                 <Clock className="h-3.5 w-3.5 text-amber-400" />
                 <span className="text-amber-400 font-semibold">
-                  Expira em {pad(countdown.h)}:{pad(countdown.m)}:{pad(countdown.s)}
+                  {t.pix.expires(`${pad(countdown.h)}:${pad(countdown.m)}:${pad(countdown.s)}`)}
                 </span>
               </div>
             ) : pix.expiresAt ? (
-              <p className="text-xs text-destructive text-center font-semibold">PIX expirado</p>
+              <p className="text-xs text-destructive text-center font-semibold">{t.pix.expired}</p>
             ) : null}
 
-            {/* QR Code */}
             {pix.qrCodeBase64 && (
               <div className="flex justify-center">
                 <div className="p-3 bg-white rounded-xl">
@@ -144,31 +143,33 @@ export function PixPaymentModal({
             )}
 
             <p className="text-xs text-center text-muted-foreground">
-              Escaneie com seu banco ou copie o código abaixo
+              {t.pix.scanInstruction}
             </p>
 
             <div className="space-y-2">
               <div className="bg-secondary/50 rounded-lg p-3 border border-border/50">
-                <p className="text-[11px] text-muted-foreground mb-1 font-medium">PIX Copia e Cola</p>
+                <p className="text-[11px] text-muted-foreground mb-1 font-medium">{t.pix.copyPaste}</p>
                 <p className="text-xs font-mono break-all text-foreground/80 leading-relaxed">
                   {pix.qrCode.slice(0, 60)}…
                 </p>
               </div>
               <Button className="w-full" onClick={copyCode} variant={copied ? "secondary" : "default"}>
-                {copied ? <><Check className="h-4 w-4 mr-2" /> Copiado!</> : <><Copy className="h-4 w-4 mr-2" /> Copiar Código PIX</>}
+                {copied
+                  ? <><Check className="h-4 w-4 mr-2" /> {t.pix.copied}</>
+                  : <><Copy className="h-4 w-4 mr-2" /> {t.pix.copyBtn}</>}
               </Button>
             </div>
 
             {pix.ticketUrl && (
               <a href={pix.ticketUrl} target="_blank" rel="noopener noreferrer"
                 className="flex items-center justify-center gap-1.5 text-xs text-primary hover:underline">
-                <ExternalLink className="h-3 w-3" /> Abrir link de pagamento
+                <ExternalLink className="h-3 w-3" /> {t.pix.openLink}
               </a>
             )}
 
             {pollUrl && (
               <p className="text-[11px] text-muted-foreground text-center border-t border-border/50 pt-3">
-                O modal fechará automaticamente após a confirmação do pagamento.
+                {t.pix.autoClose}
               </p>
             )}
           </div>
@@ -176,7 +177,7 @@ export function PixPaymentModal({
 
         {!confirmed && (
           <Button variant="outline" className="w-full" onClick={() => onOpenChange(false)}>
-            {pix ? "Fechar — pagarei depois" : "Fechar"}
+            {pix ? t.pix.closeLater : t.pix.close}
           </Button>
         )}
       </DialogContent>

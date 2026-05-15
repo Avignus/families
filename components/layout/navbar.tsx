@@ -15,10 +15,27 @@ import { useNotifications } from "@/components/notifications/notification-provid
 import { FamiliesLogo } from "./logo";
 import { formatRelativeTime, formatCurrency } from "@/lib/utils";
 import { getNotificationContent } from "@/lib/notifications/templates";
+import { useLanguage } from "@/lib/i18n/context";
+
+function LanguageToggle() {
+  const { lang, setLang } = useLanguage();
+  return (
+    <button
+      onClick={() => setLang(lang === "en" ? "pt" : "en")}
+      title={lang === "en" ? "Mudar para Português" : "Switch to English"}
+      className="flex items-center gap-0.5 px-1.5 py-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-primary/10 transition-colors"
+    >
+      <span className={`text-base leading-none transition-opacity ${lang === "en" ? "opacity-100" : "opacity-30"}`}>🇺🇸</span>
+      <span className="text-muted-foreground/40 text-xs mx-0.5">/</span>
+      <span className={`text-base leading-none transition-opacity ${lang === "pt" ? "opacity-100" : "opacity-30"}`}>🇧🇷</span>
+    </button>
+  );
+}
 
 export function Navbar() {
   const { data: session, update } = useSession();
   const { unreadCount, recent, markRead } = useNotifications();
+  const { t } = useLanguage();
   const [freshName, setFreshName] = useState<string | null>(null);
   const [freshAvatar, setFreshAvatar] = useState<string | null>(null);
   const [creditsCents, setCreditsCents] = useState<number | null>(null);
@@ -74,11 +91,13 @@ export function Navbar() {
             className="hidden md:flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             <Globe className="h-4 w-4" />
-            Catálogo
+            {t.nav.catalog}
           </Link>
         </div>
 
         <div className="flex items-center gap-1">
+          <LanguageToggle />
+
           {/* Notification bell */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -94,16 +113,16 @@ export function Navbar() {
             <DropdownMenuContent align="end" className="w-80 bg-card/95 backdrop-blur border-border/60">
               <DropdownMenuLabel className="flex items-center justify-between py-2.5">
                 <span className="font-semibold" style={{ fontFamily: "var(--font-space-grotesk)" }}>
-                  Notificações
+                  {t.nav.notifications}
                 </span>
                 {unreadCount > 0 && (
-                  <Badge className="text-xs h-5">{unreadCount} novas</Badge>
+                  <Badge className="text-xs h-5">{unreadCount} {t.nav.newBadge}</Badge>
                 )}
               </DropdownMenuLabel>
               <DropdownMenuSeparator className="bg-border/60" />
               {recent.length === 0 ? (
                 <div className="px-3 py-6 text-center text-sm text-muted-foreground">
-                  Nenhuma notificação ainda
+                  {t.nav.noNotifications}
                 </div>
               ) : (
                 <>
@@ -141,7 +160,7 @@ export function Navbar() {
                   })}
                   <DropdownMenuSeparator className="bg-border/60" />
                   <DropdownMenuItem asChild className="justify-center text-primary text-xs py-2 focus:bg-primary/10 focus:text-primary">
-                    <Link href="/notifications">Ver todas as notificações</Link>
+                    <Link href="/notifications">{t.nav.viewAll}</Link>
                   </DropdownMenuItem>
                 </>
               )}
@@ -167,11 +186,11 @@ export function Navbar() {
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col gap-0.5">
                   <span className="font-semibold text-sm">{user.personaName ?? user.name}</span>
-                  <span className="text-xs text-muted-foreground">Steam account</span>
+                  <span className="text-xs text-muted-foreground">{t.nav.steamAccount}</span>
                   {creditsCents != null && creditsCents > 0 && (
                     <span className="flex items-center gap-1 text-xs font-medium mt-0.5" style={{ color: "hsl(258 82% 72%)" }}>
                       <Wallet className="h-3 w-3" />
-                      {formatCurrency(creditsCents, "BRL")} em créditos
+                      {formatCurrency(creditsCents, "BRL")} {t.nav.credits}
                     </span>
                   )}
                 </div>
@@ -180,13 +199,13 @@ export function Navbar() {
               <DropdownMenuItem asChild className="focus:bg-primary/10 focus:text-foreground">
                 <Link href="/notifications" className="cursor-pointer">
                   <Bell className="h-4 w-4 mr-2 text-muted-foreground" />
-                  Notificações
+                  {t.nav.notifications}
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild className="focus:bg-primary/10 focus:text-foreground">
                 <Link href="/settings" className="cursor-pointer">
                   <Settings className="h-4 w-4 mr-2 text-muted-foreground" />
-                  Configurações
+                  {t.nav.settings}
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator className="bg-border/60" />
@@ -195,7 +214,7 @@ export function Navbar() {
                 className="text-destructive focus:text-destructive focus:bg-destructive/10 cursor-pointer"
               >
                 <LogOut className="h-4 w-4 mr-2" />
-                Sair
+                {t.nav.signOut}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

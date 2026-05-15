@@ -13,12 +13,14 @@ import { WishlistItemCard } from "@/components/wishlist/wishlist-item-card";
 import { GameSearchModal } from "@/components/wishlist/game-search-modal";
 import { VotesPanel } from "@/components/votes/votes-panel";
 import { SteamLibraryPanel } from "@/components/family/steam-library-panel";
+import { MemberActions } from "@/components/family/member-actions";
 import { Plus, ChevronDown, ChevronUp, Settings, Copy, LogIn, Gamepad2, Check, X, Camera } from "lucide-react";
 import { MonthlyBudgetForm } from "@/components/family/monthly-budget-form";
 import { FamilyCoverArt } from "@/components/family-cover-art";
 import { getMemberColor, formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
 import Link from "next/link";
+import { useLanguage } from "@/lib/i18n/context";
 
 type Member = {
   id: string;
@@ -71,6 +73,7 @@ type FamilyData = {
 
 export function FamilyPageClient({ familyId }: { familyId: string }) {
   const { data: session } = useSession();
+  const { t } = useLanguage();
   const userId = (session?.user as { id?: string })?.id ?? "";
   const searchParams = useSearchParams();
   const pledgeItemId = searchParams.get("pledge") ?? null;
@@ -133,14 +136,14 @@ export function FamilyPageClient({ familyId }: { familyId: string }) {
       if (data.error?.code === "GAME_ALREADY_IN_FAMILY") {
         toast.error(data.error.message);
       } else {
-        toast.error(data.error?.message ?? "Erro ao adicionar jogo");
+        toast.error(data.error?.message ?? t.family.errorAddingGame);
       }
       return;
     }
-    toast.success("Adicionado à lista!", {
+    toast.success(t.family.gameAdded, {
       description: result.name,
       action: {
-        label: "Ver lista →",
+        label: t.family.viewList,
         onClick: () => document.getElementById("family-wishlist")?.scrollIntoView({ behavior: "smooth", block: "start" }),
       },
     });
@@ -149,7 +152,7 @@ export function FamilyPageClient({ familyId }: { familyId: string }) {
 
   const copyId = () => {
     navigator.clipboard.writeText(familyId);
-    toast.success("ID copiado!");
+    toast.success(t.family.idCopied);
   };
 
   if (isLoading) {
@@ -175,7 +178,7 @@ export function FamilyPageClient({ familyId }: { familyId: string }) {
     if ((error as { status?: number }).status === 403) return <JoinRequestScreen familyId={familyId} />;
     return (
       <div className="container py-8 text-center text-muted-foreground">
-        Família não encontrada.
+        {t.family.notFound}
       </div>
     );
   }
@@ -229,13 +232,13 @@ export function FamilyPageClient({ familyId }: { familyId: string }) {
                   form.append("file", file);
                   const res = await fetch(`/api/families/${familyId}/cover`, { method: "POST", body: form });
                   const data = await res.json();
-                  if (!res.ok) { toast.error(data.error?.message ?? "Erro ao enviar imagem"); return; }
-                  toast.success("Capa atualizada!");
+                  if (!res.ok) { toast.error(data.error?.message ?? t.family.imageError); return; }
+                  toast.success(t.family.coverUpdated);
                   refetch();
                 }}
               />
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-black/60 text-white backdrop-blur-sm hover:bg-black/75 transition-colors">
-                <Camera className="h-3.5 w-3.5" /> Alterar capa
+                <Camera className="h-3.5 w-3.5" /> {t.family.changeCover}
               </span>
             </label>
           )}
@@ -255,7 +258,7 @@ export function FamilyPageClient({ familyId }: { familyId: string }) {
             {family.isChief && (
               <Link href={`/families/${familyId}/admin`}>
                 <Button size="sm" variant="outline" className="shrink-0">
-                  <Settings className="h-4 w-4 mr-1" /> Administrar
+                  <Settings className="h-4 w-4 mr-1" /> {t.family.manage}
                 </Button>
               </Link>
             )}
@@ -265,23 +268,35 @@ export function FamilyPageClient({ familyId }: { familyId: string }) {
         <CardContent className="space-y-6">
           {/* Members strip */}
           <div>
-            <h3 className="text-sm font-medium text-muted-foreground mb-3">Membros</h3>
+            <h3 className="text-sm font-medium text-muted-foreground mb-3">{t.family.members}</h3>
             <div className="flex flex-wrap gap-4">
               {family.memberships.map(({ user }) => {
                 const color = memberColors.get(user.id)!;
+                const canRemove = family.isChief && user.id !== family.chiefId;
                 return (
-                  <div key={user.id} className="flex flex-col items-center gap-1.5">
-                    <Avatar className="h-12 w-12" style={{ boxShadow: `0 0 0 2px ${color}` }}>
-                      <AvatarImage src={user.avatarMedium} alt={user.personaName} />
-                      <AvatarFallback style={{ backgroundColor: color }}>
-                        {user.personaName[0]}
-                      </AvatarFallback>
-                    </Avatar>
+                  <div key={user.id} className="flex flex-col items-center gap-1.5 group/member">
+                    <div className="relative">
+                      <Avatar className="h-12 w-12" style={{ boxShadow: `0 0 0 2px ${color}` }}>
+                        <AvatarImage src={user.avatarMedium} alt={user.personaName} />
+                        <AvatarFallback style={{ backgroundColor: color }}>
+                          {user.personaName[0]}
+                        </AvatarFallback>
+                      </Avatar>
+                      {canRemove && (
+                        <MemberActions
+                          compact
+                          familyId={familyId}
+                          memberId={user.id}
+                          memberName={user.personaName}
+                          onSuccess={() => refetch()}
+                        />
+                      )}
+                    </div>
                     <span className="text-xs max-w-[60px] truncate" style={{ color }}>
                       {user.personaName}
                     </span>
                     {user.id === family.chiefId && (
-                      <Badge variant="outline" className="text-[9px] px-1 py-0">Chefe</Badge>
+                      <Badge variant="outline" className="text-[9px] px-1 py-0">{t.family.chief}</Badge>
                     )}
                   </div>
                 );
@@ -305,9 +320,9 @@ export function FamilyPageClient({ familyId }: { familyId: string }) {
           {/* Shared family wishlist */}
           <div id="family-wishlist">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold">Lista de Desejos da Família</h3>
+              <h3 className="font-semibold">{t.family.wishlistTitle}</h3>
               <Button size="sm" variant="outline" onClick={() => setAddGameOpen(true)}>
-                <Plus className="h-4 w-4 mr-1" /> Adicionar Jogo
+                <Plus className="h-4 w-4 mr-1" /> {t.family.addGame}
               </Button>
             </div>
 
@@ -319,7 +334,7 @@ export function FamilyPageClient({ familyId }: { familyId: string }) {
 
             {family.wishlistItems.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground text-sm">
-                Nenhum jogo na lista ainda. Adicione o primeiro!
+                {t.family.noGames}
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -349,7 +364,7 @@ export function FamilyPageClient({ familyId }: { familyId: string }) {
               onClick={() => setVotesExpanded((v) => !v)}
               className="flex items-center gap-2 text-sm font-semibold w-full text-left"
             >
-              <span>Votações</span>
+              <span>{t.family.votes}</span>
               {votesExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
             </button>
             {votesExpanded && (
@@ -364,7 +379,7 @@ export function FamilyPageClient({ familyId }: { familyId: string }) {
             <>
               <Separator />
               <div>
-                <h3 className="font-semibold mb-3">Resumo de Contribuições</h3>
+                <h3 className="font-semibold mb-3">{t.family.contributionSummary}</h3>
                 <div className="space-y-1 text-sm">
                   {Object.entries(settlement).map(([pledgerId, owed]) =>
                     Object.entries(owed).map(([ownerId, cents]) => {
@@ -375,7 +390,7 @@ export function FamilyPageClient({ familyId }: { familyId: string }) {
                         <div key={`${pledgerId}-${ownerId}`} className="flex justify-between text-muted-foreground">
                           <span>
                             <span style={{ color: memberColors.get(pledgerId) }}>{pledger.personaName}</span>
-                            {" deve "}
+                            {" "}{t.family.owes}{" "}
                             <span style={{ color: memberColors.get(ownerId) }}>{owner.personaName}</span>
                           </span>
                           <span className="font-medium text-foreground">
@@ -387,7 +402,7 @@ export function FamilyPageClient({ familyId }: { familyId: string }) {
                   )}
                 </div>
                 <p className="text-xs text-muted-foreground mt-2">
-                  Este app registra apenas quem deve o quê. O pagamento real é combinado entre os membros.
+                  {t.family.appDisclaimer}
                 </p>
               </div>
             </>
@@ -401,7 +416,7 @@ export function FamilyPageClient({ familyId }: { familyId: string }) {
               className="flex items-center gap-2 text-sm font-semibold w-full text-left"
             >
               <Gamepad2 className="h-4 w-4 text-muted-foreground" />
-              <span>Jogos Steam da Família</span>
+              <span>{t.family.steamGames}</span>
               {steamExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
             </button>
             {steamExpanded && (
@@ -423,7 +438,7 @@ export function FamilyPageClient({ familyId }: { familyId: string }) {
         open={addGameOpen}
         onOpenChange={setAddGameOpen}
         onSelect={handleAddGame}
-        title="Adicionar à Lista de Desejos"
+        title={t.family.addToWishlist}
       />
     </div>
   );
@@ -494,6 +509,7 @@ function PendingMemberAvatar({
 }
 
 function JoinRequestScreen({ familyId }: { familyId: string }) {
+  const { t } = useLanguage();
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
 
@@ -504,14 +520,14 @@ function JoinRequestScreen({ familyId }: { familyId: string }) {
       const json = await res.json();
       if (!res.ok) {
         if (json.error?.code === "ALREADY_PENDING") {
-          toast.info("Você já tem uma solicitação pendente para esta família.");
+          toast.info(t.family.alreadyPending);
           setSent(true);
         } else {
-          toast.error(json.error?.message ?? "Erro ao solicitar entrada");
+          toast.error(json.error?.message ?? t.family.errorJoining);
         }
         return;
       }
-      toast.success("Solicitação enviada! Aguarde a aprovação do chefe.");
+      toast.success(t.family.requestSent);
       setSent(true);
     } finally {
       setLoading(false);
@@ -522,19 +538,19 @@ function JoinRequestScreen({ familyId }: { familyId: string }) {
     <div className="container py-16 flex justify-center">
       <Card className="w-full max-w-md text-center">
         <CardHeader>
-          <CardTitle>Você não é membro desta família</CardTitle>
+          <CardTitle>{t.family.notMemberTitle}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            Para ver o conteúdo desta família, envie uma solicitação de entrada ao chefe.
+            {t.family.notMemberDesc}
           </p>
           <p className="text-xs text-muted-foreground font-mono">{familyId}</p>
           {sent ? (
-            <p className="text-sm font-medium text-green-500">Solicitação enviada! Aguarde a aprovação.</p>
+            <p className="text-sm font-medium text-green-500">{t.family.requestSent}</p>
           ) : (
             <Button onClick={handleRequest} disabled={loading} className="w-full">
               <LogIn className="h-4 w-4 mr-2" />
-              {loading ? "Enviando..." : "Solicitar Entrada"}
+              {loading ? t.family.sending : t.family.requestJoin}
             </Button>
           )}
         </CardContent>

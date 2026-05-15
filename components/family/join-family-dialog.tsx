@@ -9,9 +9,11 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { useLanguage } from "@/lib/i18n/context";
 
 export function JoinFamilyDialog() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   const [familyId, setFamilyId] = useState("");
   const [loading, setLoading] = useState(false);
@@ -25,10 +27,10 @@ export function JoinFamilyDialog() {
       const res = await fetch(`/api/families/${familyId.trim()}/join-requests`, { method: "POST" });
       const data = await res.json();
       if (!res.ok) {
-        toast.error(data.error?.message ?? "Erro ao solicitar entrada");
+        toast.error(data.error?.message ?? t.joinFamily.error);
         return;
       }
-      toast.success("Solicitação enviada! Aguarde a aprovação do chefe.");
+      toast.success(t.joinFamily.success);
       setOpen(false);
       setFamilyId("");
       router.refresh();
@@ -42,30 +44,30 @@ export function JoinFamilyDialog() {
       <DialogTrigger asChild>
         <button className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold border transition-all hover:bg-secondary/60 active:scale-[0.98]"
           style={{ borderColor: "hsl(258 82% 60% / 0.4)", color: "hsl(258 82% 72%)" }}>
-          <LogIn className="h-4 w-4" /> Entre em uma família
+          <LogIn className="h-4 w-4" /> {t.joinFamily.trigger}
         </button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Entrar em uma Família</DialogTitle>
+          <DialogTitle>{t.joinFamily.title}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="text-sm font-medium mb-1 block">ID da família</label>
+            <label className="text-sm font-medium mb-1 block">{t.joinFamily.idLabel}</label>
             <Input
               value={familyId}
               onChange={(e) => setFamilyId(e.target.value)}
-              placeholder="Cole o ID da família aqui"
+              placeholder={t.joinFamily.idPlaceholder}
               required
             />
             <p className="text-xs text-muted-foreground mt-1">
-              Peça o ID ao chefe da família que deseja entrar.
+              {t.joinFamily.idHint}
             </p>
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
+            <Button type="button" variant="outline" onClick={() => setOpen(false)}>{t.joinFamily.cancel}</Button>
             <Button type="submit" disabled={loading || !familyId.trim()}>
-              {loading ? "Enviando..." : "Solicitar Entrada"}
+              {loading ? t.joinFamily.sending : t.joinFamily.submit}
             </Button>
           </DialogFooter>
         </form>

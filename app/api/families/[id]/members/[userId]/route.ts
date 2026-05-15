@@ -1,12 +1,15 @@
 import { NextRequest } from "next/server";
 import { requireSession, isApiError, ok, err } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
+import { creditWallet } from "@/lib/wallet";
 
 export async function DELETE(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: { id: string; userId: string } }
 ) {
   const user = await requireSession();
+  const body = await req.json().catch(() => ({}));
+  const removalReason: string | undefined = typeof body?.reason === "string" ? body.reason : undefined;
   if (isApiError(user)) return user;
 
   const family = await prisma.family.findUnique({ where: { id: params.id } });
@@ -35,31 +38,68 @@ export async function DELETE(
     return err("NOT_FOUND", "Active membership not found", 404);
   }
 
-  // Soft-cancel active pledges from this member in this family
   await prisma.$transaction(async (tx) => {
     await tx.familyMembership.update({
       where: { id: membership.id },
       data: { status: "removed" },
     });
 
-    // Cancel pledges on items in this family
-    const familyItems = await tx.wishlistItem.findMany({
-      where: { familyId: params.id },
-      select: { id: true },
-    });
-    const itemIds = familyItems.map((i) => i.id);
-
-    if (itemIds.length > 0) {
-      await tx.pledge.updateMany({
-        where: {
-          pledgerUserId: params.userId,
-          wishlistItemId: { in: itemIds },
-          status: "active",
+    // Load all active pledges from this member on items in this family
+    const pledges = await tx.pledge.findMany({
+      where: {
+        pledgerUserId: params.userId,
+        status: "active",
+        wishlistItem: { familyId: params.id },
+      },
+      include: {
+        wishlistItem: {
+          select: { id: true, status: true, targetPriceCents: true, disbursedAt: true },
         },
-        data: { status: "withdrawn" },
+      },
+    });
+
+    if (pledges.length === 0) return;
+
+    const pledgeIds = pledges.map((p) => p.id);
+    await tx.pledge.updateMany({
+      where: { id: { in: pledgeIds } },
+      data: { status: "withdrawn" },
+    });
+
+    // Credit removed member's wallet: PIX already paid + credits used
+    for (const pledge of pledges) {
+      const creditAmount =
+        (pledge.paidAt ? (pledge.mpAmountCents ?? 0) : 0) + pledge.creditsCentsUsed;
+      if (creditAmount > 0) {
+        await creditWallet(tx, params.userId, creditAmount, "member_removed", pledge.id);
+      }
+    }
+
+    // Revert funded → open for items no longer fully covered (skip already-disbursed items)
+    const uniqueItems = Object.values(
+      Object.fromEntries(pledges.map((p) => [p.wishlistItem.id, p.wishlistItem]))
+    );
+    const fundedItems = uniqueItems.filter(
+      (item) => item.status === "funded" && !item.disbursedAt
+    );
+
+    for (const item of fundedItems) {
+      const { _sum } = await tx.pledge.aggregate({
+        where: { wishlistItemId: item.id, status: "active" },
+        _sum: { amountCents: true },
       });
+      if (((_sum.amountCents ?? 0) < item.targetPriceCents)) {
+        await tx.wishlistItem.update({
+          where: { id: item.id },
+          data: { status: "open" },
+        });
+      }
     }
   });
+
+  if (removalReason) {
+    console.log(`Member ${params.userId} removed from family ${params.id} by ${user.id}. Reason: ${removalReason}`);
+  }
 
   return ok({ message: "Member removed" });
 }

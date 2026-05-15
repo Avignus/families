@@ -4,12 +4,14 @@ import { useState } from "react";
 import { Link2, Copy, RefreshCw, Trash2, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { useLanguage } from "@/lib/i18n/context";
 
 export function InviteLinkPanel({ familyId, initialToken, appUrl }: {
   familyId: string;
   initialToken: string | null;
   appUrl: string;
 }) {
+  const { t } = useLanguage();
   const [token, setToken] = useState(initialToken);
   const [loading, setLoading] = useState<"generate" | "revoke" | null>(null);
   const [copied, setCopied] = useState(false);
@@ -21,9 +23,9 @@ export function InviteLinkPanel({ familyId, initialToken, appUrl }: {
     try {
       const res = await fetch(`/api/families/${familyId}/invite`, { method: "POST" });
       const data = await res.json();
-      if (!res.ok) { toast.error("Erro ao gerar convite"); return; }
+      if (!res.ok) { toast.error(t.inviteLink.generateError); return; }
       setToken(data.data.token);
-      toast.success("Link de convite gerado!");
+      toast.success(t.inviteLink.generated);
     } finally {
       setLoading(null);
     }
@@ -33,9 +35,9 @@ export function InviteLinkPanel({ familyId, initialToken, appUrl }: {
     setLoading("revoke");
     try {
       const res = await fetch(`/api/families/${familyId}/invite`, { method: "DELETE" });
-      if (!res.ok) { toast.error("Erro ao revogar convite"); return; }
+      if (!res.ok) { toast.error(t.inviteLink.revokeError); return; }
       setToken(null);
-      toast.success("Link revogado. Links anteriores não funcionam mais.");
+      toast.success(t.inviteLink.revoked);
     } finally {
       setLoading(null);
     }
@@ -58,7 +60,7 @@ export function InviteLinkPanel({ familyId, initialToken, appUrl }: {
             </code>
             <Button variant="outline" size="sm" onClick={copy} className="shrink-0 gap-1.5">
               {copied ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
-              {copied ? "Copiado" : "Copiar"}
+              {copied ? t.inviteLink.copied : t.inviteLink.copy}
             </Button>
           </div>
           <div className="flex gap-2">
@@ -69,7 +71,7 @@ export function InviteLinkPanel({ familyId, initialToken, appUrl }: {
               className="gap-1.5 text-muted-foreground"
             >
               <RefreshCw className={`h-3.5 w-3.5 ${loading === "generate" ? "animate-spin" : ""}`} />
-              Regenerar
+              {t.inviteLink.regenerate}
             </Button>
             <Button
               variant="outline" size="sm"
@@ -78,16 +80,16 @@ export function InviteLinkPanel({ familyId, initialToken, appUrl }: {
               className="gap-1.5 text-destructive hover:text-destructive"
             >
               <Trash2 className="h-3.5 w-3.5" />
-              Revogar
+              {t.inviteLink.revoke}
             </Button>
           </div>
           <p className="text-xs text-muted-foreground">
-            Qualquer pessoa com este link pode solicitar entrada. Regenere para invalidar links antigos.
+            {t.inviteLink.hint}
           </p>
         </>
       ) : (
         <>
-          <p className="text-sm text-muted-foreground">Nenhum link ativo. Gere um para convidar pessoas diretamente.</p>
+          <p className="text-sm text-muted-foreground">{t.inviteLink.noLink}</p>
           <Button
             size="sm"
             onClick={generate}
@@ -95,7 +97,7 @@ export function InviteLinkPanel({ familyId, initialToken, appUrl }: {
             className="gap-1.5"
           >
             <Link2 className={`h-4 w-4 ${loading === "generate" ? "animate-spin" : ""}`} />
-            {loading === "generate" ? "Gerando..." : "Gerar link de convite"}
+            {loading === "generate" ? t.inviteLink.generating : t.inviteLink.generate}
           </Button>
         </>
       )}

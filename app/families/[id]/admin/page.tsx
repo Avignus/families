@@ -12,6 +12,7 @@ import { DeleteFamilyButton } from "@/components/family/delete-family-button";
 import { InviteLinkPanel } from "@/components/family/invite-link-panel";
 import { ArrowLeft, Crown, Users, Globe, Link2 } from "lucide-react";
 import Link from "next/link";
+import { getServerTranslations } from "@/lib/i18n/server";
 
 export default async function AdminPage({ params }: { params: { id: string } }) {
   const session = await getSession();
@@ -36,23 +37,24 @@ export default async function AdminPage({ params }: { params: { id: string } }) 
 
   const pendingRequests = family.memberships.filter((m) => m.status === "pending");
   const activeMembers = family.memberships.filter((m) => m.status === "active");
+  const { t } = getServerTranslations();
 
   return (
     <div className="container py-8 space-y-6 max-w-2xl">
       <Link href={`/families/${params.id}`} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
-        <ArrowLeft className="h-4 w-4" /> Voltar para {family.name}
+        <ArrowLeft className="h-4 w-4" /> {t.admin.back(family.name)}
       </Link>
 
       <h1 className="text-2xl font-bold flex items-center gap-2">
         <Crown className="h-5 w-5 text-amber-400" />
-        Administrar: {family.name}
+        {t.admin.title(family.name)}
       </h1>
 
       {/* Pending join requests */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
-            Solicitações Pendentes
+            {t.admin.pendingRequests}
             {pendingRequests.length > 0 && (
               <Badge>{pendingRequests.length}</Badge>
             )}
@@ -60,7 +62,7 @@ export default async function AdminPage({ params }: { params: { id: string } }) 
         </CardHeader>
         <CardContent>
           {pendingRequests.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Nenhuma solicitação pendente.</p>
+            <p className="text-sm text-muted-foreground">{t.admin.noPending}</p>
           ) : (
             <div className="space-y-3">
               {pendingRequests.map((m) => (
@@ -76,17 +78,17 @@ export default async function AdminPage({ params }: { params: { id: string } }) 
                         <ReputationBadge score={m.user.reputationScore} showScore />
                         {m.feePaidAt && (
                           <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/25">
-                            Taxa paga
+                            {t.admin.feePaid}
                           </span>
                         )}
                         {!m.feePaidAt && m.feeChargedCents && (
                           <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/25">
-                            Aguardando pagamento
+                            {t.admin.waitingPayment}
                           </span>
                         )}
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        {new Date(m.joinedAt).toLocaleDateString("pt-BR")}
+                        {new Date(m.joinedAt).toLocaleDateString(t.dateLocale)}
                       </p>
                     </div>
                   </div>
@@ -103,7 +105,7 @@ export default async function AdminPage({ params }: { params: { id: string } }) 
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
             <Users className="h-4 w-4" />
-            Membros Ativos ({activeMembers.length})
+            {t.admin.activeMembers(activeMembers.length)}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -119,11 +121,11 @@ export default async function AdminPage({ params }: { params: { id: string } }) 
                     <div className="flex items-center gap-2">
                       <p className="text-sm font-medium">{m.user.personaName}</p>
                       {m.userId === family.chiefId && (
-                        <Badge variant="secondary" className="text-xs">Chefe</Badge>
+                        <Badge variant="secondary" className="text-xs">{t.admin.chief}</Badge>
                       )}
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      Desde {new Date(m.joinedAt).toLocaleDateString("pt-BR")}
+                      {t.admin.since(new Date(m.joinedAt).toLocaleDateString(t.dateLocale))}
                     </p>
                   </div>
                 </div>
@@ -141,7 +143,7 @@ export default async function AdminPage({ params }: { params: { id: string } }) 
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
             <Globe className="h-4 w-4" />
-            Catálogo Público
+            {t.admin.publicCatalog}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -167,7 +169,7 @@ export default async function AdminPage({ params }: { params: { id: string } }) 
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
             <Link2 className="h-4 w-4" />
-            Link de Convite
+            {t.admin.inviteLink}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -182,7 +184,7 @@ export default async function AdminPage({ params }: { params: { id: string } }) 
       {/* Danger zone */}
       <Card className="border-destructive/30">
         <CardHeader className="pb-3">
-          <CardTitle className="text-base text-destructive">Zona de Perigo</CardTitle>
+          <CardTitle className="text-base text-destructive">{t.admin.dangerZone}</CardTitle>
         </CardHeader>
         <CardContent>
           <DeleteFamilyButton familyId={params.id} familyName={family.name} />

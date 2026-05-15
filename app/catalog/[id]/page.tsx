@@ -11,6 +11,7 @@ import Link from "next/link";
 import { CatalogJoinButton } from "@/components/catalog/catalog-join-button";
 import { CatalogWishlistItem } from "@/components/catalog/catalog-wishlist-item";
 import { CatalogSteamPanel } from "@/components/catalog/catalog-steam-panel";
+import { getServerTranslations } from "@/lib/i18n/server";
 
 export const dynamic = "force-dynamic";
 
@@ -41,6 +42,8 @@ export default async function CatalogFamilyPage({ params }: { params: { id: stri
   });
 
   if (!family) notFound();
+
+  const { t } = getServerTranslations();
 
   const myMembership = currentUserId
     ? await prisma.familyMembership.findUnique({
@@ -122,7 +125,7 @@ export default async function CatalogFamilyPage({ params }: { params: { id: stri
         href="/catalog"
         className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
       >
-        <ArrowLeft className="h-4 w-4" /> Catálogo
+        <ArrowLeft className="h-4 w-4" /> {t.catalogFamily.backLink}
       </Link>
 
       {/* Cover image */}
@@ -156,11 +159,11 @@ export default async function CatalogFamilyPage({ params }: { params: { id: stri
             <div className="flex items-center gap-2">
               {family.isPublic && !isFull ? (
                 <span className="flex items-center gap-1 text-emerald-400 text-xs">
-                  <Unlock className="h-3.5 w-3.5" /> Aberta
+                  <Unlock className="h-3.5 w-3.5" /> {t.catalogFamily.open}
                 </span>
               ) : (
                 <span className="flex items-center gap-1 text-muted-foreground text-xs">
-                  <Lock className="h-3.5 w-3.5" /> {isFull ? "Sem vagas" : "Privada"}
+                  <Lock className="h-3.5 w-3.5" /> {isFull ? t.catalogFamily.noSlots : t.catalogFamily.private}
                 </span>
               )}
               {family.entryFeeCents > 0 && (
@@ -204,7 +207,7 @@ export default async function CatalogFamilyPage({ params }: { params: { id: stri
           </div>
           <div className="text-sm text-muted-foreground flex items-center gap-1.5">
             <Users className="h-4 w-4" />
-            {memberCount}{family.maxMembers ? `/${family.maxMembers}` : ""} membros
+            {t.catalogFamily.members(memberCount, family.maxMembers)}
             <span className="text-muted-foreground/40">·</span>
             <Crown className="h-3.5 w-3.5 text-amber-400" />
             {family.chief.personaName}
@@ -216,18 +219,18 @@ export default async function CatalogFamilyPage({ params }: { params: { id: stri
       <div className="grid grid-cols-3 gap-3">
         <StatCard
           icon={<TrendingUp className="h-4 w-4" />}
-          label="Total arrecadado"
+          label={t.catalogFamily.totalRaised}
           value={totalPaidCents > 0 ? formatCurrency(totalPaidCents, family.currency) : "—"}
           highlight
         />
         <StatCard
           icon={<ShoppingCart className="h-4 w-4" />}
-          label="Jogos comprados"
+          label={t.catalogFamily.gamesPurchased}
           value={purchasedItems.length > 0 ? String(purchasedItems.length) : "—"}
         />
         <StatCard
           icon={<Users className="h-4 w-4" />}
-          label="Membros ativos"
+          label={t.catalogFamily.activeMembers}
           value={String(memberCount)}
         />
       </div>
@@ -237,7 +240,7 @@ export default async function CatalogFamilyPage({ params }: { params: { id: stri
         <div className="space-y-3">
           <h2 className="font-semibold flex items-center gap-2 text-sm">
             <Trophy className="h-4 w-4 text-amber-400" />
-            Top Contribuidores
+            {t.catalogFamily.topContributors}
           </h2>
           <div className="flex flex-wrap gap-3">
             {topContributors.map(({ user, totalCents }, i) => (
@@ -260,7 +263,7 @@ export default async function CatalogFamilyPage({ params }: { params: { id: stri
         <div className="space-y-3">
           <h2 className="font-semibold flex items-center gap-2">
             <ShoppingCart className="h-4 w-4 text-emerald-400" />
-            Jogos já comprados pela família
+            {t.catalogFamily.purchasedSection}
           </h2>
           <div className="flex gap-3 overflow-x-auto pb-1">
             {purchasedWithSteam.map((item) => (
@@ -275,7 +278,7 @@ export default async function CatalogFamilyPage({ params }: { params: { id: stri
                     {item.steam?.name ?? `App #${item.steamAppId}`}
                   </p>
                   <span className="inline-flex items-center gap-0.5 mt-1 text-[10px] text-emerald-400 font-semibold">
-                    <ShoppingCart className="h-2.5 w-2.5" /> Comprado
+                    <ShoppingCart className="h-2.5 w-2.5" /> {t.catalogFamily.purchased}
                   </span>
                 </div>
               </div>
@@ -288,11 +291,11 @@ export default async function CatalogFamilyPage({ params }: { params: { id: stri
       <div className="space-y-4">
         <h2 className="font-semibold flex items-center gap-2">
           <Gamepad2 className="h-4 w-4 text-muted-foreground" />
-          Lista de Desejos ({wishlistWithSteam.length})
+          {t.catalogFamily.wishlist(wishlistWithSteam.length)}
         </h2>
         {wishlistWithSteam.length === 0 ? (
           <p className="text-sm text-muted-foreground py-8 text-center">
-            Nenhum jogo na lista no momento.
+            {t.catalogFamily.noGames}
           </p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -307,7 +310,7 @@ export default async function CatalogFamilyPage({ params }: { params: { id: stri
       <div className="space-y-4">
         <h2 className="font-semibold flex items-center gap-2">
           <Library className="h-4 w-4 text-muted-foreground" />
-          Jogos Steam da Família
+          {t.catalogFamily.steamGames}
         </h2>
         <CatalogSteamPanel
           familyId={params.id}

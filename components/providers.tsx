@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
 import { NotificationProvider } from "./notifications/notification-provider";
 import { Toaster } from "sonner";
+import { LanguageProvider } from "@/lib/i18n/context";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -17,17 +18,19 @@ export function Providers({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <SessionProvider>
-      <QueryClientProvider client={queryClient}>
-        <NotificationProvider>
-          {children}
-          <Toaster
-            position="bottom-right"
-            theme="dark"
-            richColors
-          />
-        </NotificationProvider>
-      </QueryClientProvider>
-    </SessionProvider>
+    <LanguageProvider>
+      <SessionProvider>
+        <QueryClientProvider client={queryClient}>
+          <NotificationProvider>
+            {children}
+            <Toaster
+              position="bottom-right"
+              theme="dark"
+              richColors
+            />
+          </NotificationProvider>
+        </QueryClientProvider>
+      </SessionProvider>
+    </LanguageProvider>
   );
 }

@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { Globe, Lock, Users, Crown, Unlock } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { FamilyCoverArt } from "@/components/family-cover-art";
+import { useLanguage } from "@/lib/i18n/context";
 
 type Props = {
   familyId: string;
@@ -27,6 +28,7 @@ type Props = {
 };
 
 export function CatalogSettingsForm({ familyId, familyName, chiefName, chiefAvatar, initial }: Props) {
+  const { t } = useLanguage();
   const [isPublic, setIsPublic] = useState(initial.isPublic);
   const [description, setDescription] = useState(initial.description ?? "");
   const [maxMembers, setMaxMembers] = useState(initial.maxMembers?.toString() ?? "");
@@ -53,10 +55,10 @@ export function CatalogSettingsForm({ familyId, familyName, chiefName, chiefAvat
       });
       const data = await res.json();
       if (!res.ok) {
-        toast.error(data.error?.message ?? "Erro ao salvar");
+        toast.error(data.error?.message ?? t.catalogSettings.saveError);
         return;
       }
-      toast.success(isPublic ? "Família publicada no catálogo!" : "Configurações salvas!");
+      toast.success(isPublic ? t.catalogSettings.published : t.catalogSettings.saved);
     } finally {
       setSaving(false);
     }
@@ -69,12 +71,12 @@ export function CatalogSettingsForm({ familyId, familyName, chiefName, chiefAvat
         <div className="space-y-0.5">
           <p className="text-sm font-medium flex items-center gap-1.5">
             {isPublic
-              ? <><Globe className="h-3.5 w-3.5 text-primary" /> Família pública</>
-              : <><Lock className="h-3.5 w-3.5 text-muted-foreground" /> Família privada</>
+              ? <><Globe className="h-3.5 w-3.5 text-primary" /> {t.catalogSettings.publicLabel}</>
+              : <><Lock className="h-3.5 w-3.5 text-muted-foreground" /> {t.catalogSettings.privateLabel}</>
             }
           </p>
           <p className="text-xs text-muted-foreground">
-            {isPublic ? "Visível no catálogo — qualquer jogador pode pedir entrada." : "Só quem tiver o ID pode solicitar entrada."}
+            {isPublic ? t.catalogSettings.publicDesc : t.catalogSettings.privateDesc}
           </p>
         </div>
         <Switch checked={isPublic} onCheckedChange={setIsPublic} />
@@ -82,9 +84,9 @@ export function CatalogSettingsForm({ familyId, familyName, chiefName, chiefAvat
 
       {/* Description */}
       <div className="space-y-1.5">
-        <Label className="text-sm">Descrição</Label>
+        <Label className="text-sm">{t.catalogSettings.description}</Label>
         <Textarea
-          placeholder="Conte sobre a família: estilo de jogo, horários, requisitos..."
+          placeholder={t.catalogSettings.descriptionPlaceholder}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           maxLength={300}
@@ -96,20 +98,20 @@ export function CatalogSettingsForm({ familyId, familyName, chiefName, chiefAvat
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-1.5">
-          <Label className="text-sm">Máximo de membros</Label>
+          <Label className="text-sm">{t.catalogSettings.maxMembers}</Label>
           <Input
             type="number" min={2} max={100}
-            placeholder="Sem limite"
+            placeholder={t.catalogSettings.noLimit}
             value={maxMembers}
             onChange={(e) => setMaxMembers(e.target.value)}
             className="text-sm"
           />
         </div>
         <div className="space-y-1.5">
-          <Label className="text-sm">Taxa de entrada ({initial.currency})</Label>
+          <Label className="text-sm">{t.catalogSettings.entryFee(initial.currency)}</Label>
           <Input
             type="number" min={0} step={0.01}
-            placeholder="Gratuito"
+            placeholder={t.catalogSettings.free}
             value={entryFee}
             onChange={(e) => setEntryFee(e.target.value)}
             className="text-sm"
@@ -119,7 +121,7 @@ export function CatalogSettingsForm({ familyId, familyName, chiefName, chiefAvat
 
       {/* Preview */}
       <div className="space-y-2">
-        <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Preview do card no catálogo</p>
+        <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">{t.catalogSettings.previewLabel}</p>
         <div className="rounded-xl border border-border/50 bg-card overflow-hidden max-w-[240px]">
           <div className="h-16 overflow-hidden">
             <FamilyCoverArt familyId={familyId} />
@@ -139,23 +141,23 @@ export function CatalogSettingsForm({ familyId, familyName, chiefName, chiefAvat
             <div className="flex items-center justify-between text-[10px]">
               <span className="text-muted-foreground flex items-center gap-1">
                 <Users className="h-3 w-3" />
-                {initial.memberCount}{previewMax ? `/${previewMax}` : ""} membros
+                {t.catalogSettings.members(initial.memberCount, previewMax)}
               </span>
               {previewFeeCents > 0
                 ? <span className="text-primary font-semibold">{formatCurrency(previewFeeCents, initial.currency)}</span>
-                : <span className="text-emerald-400 flex items-center gap-0.5"><Unlock className="h-2.5 w-2.5" /> Gratuito</span>
+                : <span className="text-emerald-400 flex items-center gap-0.5"><Unlock className="h-2.5 w-2.5" /> {t.catalogSettings.free}</span>
               }
             </div>
             <div className="h-6 rounded-md text-[10px] font-semibold text-white flex items-center justify-center"
               style={{ background: "linear-gradient(135deg, hsl(258 82% 60%), hsl(258 82% 50%))" }}>
-              {previewFeeCents > 0 ? `Entrar · ${formatCurrency(previewFeeCents, initial.currency)}` : "Pedir entrada"}
+              {previewFeeCents > 0 ? t.catalogSettings.joinBtn(formatCurrency(previewFeeCents, initial.currency)) : t.catalogSettings.joinFree}
             </div>
           </div>
         </div>
       </div>
 
       <Button onClick={handleSave} disabled={saving} size="sm" className="w-full">
-        {saving ? "Salvando..." : isPublic ? "Publicar no catálogo" : "Salvar configurações"}
+        {saving ? t.catalogSettings.saving : isPublic ? t.catalogSettings.savePublic : t.catalogSettings.savePrivate}
       </Button>
     </div>
   );

@@ -10,9 +10,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { generateFamilyName } from "@/lib/family-name-generator";
+import { useLanguage } from "@/lib/i18n/context";
 
 export function CreateFamilyDialog() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
@@ -37,11 +39,11 @@ export function CreateFamilyDialog() {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => null);
-        toast.error(data?.error?.message ?? "Erro ao criar família");
+        toast.error(data?.error?.message ?? t.createFamily.error);
         return;
       }
       const data = await res.json();
-      toast.success(`Família "${name}" criada!`);
+      toast.success(t.createFamily.success(name));
       setOpen(false);
       setName("");
       router.push(`/families/${data.data.id}`);
@@ -58,21 +60,21 @@ export function CreateFamilyDialog() {
           className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white transition-all hover:opacity-90 active:scale-[0.98]"
           style={{ background: "linear-gradient(135deg, hsl(258 82% 60%), hsl(258 82% 48%))", boxShadow: "0 0 16px hsl(258 82% 60% / 0.35)" }}
         >
-          <Plus className="h-4 w-4" /> Criar Família
+          <Plus className="h-4 w-4" /> {t.createFamily.trigger}
         </button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Criar Nova Família</DialogTitle>
+          <DialogTitle>{t.createFamily.title}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1.5">
-            <label className="text-sm font-medium block">Nome da família</label>
+            <label className="text-sm font-medium block">{t.createFamily.nameLabel}</label>
             <div className="flex gap-2">
               <Input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="ex: Turma dos Games"
+                placeholder={t.createFamily.namePlaceholder}
                 required
                 maxLength={100}
                 className="flex-1"
@@ -87,13 +89,13 @@ export function CreateFamilyDialog() {
               </button>
             </div>
             <p className="text-[11px] text-muted-foreground">
-              Clique em <Shuffle className="h-3 w-3 inline" /> para sugerir um nome aleatório.
+              {t.createFamily.nameHint} <Shuffle className="h-3 w-3 inline" /> {t.createFamily.nameHint2}
             </p>
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
+            <Button type="button" variant="outline" onClick={() => setOpen(false)}>{t.createFamily.cancel}</Button>
             <Button type="submit" disabled={loading || !name.trim()}>
-              {loading ? "Criando..." : "Criar Família"}
+              {loading ? t.createFamily.creating : t.createFamily.submit}
             </Button>
           </DialogFooter>
         </form>

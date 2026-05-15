@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { VotesPanel } from "@/components/votes/votes-panel";
+import { getServerTranslations } from "@/lib/i18n/server";
 
 export default async function VotesPage({ params }: { params: { id: string } }) {
   const session = await getSession();
@@ -20,12 +21,14 @@ export default async function VotesPage({ params }: { params: { id: string } }) 
 
   if (!family || !membership || membership.status !== "active") redirect("/dashboard");
 
+  const { t } = getServerTranslations();
+
   return (
     <div className="container py-8 max-w-2xl space-y-6">
       <Link href={`/families/${params.id}`} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
-        <ArrowLeft className="h-4 w-4" /> Voltar para {family.name}
+        <ArrowLeft className="h-4 w-4" /> {t.admin.back(family.name)}
       </Link>
-      <h1 className="text-2xl font-bold">Votações — {family.name}</h1>
+      <h1 className="text-2xl font-bold">{t.votes.openSection} — {family.name}</h1>
       <VotesPanel familyId={params.id} currency={family.currency} />
     </div>
   );

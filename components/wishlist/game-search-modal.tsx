@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, Loader2 } from "lucide-react";
 import Image from "next/image";
+import { useLanguage } from "@/lib/i18n/context";
 
 type SearchResult = {
   appId: number;
@@ -30,7 +31,9 @@ function useDebounce<T extends (...args: unknown[]) => unknown>(fn: T, delay: nu
   }) as T;
 }
 
-export function GameSearchModal({ open, onOpenChange, onSelect, title = "Buscar Jogo" }: Props) {
+export function GameSearchModal({ open, onOpenChange, onSelect, title }: Props) {
+  const { t } = useLanguage();
+  const resolvedTitle = title ?? t.gameSearch.defaultTitle;
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
@@ -65,14 +68,14 @@ export function GameSearchModal({ open, onOpenChange, onSelect, title = "Buscar 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
+          <DialogTitle>{resolvedTitle}</DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               className="pl-9"
-              placeholder="Buscar jogos na Steam..."
+              placeholder={t.gameSearch.placeholder}
               value={query}
               onChange={handleChange}
               autoFocus
@@ -86,7 +89,7 @@ export function GameSearchModal({ open, onOpenChange, onSelect, title = "Buscar 
             )}
             {!loading && query.length >= 2 && results.length === 0 && (
               <p className="text-center text-sm text-muted-foreground py-4">
-                Nenhum jogo encontrado
+                {t.gameSearch.noResults}
               </p>
             )}
             {results.map((r) => (

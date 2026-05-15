@@ -7,6 +7,7 @@ import { formatCurrency } from "@/lib/utils";
 import { PixPaymentModal } from "@/components/wishlist/pix-payment-modal";
 import { QrCode } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useLanguage } from "@/lib/i18n/context";
 
 type PixData = {
   qrCode: string;
@@ -33,6 +34,7 @@ export function CatalogJoinButton({
   pendingPix = null,
 }: Props) {
   const router = useRouter();
+  const { t } = useLanguage();
   const [status, setStatus] = useState(initialStatus);
   const [loading, setLoading] = useState(false);
   const [pix, setPix] = useState<PixData | null>(pendingPix ?? null);
@@ -44,14 +46,14 @@ export function CatalogJoinButton({
       const res = await fetch(`/api/families/${familyId}/join-requests`, { method: "POST" });
       const data = await res.json();
       if (!res.ok) {
-        toast.error(data.error?.message ?? "Erro ao solicitar entrada");
+        toast.error(data.error?.message ?? t.catalogJoinBtn.error);
         return;
       }
       if (data.data?.pendingPayment && data.data?.pix) {
         setPix(data.data.pix);
         setPixOpen(true);
       } else {
-        toast.success("Solicitação enviada! Aguarde aprovação do líder.");
+        toast.success(t.catalogJoinBtn.success);
         setStatus("pending");
       }
     } finally {
@@ -60,7 +62,7 @@ export function CatalogJoinButton({
   };
 
   if (status === "rejected") {
-    return <span className="text-xs text-destructive font-semibold">Solicitação rejeitada</span>;
+    return <span className="text-xs text-destructive font-semibold">{t.catalogJoinBtn.rejected}</span>;
   }
 
   // Pending with unpaid fee — show pay button
@@ -77,14 +79,14 @@ export function CatalogJoinButton({
           }}
         >
           <QrCode className="h-4 w-4" />
-          Pagar taxa de entrada
+          {t.catalogJoinBtn.payFee}
         </Button>
         <PixPaymentModal
           open={pixOpen}
           onOpenChange={setPixOpen}
           amountCents={entryFeeCents}
           currency={currency}
-          gameName={`Entrada em ${familyName}`}
+          gameName={t.catalogJoinBtn.entryInto(familyName)}
           pix={pix}
           pollUrl={`/api/families/${familyId}/entry-status`}
           onConfirmed={() => router.push(`/families/${familyId}`)}
@@ -95,7 +97,7 @@ export function CatalogJoinButton({
 
   // Pending without fee — waiting approval
   if (status === "pending") {
-    return <span className="text-xs text-amber-400 font-semibold">Solicitação enviada</span>;
+    return <span className="text-xs text-amber-400 font-semibold">{t.catalogJoinBtn.requestSent}</span>;
   }
 
   return (
@@ -104,8 +106,8 @@ export function CatalogJoinButton({
         {loading
           ? "..."
           : entryFeeCents > 0
-          ? `Entrar · ${formatCurrency(entryFeeCents, currency)}`
-          : "Pedir entrada"}
+          ? t.catalogJoinBtn.join(formatCurrency(entryFeeCents, currency))
+          : t.catalogJoinBtn.request}
       </Button>
       {pix && (
         <PixPaymentModal
@@ -113,7 +115,7 @@ export function CatalogJoinButton({
           onOpenChange={setPixOpen}
           amountCents={entryFeeCents}
           currency={currency}
-          gameName={`Entrada em ${familyName}`}
+          gameName={t.catalogJoinBtn.entryInto(familyName)}
           pix={pix}
           pollUrl={`/api/families/${familyId}/entry-status`}
           onConfirmed={() => router.push(`/families/${familyId}`)}

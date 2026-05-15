@@ -13,9 +13,11 @@ import { getTier, TIER_LABELS } from "@/lib/reputation";
 import { formatCurrency } from "@/lib/utils";
 import { validatePixKey } from "@/lib/pix-key";
 import { toast } from "sonner";
+import { useLanguage } from "@/lib/i18n/context";
 
 export default function SettingsPage() {
   const { data: session } = useSession();
+  const { t } = useLanguage();
   const sessionUser = session?.user as { personaName?: string; avatarMedium?: string; image?: string } | undefined;
   const [pixKey, setPixKey] = useState("");
   const [email, setEmail] = useState("");
@@ -61,22 +63,22 @@ export default function SettingsPage() {
     setLoading(false);
 
     if (!res.ok) {
-      toast.error(data.error?.message ?? "Erro ao salvar");
+      toast.error(data.error?.message ?? t.settings.pixSaveError);
       return;
     }
     setSaved(true);
-    toast.success("Chave PIX salva!");
+    toast.success(t.settings.pixSaved);
   }
 
   async function handleDeleteAccount() {
-    if (!confirm("Tem certeza? Esta ação é irreversível e excluirá todos os seus dados.")) return;
+    if (!confirm(t.settings.deleteConfirm)) return;
     setDeleteLoading(true);
     const res = await fetch("/api/me/account", { method: "DELETE" });
     if (res.ok) {
       router.push("/api/auth/signout?callbackUrl=/");
     } else {
       const data = await res.json();
-      toast.error(data.error?.message ?? "Erro ao excluir conta");
+      toast.error(data.error?.message ?? t.settings.deleteError);
       setDeleteLoading(false);
     }
   }
@@ -96,11 +98,11 @@ export default function SettingsPage() {
     setEmailLoading(false);
 
     if (!res.ok) {
-      toast.error(data.error?.message ?? "Erro ao salvar email");
+      toast.error(data.error?.message ?? t.settings.emailSaveError);
       return;
     }
     setEmailSaved(true);
-    toast.success(email.trim() ? "Email salvo!" : "Email removido!");
+    toast.success(email.trim() ? t.settings.emailSaved : t.settings.emailRemoved);
   }
 
   return (
@@ -113,8 +115,8 @@ export default function SettingsPage() {
           </AvatarFallback>
         </Avatar>
         <div>
-          <h1 className="text-2xl font-bold">{sessionUser?.personaName ?? "Carregando..."}</h1>
-          <p className="text-sm text-muted-foreground">Configurações da conta</p>
+          <h1 className="text-2xl font-bold">{sessionUser?.personaName ?? t.settings.loading}</h1>
+          <p className="text-sm text-muted-foreground">{t.settings.accountSettings}</p>
         </div>
       </div>
 
@@ -123,18 +125,18 @@ export default function SettingsPage() {
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base">
               <Star className="h-4 w-4 text-amber-400" />
-              Reputação
+              {t.settings.reputation}
             </CardTitle>
             <CardDescription>
-              Seu score é calculado com base em contribuições pagas, velocidade de pagamento e jogos financiados.
+              {t.settings.reputationDesc}
             </CardDescription>
           </CardHeader>
           <CardContent className="flex items-center gap-3">
             <ReputationBadge score={reputationScore} showScore size="md" />
             <div className="text-sm text-muted-foreground">
               {reputationScore === 0
-                ? "Faça sua primeira contribuição para começar a construir sua reputação."
-                : `Tier: ${TIER_LABELS[getTier(reputationScore)]}`}
+                ? t.settings.reputationEmpty
+                : t.settings.tier(TIER_LABELS[getTier(reputationScore)])}
             </div>
           </CardContent>
         </Card>
@@ -145,10 +147,10 @@ export default function SettingsPage() {
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base">
               <Wallet className="h-4 w-4 text-primary" />
-              Créditos na plataforma
+              {t.settings.creditsTitle}
             </CardTitle>
             <CardDescription>
-              Gerados quando um item da wishlist é cancelado. Usados automaticamente na sua próxima contribuição.
+              {t.settings.creditsDesc}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -160,10 +162,10 @@ export default function SettingsPage() {
                 {formatCurrency(creditsCents, "BRL")}
               </span>
               {creditsCents > 0 && (
-                <span className="text-xs text-muted-foreground">disponível para contribuições</span>
+                <span className="text-xs text-muted-foreground">{t.settings.creditsAvailable}</span>
               )}
               {creditsCents === 0 && (
-                <span className="text-xs text-muted-foreground">sem créditos no momento</span>
+                <span className="text-xs text-muted-foreground">{t.settings.noCredits}</span>
               )}
             </div>
           </CardContent>
@@ -174,25 +176,25 @@ export default function SettingsPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <KeyRound className="h-4 w-4 text-primary" />
-            Chave PIX para recebimento
+            {t.settings.pixTitle}
           </CardTitle>
           <CardDescription>
-            Usada para receber valores de financiamento de jogos e taxas de entrada da sua família.
+            {t.settings.pixDesc}
           </CardDescription>
         </CardHeader>
         <CardContent>
           {initialLoading ? (
             <div className="flex items-center gap-2 text-muted-foreground text-sm py-2">
               <Loader2 className="h-4 w-4 animate-spin" />
-              Carregando...
+              {t.settings.loading}
             </div>
           ) : (
             <form onSubmit={handleSave} className="space-y-4">
               <div className="space-y-2">
-                <label htmlFor="pixKey" className="text-sm font-medium">Chave PIX</label>
+                <label htmlFor="pixKey" className="text-sm font-medium">{t.settings.pixKey}</label>
                 <Input
                   id="pixKey"
-                  placeholder="CPF, e-mail, telefone ou chave aleatória"
+                  placeholder={t.settings.pixPlaceholder}
                   value={pixKey}
                   onChange={(e) => { setPixKey(e.target.value); setSaved(false); }}
                   className={
@@ -217,7 +219,7 @@ export default function SettingsPage() {
 
                 {!validation && (
                   <p className="text-xs text-muted-foreground">
-                    Aceita CPF, CNPJ, e-mail, telefone (+55) ou chave aleatória.
+                    {t.settings.pixHint}
                   </p>
                 )}
               </div>
@@ -228,12 +230,12 @@ export default function SettingsPage() {
                   disabled={loading || (!!pixKey.trim() && !!validation && !validation.valid)}
                 >
                   {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                  Salvar
+                  {t.settings.save}
                 </Button>
                 {saved && (
                   <span className="flex items-center gap-1.5 text-sm text-emerald-500">
                     <CheckCircle2 className="h-4 w-4" />
-                    Salvo
+                    {t.settings.saved}
                   </span>
                 )}
               </div>
@@ -246,10 +248,10 @@ export default function SettingsPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <Mail className="h-4 w-4 text-primary" />
-            Notificações por email
+            {t.settings.emailTitle}
           </CardTitle>
           <CardDescription>
-            Receba emails para eventos importantes: jogo financiado, repasse enviado, aprovação em família.
+            {t.settings.emailDesc}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -261,11 +263,11 @@ export default function SettingsPage() {
           ) : (
             <form onSubmit={handleSaveEmail} className="space-y-4">
               <div className="space-y-2">
-                <label htmlFor="email" className="text-sm font-medium">Email</label>
+                <label htmlFor="email" className="text-sm font-medium">{t.settings.email}</label>
                 <Input
                   id="email"
                   type="email"
-                  placeholder="seu@email.com"
+                  placeholder={t.settings.emailPlaceholder}
                   value={email}
                   onChange={(e) => { setEmail(e.target.value); setEmailSaved(false); }}
                   className={
@@ -276,12 +278,12 @@ export default function SettingsPage() {
                 />
                 {email.trim() && !emailValid && (
                   <div className="flex items-center gap-1.5 text-xs text-destructive">
-                    <XCircle className="h-3.5 w-3.5" /> Email inválido
+                    <XCircle className="h-3.5 w-3.5" /> {t.settings.emailInvalid}
                   </div>
                 )}
                 {!email.trim() && (
                   <p className="text-xs text-muted-foreground">
-                    Opcional. Deixe em branco para não receber emails.
+                    {t.settings.emailOptional}
                   </p>
                 )}
               </div>
@@ -289,12 +291,12 @@ export default function SettingsPage() {
               <div className="flex items-center gap-3">
                 <Button type="submit" disabled={emailLoading || !emailValid}>
                   {emailLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                  Salvar
+                  {t.settings.save}
                 </Button>
                 {emailSaved && (
                   <span className="flex items-center gap-1.5 text-sm text-emerald-500">
                     <CheckCircle2 className="h-4 w-4" />
-                    Salvo
+                    {t.settings.saved}
                   </span>
                 )}
               </div>
@@ -307,11 +309,10 @@ export default function SettingsPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base text-destructive">
             <Trash2 className="h-4 w-4" />
-            Excluir conta
+            {t.settings.deleteTitle}
           </CardTitle>
           <CardDescription>
-            Remove permanentemente sua conta e dados pessoais. Transações financeiras são retidas
-            conforme obrigações legais. Esta ação não pode ser desfeita.
+            {t.settings.deleteDesc}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -321,7 +322,7 @@ export default function SettingsPage() {
             disabled={deleteLoading}
           >
             {deleteLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            Excluir minha conta
+            {t.settings.deleteBtn}
           </Button>
         </CardContent>
       </Card>

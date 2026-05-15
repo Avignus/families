@@ -5,11 +5,13 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Check, X } from "lucide-react";
+import { useLanguage } from "@/lib/i18n/context";
 
 type Props = { familyId: string; requestId: string };
 
 export function JoinRequestActions({ familyId, requestId }: Props) {
   const router = useRouter();
+  const { lang } = useLanguage();
   const [loading, setLoading] = useState<"approve" | "reject" | null>(null);
 
   const handle = async (action: "approve" | "reject") => {
@@ -23,7 +25,9 @@ export function JoinRequestActions({ familyId, requestId }: Props) {
         toast.error(data.error?.message ?? "Erro");
         return;
       }
-      toast.success(action === "approve" ? "Membro aprovado!" : "Solicitação rejeitada");
+      toast.success(action === "approve"
+        ? (lang === "en" ? "Member approved!" : "Membro aprovado!")
+        : (lang === "en" ? "Request rejected" : "Solicitação rejeitada"));
       router.refresh();
     } finally {
       setLoading(null);

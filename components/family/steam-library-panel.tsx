@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { formatCurrency } from "@/lib/utils";
 import { PledgeModal } from "@/components/wishlist/pledge-modal";
 import { toast } from "sonner";
+import { useLanguage } from "@/lib/i18n/context";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -298,6 +299,7 @@ function WishEntry({
   familyId: string;
   onRefresh: () => void;
 }) {
+  const { t } = useLanguage();
   const [pledgeOpen, setPledgeOpen] = useState(false);
   const [adding, setAdding] = useState(false);
 
@@ -317,13 +319,13 @@ function WishEntry({
       });
       const data = await res.json();
       if (!res.ok) {
-        toast.error(data.error?.message ?? "Erro ao adicionar jogo");
+        toast.error(data.error?.message ?? t.family.errorAddingGame);
         return;
       }
-      toast.success("Adicionado à lista!", {
+      toast.success(t.family.gameAdded, {
         description: entry.name,
         action: {
-          label: "Ver lista →",
+          label: t.family.viewList,
           onClick: () => document.getElementById("family-wishlist")?.scrollIntoView({ behavior: "smooth", block: "start" }),
         },
       });

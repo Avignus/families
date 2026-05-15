@@ -7,6 +7,7 @@ import { formatCurrency, getMemberColor } from "@/lib/utils";
 import { PledgeModal } from "./pledge-modal";
 import { ShoppingCart, Minus, X, Sparkles, RefreshCw, Clock, PackageOpen, CheckCircle2, Trash2, Link2, Copy, Check } from "lucide-react";
 import { toast } from "sonner";
+import { useLanguage } from "@/lib/i18n/context";
 
 type Pledger = {
   id: string;
@@ -60,6 +61,7 @@ type Props = {
 };
 
 export function WishlistItemCard({ item, familyId, currentUserId, memberColors, onRefresh, ownedByCurrentUser = false, priceAlert, priceAvgCents, autoOpen = false, initialPct }: Props) {
+  const { t } = useLanguage();
   const [pledgeOpen, setPledgeOpen] = useState(false);
   const [removeConfirm, setRemoveConfirm] = useState(false);
   const [removing, setRemoving] = useState(false);
@@ -73,11 +75,11 @@ export function WishlistItemCard({ item, familyId, currentUserId, memberColors, 
     : undefined;
 
   useEffect(() => {
-    if (autoOpen && !autoOpenFired.current && item.status === "open" && !ownedByCurrentUser) {
+    if (autoOpen && !autoOpenFired.current && item.status === "open") {
       autoOpenFired.current = true;
       setPledgeOpen(true);
     }
-  }, [autoOpen, item.status, ownedByCurrentUser]);
+  }, [autoOpen, item.status]);
 
   const buildShareUrl = (pct: number) => {
     if (typeof window === "undefined") return "";
@@ -108,15 +110,15 @@ export function WishlistItemCard({ item, familyId, currentUserId, memberColors, 
     const res = await fetch(`/api/wishlist/${item.id}/purchased`, { method: "POST" });
     const data = await res.json();
     if (!res.ok) { toast.error(data.error?.message ?? "Erro"); return; }
-    toast.success("Jogo marcado como comprado!");
+    toast.success(t.wishlist.gamePurchased);
     onRefresh();
   };
 
   const handleUpdatePrice = async () => {
     const res = await fetch(`/api/wishlist/${item.id}`, { method: "PATCH" });
     const data = await res.json();
-    if (!res.ok) { toast.error(data.error?.message ?? "Preço ainda indisponível na Steam"); return; }
-    toast.success(`Preço atualizado: ${formatCurrency(data.data.targetPriceCents, item.currency)}`);
+    if (!res.ok) { toast.error(data.error?.message ?? t.wishlist.priceUnavailable); return; }
+    toast.success(t.wishlist.priceUpdated(formatCurrency(data.data.targetPriceCents, item.currency)));
     onRefresh();
   };
 
@@ -124,7 +126,7 @@ export function WishlistItemCard({ item, familyId, currentUserId, memberColors, 
     const res = await fetch(`/api/pledges/${pledgeId}`, { method: "DELETE" });
     const data = await res.json();
     if (!res.ok) { toast.error(data.error?.message ?? "Erro"); return; }
-    toast.success("Contribuição cancelada");
+    toast.success(t.wishlist.contributionCancelled);
     onRefresh();
   };
 
@@ -132,7 +134,7 @@ export function WishlistItemCard({ item, familyId, currentUserId, memberColors, 
     const res = await fetch(`/api/pledges/${pledgeId}`, { method: "DELETE" });
     const data = await res.json();
     if (!res.ok) { toast.error(data.error?.message ?? "Erro"); return; }
-    toast.success("Contribuição removida");
+    toast.success(t.wishlist.contributionRemoved);
     onRefresh();
   };
 
@@ -142,7 +144,7 @@ export function WishlistItemCard({ item, familyId, currentUserId, memberColors, 
       const res = await fetch(`/api/wishlist/${item.id}`, { method: "DELETE" });
       const data = await res.json();
       if (!res.ok) { toast.error(data.error?.message ?? "Erro ao remover"); return; }
-      toast.success(`${gameName} removido da lista`);
+      toast.success(t.wishlist.gameRemoved(gameName));
       onRefresh();
     } finally {
       setRemoving(false);
@@ -171,7 +173,7 @@ export function WishlistItemCard({ item, familyId, currentUserId, memberColors, 
           />
         ) : (
           <div className="w-full h-full bg-secondary flex items-center justify-center">
-            <span className="text-muted-foreground text-xs">Sem imagem</span>
+            <span className="text-muted-foreground text-xs">{t.wishlist.noImage}</span>
           </div>
         )}
         {/* Gradient overlay */}
@@ -187,7 +189,7 @@ export function WishlistItemCard({ item, familyId, currentUserId, memberColors, 
                   disabled={removing}
                   className="h-7 px-2 rounded-md text-[11px] font-semibold bg-destructive text-white hover:bg-destructive/90 transition-colors shadow-md"
                 >
-                  {removing ? "…" : "Remover"}
+                  {removing ? "…" : t.wishlist.remove}
                 </button>
                 <button
                   onClick={() => setRemoveConfirm(false)}
@@ -200,7 +202,7 @@ export function WishlistItemCard({ item, familyId, currentUserId, memberColors, 
               <button
                 onClick={() => setRemoveConfirm(true)}
                 className="h-7 w-7 rounded-md flex items-center justify-center bg-black/40 text-white/60 hover:bg-black/70 hover:text-white opacity-0 group-hover:opacity-100 transition-all duration-150 shadow-md backdrop-blur-sm"
-                title="Remover da lista"
+                title={t.wishlist.removeTitle}
               >
                 <Trash2 className="h-3.5 w-3.5" />
               </button>
@@ -213,29 +215,29 @@ export function WishlistItemCard({ item, familyId, currentUserId, memberColors, 
           {isFunded && (
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold funded-pulse"
               style={{ background: "hsl(258 82% 66% / 0.9)", color: "white" }}>
-              <Sparkles className="h-3 w-3" /> Financiado
+              <Sparkles className="h-3 w-3" /> {t.wishlist.funded}
             </span>
           )}
           {isPurchased && (
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/80 text-white">
-              <ShoppingCart className="h-3 w-3" /> Comprado
+              <ShoppingCart className="h-3 w-3" /> {t.wishlist.purchased}
             </span>
           )}
           {comingSoon && !isFunded && !isPurchased && (
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-sky-600/85 text-white">
               <Clock className="h-3 w-3" />
-              Em breve
+              {t.wishlist.comingSoon}
               {item.steamData?.releaseDate && item.steamData.releaseDate !== "Em breve" ? ` · ${item.steamData.releaseDate}` : ""}
             </span>
           )}
           {noPriceDefined && !comingSoon && !isFunded && !isPurchased && (
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-zinc-600/85 text-zinc-300">
-              <PackageOpen className="h-3 w-3" /> Sem preço
+              <PackageOpen className="h-3 w-3" /> {t.wishlist.noPrice}
             </span>
           )}
           {ownedByCurrentUser && !isPurchased && (
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-600/85 text-white">
-              <CheckCircle2 className="h-3 w-3" /> Você já tem
+              <CheckCircle2 className="h-3 w-3" /> {t.wishlist.youOwn}
             </span>
           )}
           {priceAlert === "low" && !isFunded && !isPurchased && (
@@ -243,7 +245,7 @@ export function WishlistItemCard({ item, familyId, currentUserId, memberColors, 
               className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-orange-500/90 text-white"
               title={priceAvgCents ? `Média histórica: ${formatCurrency(priceAvgCents, item.currency)}` : undefined}
             >
-              🔥 Mínimo histórico
+              {t.wishlist.historicLow}
             </span>
           )}
           {priceAlert === "high" && !isFunded && !isPurchased && (
@@ -251,7 +253,7 @@ export function WishlistItemCard({ item, familyId, currentUserId, memberColors, 
               className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-zinc-500/80 text-zinc-200"
               title={priceAvgCents ? `Média histórica: ${formatCurrency(priceAvgCents, item.currency)}` : undefined}
             >
-              ⚠️ Acima da média
+              {t.wishlist.aboveAverage}
             </span>
           )}
         </div>
@@ -266,9 +268,9 @@ export function WishlistItemCard({ item, familyId, currentUserId, memberColors, 
           <div className="flex items-center justify-between mt-0.5">
             <p className="text-xs text-muted-foreground">
               {item.steamData?.isFree
-                ? "Gratuito"
+                ? t.wishlist.free
                 : noPriceDefined
-                ? "Preço a definir"
+                ? t.wishlist.priceToSet
                 : formatCurrency(item.steamData?.priceCents ?? item.targetPriceCents, item.currency)}
             </p>
             {item.owner && (
@@ -283,7 +285,7 @@ export function WishlistItemCard({ item, familyId, currentUserId, memberColors, 
                   className="text-[10px] max-w-[60px] truncate"
                   style={{ color: memberColors.get(item.owner.id) }}
                 >
-                  {item.owner.id === currentUserId ? "você" : item.owner.personaName}
+                  {item.owner.id === currentUserId ? t.wishlist.you : item.owner.personaName}
                 </span>
               </div>
             )}
@@ -352,7 +354,7 @@ export function WishlistItemCard({ item, familyId, currentUserId, memberColors, 
                         <button
                           onClick={() => handleWithdrawPledge(pledge.id)}
                           className="text-muted-foreground/50 hover:text-destructive transition-colors ml-0.5"
-                          title="Cancelar minha contribuição"
+                          title={t.wishlist.cancelContribution}
                         >
                           <Minus className="h-3 w-3" />
                         </button>
@@ -361,7 +363,7 @@ export function WishlistItemCard({ item, familyId, currentUserId, memberColors, 
                         <button
                           onClick={() => handleRemovePledge(pledge.id)}
                           className="text-muted-foreground/50 hover:text-destructive transition-colors ml-0.5"
-                          title="Remover contribuição"
+                          title={t.wishlist.removeContribution}
                         >
                           <X className="h-3 w-3" />
                         </button>
@@ -377,7 +379,7 @@ export function WishlistItemCard({ item, familyId, currentUserId, memberColors, 
         {/* Share popover */}
         {shareOpen && item.status === "open" && !item.steamData?.isFree && !ownedByCurrentUser && (
           <div className="rounded-lg border border-border/60 bg-secondary/40 p-3 space-y-2.5 text-xs">
-            <p className="font-medium text-foreground/80">Pedir contribuição</p>
+            <p className="font-medium text-foreground/80">{t.wishlist.requestContribution}</p>
             <div className="flex items-center gap-2">
               <input
                 type="range"
@@ -398,7 +400,7 @@ export function WishlistItemCard({ item, familyId, currentUserId, memberColors, 
                 className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-primary/15 hover:bg-primary/25 text-primary transition-colors"
               >
                 {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-                {copied ? "Copiado!" : "Copiar link"}
+                {copied ? t.wishlist.copied : t.wishlist.copyLink}
               </button>
             </div>
           </div>
@@ -412,10 +414,10 @@ export function WishlistItemCard({ item, familyId, currentUserId, memberColors, 
               className="flex-1 h-8 rounded-md text-xs font-semibold border border-amber-500/40 text-amber-400 hover:bg-amber-500/10 transition-colors flex items-center justify-center gap-1.5"
             >
               <RefreshCw className="h-3 w-3" />
-              Atualizar preço da Steam
+              {t.wishlist.updatePrice}
             </button>
           )}
-          {item.status === "open" && remaining > 0 && !ownedByCurrentUser && (
+          {item.status === "open" && remaining > 0 && (
             <button
               onClick={() => setPledgeOpen(true)}
               className="flex-1 h-8 rounded-md text-xs font-semibold text-white transition-all hover:opacity-90 active:scale-[0.98]"
@@ -424,7 +426,7 @@ export function WishlistItemCard({ item, familyId, currentUserId, memberColors, 
                 boxShadow: "0 0 12px hsl(258 82% 66% / 0.2)",
               }}
             >
-              Contribuir
+              {t.wishlist.contribute}
             </button>
           )}
           {item.status === "open" && !item.steamData?.isFree && (
@@ -435,16 +437,10 @@ export function WishlistItemCard({ item, familyId, currentUserId, memberColors, 
                   ? "border-primary/40 text-primary bg-primary/10"
                   : "border-transparent text-muted-foreground/50 hover:text-primary hover:border-primary/20 hover:bg-primary/5"
               }`}
-              title="Pedir contribuição"
+              title={t.wishlist.requestContribution}
             >
               <Link2 className="h-3.5 w-3.5" />
             </button>
-          )}
-          {item.status === "open" && remaining > 0 && ownedByCurrentUser && (
-            <div className="flex-1 h-8 rounded-md text-xs font-medium border border-emerald-500/30 text-emerald-400/70 flex items-center justify-center gap-1.5 cursor-default select-none">
-              <CheckCircle2 className="h-3 w-3" />
-              Você já tem este jogo
-            </div>
           )}
           {isFunded && isOwner && (
             <Button
@@ -454,7 +450,7 @@ export function WishlistItemCard({ item, familyId, currentUserId, memberColors, 
               onClick={handleMarkPurchased}
             >
               <ShoppingCart className="h-3 w-3 mr-1" />
-              Marcar como Comprado
+              {t.wishlist.markPurchased}
             </Button>
           )}
         </div>

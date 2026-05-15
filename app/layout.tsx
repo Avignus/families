@@ -3,6 +3,7 @@ import { Inter, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers";
 import { Navbar } from "@/components/layout/navbar";
+import { getServerTranslations } from "@/lib/i18n/server";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -22,6 +23,7 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  const { t } = getServerTranslations();
   return (
     <html lang="pt-BR" className="dark">
       <body className={`${inter.variable} ${spaceGrotesk.variable} font-sans`}>
@@ -36,9 +38,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 &copy; {new Date().getFullYear()} RAPOZOTECH SOLUCOES INTELIGENTES LTDA &mdash; CNPJ 61.992.849/0001-83
               </p>
               <div className="flex gap-4 text-xs text-muted-foreground/70">
-                <a href="/terms" className="hover:text-muted-foreground transition-colors">Termos de Uso</a>
-                <a href="/privacy" className="hover:text-muted-foreground transition-colors">Política de Privacidade</a>
-                <a href="mailto:contato@families.app" className="hover:text-muted-foreground transition-colors">Contato</a>
+                <a href="/terms" className="hover:text-muted-foreground transition-colors">{t.layout.terms}</a>
+                <a href="/privacy" className="hover:text-muted-foreground transition-colors">{t.layout.privacy}</a>
+                <a href="mailto:contato@families.app" className="hover:text-muted-foreground transition-colors">{t.layout.contact}</a>
               </div>
             </div>
           </footer>

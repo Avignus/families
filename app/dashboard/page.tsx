@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { CreateFamilyDialog } from "@/components/family/create-family-dialog";
 import { JoinFamilyDialog } from "@/components/family/join-family-dialog";
 import { FamilyCoverArt } from "@/components/family-cover-art";
+import { getServerTranslations } from "@/lib/i18n/server";
 
 export const dynamic = "force-dynamic";
 
@@ -89,6 +90,7 @@ export default async function DashboardPage() {
   const totalAccessible = allAccessibleIds.size;
   const ownGames = ownGameIds.size;
   const viaFamilies = totalAccessible - ownGames;
+  const { t } = getServerTranslations();
 
   // Compute covers per family: wishlist first → library fill → client falls back to SVG
   const coversByFamily = await Promise.all(
@@ -143,9 +145,7 @@ export default async function DashboardPage() {
       {totalPendingRequests > 0 && (
         <div className="flex items-center gap-3 p-4 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400">
           <AlertTriangle className="h-5 w-5 shrink-0" />
-          <span>
-            Você tem <strong>{totalPendingRequests}</strong> solicitação{totalPendingRequests > 1 ? "ões" : ""} de entrada pendente{totalPendingRequests > 1 ? "s" : ""}.
-          </span>
+          <span dangerouslySetInnerHTML={{ __html: t.dashboard.pendingAlert(totalPendingRequests).replace(String(totalPendingRequests), `<strong>${totalPendingRequests}</strong>`) }} />
         </div>
       )}
 
@@ -162,9 +162,9 @@ export default async function DashboardPage() {
                 </div>
                 <div>
                   <p className="text-2xl font-bold leading-none" style={{ fontFamily: "var(--font-space-grotesk)" }}>
-                    {totalAccessible.toLocaleString("pt-BR")}
+                    {totalAccessible.toLocaleString(t.dateLocale)}
                   </p>
-                  <p className="text-sm text-muted-foreground mt-0.5">jogos acessíveis no total</p>
+                  <p className="text-sm text-muted-foreground mt-0.5">{t.dashboard.totalGames}</p>
                 </div>
               </div>
 
@@ -172,16 +172,16 @@ export default async function DashboardPage() {
               <div className="flex sm:flex-col justify-around sm:justify-center gap-0 sm:min-w-[180px] border-t sm:border-t-0 sm:border-l border-border/60 px-6 py-4 sm:py-5 bg-card/40">
                 <div className="flex items-center gap-2">
                   <Gamepad2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                  <span className="text-sm font-semibold">{ownGames.toLocaleString("pt-BR")}</span>
-                  <span className="text-xs text-muted-foreground">seus</span>
+                  <span className="text-sm font-semibold">{ownGames.toLocaleString(t.dateLocale)}</span>
+                  <span className="text-xs text-muted-foreground">{t.dashboard.yours}</span>
                 </div>
                 <div className="hidden sm:block h-px bg-border/60 my-2.5" />
                 <div className="flex items-center gap-2">
                   <Share2 className="h-3.5 w-3.5 shrink-0" style={{ color: "hsl(258 82% 66%)" }} />
                   <span className="text-sm font-semibold" style={{ color: "hsl(258 82% 66%)" }}>
-                    {viaFamilies.toLocaleString("pt-BR")}
+                    {viaFamilies.toLocaleString(t.dateLocale)}
                   </span>
-                  <span className="text-xs text-muted-foreground">via famílias</span>
+                  <span className="text-xs text-muted-foreground">{t.dashboard.viaFamilies}</span>
                 </div>
               </div>
             </div>
@@ -190,7 +190,7 @@ export default async function DashboardPage() {
       )}
 
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Suas Famílias</h1>
+        <h1 className="text-2xl font-bold">{t.dashboard.title}</h1>
         <div className="flex gap-2">
           <JoinFamilyDialog />
           <CreateFamilyDialog />
@@ -205,9 +205,9 @@ export default async function DashboardPage() {
               <Users className="h-8 w-8" style={{ color: "hsl(258 82% 66%)" }} />
             </div>
             <div className="text-center space-y-1">
-              <p className="font-semibold text-base">Você ainda não tem famílias</p>
+              <p className="font-semibold text-base">{t.dashboard.noFamilies}</p>
               <p className="text-sm text-muted-foreground">
-                Crie uma família ou entre em uma existente pelo catálogo ou por ID.
+                {t.dashboard.noFamiliesHint}
               </p>
             </div>
             <div className="flex gap-3 flex-wrap justify-center">
@@ -250,11 +250,11 @@ export default async function DashboardPage() {
                       <div className="flex items-center gap-1.5 shrink-0">
                         {pendingCount > 0 && (
                           <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30">
-                            {pendingCount} pendente{pendingCount > 1 ? "s" : ""}
+                            {t.dashboard.pending(pendingCount)}
                           </span>
                         )}
                         {isChief && (
-                          <Badge variant="secondary" className="text-xs">Chefe</Badge>
+                          <Badge variant="secondary" className="text-xs">{t.dashboard.chief}</Badge>
                         )}
                       </div>
                     </div>
@@ -263,16 +263,16 @@ export default async function DashboardPage() {
                     <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
                       <span className="flex items-center gap-1">
                         <Users className="h-3.5 w-3.5" />
-                        {family._count.memberships} membro{family._count.memberships !== 1 ? "s" : ""}
+                        {t.dashboard.members(family._count.memberships)}
                       </span>
                       <span className="flex items-center gap-1">
                         <Gamepad2 className="h-3.5 w-3.5" />
-                        {libraryCount} {libraryCount !== 1 ? "jogáveis" : "jogável"}
+                        {t.dashboard.playable(libraryCount)}
                       </span>
                       {wishlistCount > 0 && (
                         <span className="flex items-center gap-1">
                           <Heart className="h-3.5 w-3.5" />
-                          {wishlistCount} na lista
+                          {t.dashboard.wishlist(wishlistCount)}
                         </span>
                       )}
                     </div>
