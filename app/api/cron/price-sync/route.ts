@@ -13,6 +13,8 @@ const HISTORY_DAYS = 90;              // rolling window for average
 const ALERT_LOW_THRESHOLD = 0.80;     // ≤80% of avg → historic low
 const ALERT_HIGH_THRESHOLD = 1.20;    // ≥120% of avg → above average
 const ALERT_COOLDOWN_DAYS = 7;        // don't re-alert same user for same game within 7 days
+const LIBRARY_PRICE_STALENESS_DAYS = 7; // refresh library prices weekly
+const LIBRARY_BATCH_SIZE = 150;         // max appIds fetched per run (Steam rate limit)
 
 function getSurplusFeeBps(): number {
   const bps = parseInt(process.env.PLATFORM_SURPLUS_FEE_BPS ?? "1000", 10);
@@ -40,6 +42,51 @@ export async function GET(req: NextRequest) {
   });
 
   const log: string[] = [];
+
+  // ── Phase 0: backfill prices for active family members' libraries ────────
+  const activeMemberUserIds = await prisma.familyMembership.findMany({
+    where: { status: "active" },
+    select: { userId: true },
+  }).then((rows) => rows.map((r) => r.userId));
+
+  if (activeMemberUserIds.length > 0) {
+    const libraryCaches = await prisma.steamUserCache.findMany({
+      where: { type: "library", userId: { in: activeMemberUserIds } },
+      select: { payload: true },
+    });
+
+    const allLibraryAppIds = new Set<number>();
+    for (const cache of libraryCaches) {
+      const games = cache.payload as Array<{ appId: number }>;
+      for (const game of games) {
+        if (game.appId) allLibraryAppIds.add(game.appId);
+      }
+    }
+
+    const staleThreshold = new Date(
+      Date.now() - LIBRARY_PRICE_STALENESS_DAYS * 24 * 60 * 60 * 1000
+    );
+    const freshIds = await prisma.steamAppCache.findMany({
+      where: { steamAppId: { in: [...allLibraryAppIds] }, fetchedAt: { gte: staleThreshold } },
+      select: { steamAppId: true },
+    }).then((rows) => new Set(rows.map((r) => r.steamAppId)));
+
+    const toFetch = [...allLibraryAppIds]
+      .filter((id) => !freshIds.has(id))
+      .slice(0, LIBRARY_BATCH_SIZE);
+
+    let libFetched = 0;
+    for (const appId of toFetch) {
+      const result = await getAppDetails(appId);
+      if (result) libFetched++;
+    }
+
+    log.push(
+      `[LIB] ${allLibraryAppIds.size} unique appIds across active families` +
+      `, ${freshIds.size} fresh, fetched ${libFetched}/${toFetch.length}` +
+      (toFetch.length === LIBRARY_BATCH_SIZE ? ` (batch capped at ${LIBRARY_BATCH_SIZE})` : "")
+    );
+  }
 
   // ── Phase 1: fetch fresh prices + record snapshots ──────────────────────
   // Deduplicate by steamAppId — only fetch each game once per run

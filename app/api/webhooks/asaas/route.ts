@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { normalizeAsaasStatus, sendPixDisbursement } from "@/lib/asaas";
+import { normalizeAsaasStatus, sendPixDisbursement, refundPayment } from "@/lib/asaas";
 import { createNotification } from "@/lib/notifications/service";
 import { computeAndSaveReputation } from "@/lib/reputation";
 import { maybeDisburseFunds } from "@/lib/disbursement";
@@ -51,9 +51,11 @@ type MembershipWithFamily = {
   id: string;
   userId: string;
   familyId: string;
+  mpPaymentId: string | null;
   mpStatus: string | null;
   feePaidAt: Date | null;
   feeChargedCents: number | null;
+  feeRefundedAt: Date | null;
   family: { id: string; name: string; chiefId: string; entryFeeCents: number; currency: string };
   user: { id: string; personaName: string };
 };
@@ -71,12 +73,40 @@ async function handleMembershipPayment(membership: MembershipWithFamily, status:
       select: { familyId: true },
     });
     if (otherActive) {
-      await prisma.familyMembership.update({
-        where: { id: membership.id },
-        data: { status: "rejected", mpStatus: "rejected" },
+      let refunded = false;
+      if (membership.mpPaymentId && membership.feeChargedCents && !membership.feeRefundedAt) {
+        try {
+          await refundPayment(membership.mpPaymentId, membership.feeChargedCents);
+          refunded = true;
+        } catch (refundErr) {
+          console.error("Auto-refund error (single-family rule):", refundErr);
+        }
+      }
+
+      await prisma.$transaction(async (tx) => {
+        await tx.familyMembership.update({
+          where: { id: membership.id },
+          data: {
+            status: "rejected",
+            mpStatus: "rejected",
+            ...(refunded ? { feeRefundedAt: new Date() } : {}),
+          },
+        });
+        const refundAmountFormatted = membership.feeChargedCents
+          ? new Intl.NumberFormat("pt-BR", { style: "currency", currency: membership.family.currency })
+              .format(membership.feeChargedCents / 100)
+          : null;
+        await createNotification(tx, {
+          recipientUserId: membership.userId,
+          type: "JOIN_REJECTED",
+          payload: {
+            familyId: membership.family.id,
+            familyName: membership.family.name,
+            refunded,
+            refundAmountFormatted,
+          },
+        });
       });
-      // TODO: trigger refund to the user
-      console.warn(`Membership ${membership.id} rejected: user ${membership.userId} already in another family. Refund needed.`);
       return;
     }
 

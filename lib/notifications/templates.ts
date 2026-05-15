@@ -119,6 +119,26 @@ const templates: Record<Locale, Templates> = {
       body: (p) => `"${p.gameName}" está por ${p.priceFormatted} — ${p.percentAbove}% acima da média histórica de ${p.avgFormatted}. Pode valer esperar.`,
       link: (p) => `/families/${p.familyId}`,
     },
+    PLEDGE_REFUNDED_NO_PIX_KEY: {
+      title: () => "Contribuição estornada",
+      body: (p) => `Sua contribuição de ${p.refundAmountFormatted} para "${p.gameName}" foi estornada — o dono do item não cadastrou uma chave PIX em 7 dias.`,
+      link: (p) => `/families/${p.familyId}`,
+    },
+    ITEM_UNFUNDED_NO_PIX_KEY: {
+      title: () => "Item reaberto — chave PIX não cadastrada",
+      body: (p) => `"${p.gameName}" foi totalmente financiado, mas como você não cadastrou sua chave PIX em 7 dias, os ${p.contributorCount} contribuidores foram estornados e o item voltou para aberto.`,
+      link: () => `/settings`,
+    },
+    FAMILY_DELETED: {
+      title: () => "Família excluída",
+      body: (p) => `A família "${p.familyName}" foi excluída pelo chief.`,
+      link: () => `/dashboard`,
+    },
+    PLEDGE_REFUNDED_FAMILY_DELETED: {
+      title: () => "Contribuição estornada",
+      body: (p) => `Sua contribuição de ${p.refundAmountFormatted} para "${p.gameName}" foi estornada porque a família "${p.familyName}" foi excluída.`,
+      link: () => `/dashboard`,
+    },
   },
   en: {
     JOIN_REQUEST: {
@@ -225,6 +245,26 @@ const templates: Record<Locale, Templates> = {
       title: () => "⚠️ Game above average",
       body: (p) => `"${p.gameName}" is at ${p.priceFormatted} — ${p.percentAbove}% above its historical average of ${p.avgFormatted}. Might be worth waiting.`,
       link: (p) => `/families/${p.familyId}`,
+    },
+    PLEDGE_REFUNDED_NO_PIX_KEY: {
+      title: () => "Pledge refunded",
+      body: (p) => `Your contribution of ${p.refundAmountFormatted} for "${p.gameName}" was refunded — the item owner did not register a PIX key within 7 days.`,
+      link: (p) => `/families/${p.familyId}`,
+    },
+    ITEM_UNFUNDED_NO_PIX_KEY: {
+      title: () => "Item reopened — PIX key not registered",
+      body: (p) => `"${p.gameName}" was fully funded, but since you didn't register a PIX key within 7 days, all ${p.contributorCount} contributors were refunded and the item was reopened.`,
+      link: () => `/settings`,
+    },
+    FAMILY_DELETED: {
+      title: () => "Family deleted",
+      body: (p) => `Family "${p.familyName}" was deleted by the chief.`,
+      link: () => `/dashboard`,
+    },
+    PLEDGE_REFUNDED_FAMILY_DELETED: {
+      title: () => "Pledge refunded",
+      body: (p) => `Your contribution of ${p.refundAmountFormatted} for "${p.gameName}" was refunded because family "${p.familyName}" was deleted.`,
+      link: () => `/dashboard`,
     },
   },
 };

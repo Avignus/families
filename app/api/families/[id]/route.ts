@@ -3,6 +3,10 @@ import { z } from "zod";
 import { requireSession, isApiError, ok, err, parseBody } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { getAppDetails, getPlayerSummaries } from "@/lib/steam";
+import { refundPayment } from "@/lib/asaas";
+import { creditWallet } from "@/lib/wallet";
+import { createNotification } from "@/lib/notifications/service";
+import { formatCurrency } from "@/lib/notifications/templates";
 
 const UpdateFamilySchema = z.object({
   name: z.string().min(1).max(100).optional(),
@@ -168,16 +172,154 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
   const user = await requireSession();
   if (isApiError(user)) return user;
 
-  const family = await prisma.family.findUnique({ where: { id: params.id } });
+  const family = await prisma.family.findUnique({
+    where: { id: params.id },
+    include: {
+      // Paid pledges on items not yet disbursed → need refund
+      wishlistItems: {
+        where: { disbursedAt: null },
+        include: {
+          pledges: {
+            where: { status: "active", paidAt: { not: null } },
+            select: {
+              id: true,
+              pledgerUserId: true,
+              mpPaymentId: true,
+              mpAmountCents: true,
+              amountCents: true,
+              creditsCentsUsed: true,
+              wishlistItem: { select: { steamAppId: true } },
+            },
+          },
+        },
+      },
+      // Paid entry fees not yet refunded → need refund
+      memberships: {
+        where: { feePaidAt: { not: null }, feeRefundedAt: null, userId: { not: user.id } },
+        select: { id: true, userId: true, mpPaymentId: true, feeChargedCents: true },
+      },
+    },
+  });
+
   if (!family) return err("NOT_FOUND", "Family not found", 404);
   if (family.chiefId !== user.id) return err("FORBIDDEN", "Only the chief can delete the family", 403);
 
-  await prisma.voteBallot.deleteMany({ where: { vote: { familyId: params.id } } });
-  await prisma.vote.deleteMany({ where: { familyId: params.id } });
-  await prisma.pledge.deleteMany({ where: { wishlistItem: { familyId: params.id } } });
-  await prisma.wishlistItem.deleteMany({ where: { familyId: params.id } });
-  await prisma.familyMembership.deleteMany({ where: { familyId: params.id } });
-  await prisma.family.delete({ where: { id: params.id } });
+  const paidPledges = family.wishlistItems.flatMap((i) => i.pledges);
+  const paidMemberships = family.memberships;
+
+  // ── Refund paid pledges ──────────────────────────────────────────────────
+  // Strategy: try Asaas first; if it fails (e.g. 90-day PIX window), fall back
+  // to wallet credit so the user always recovers their money.
+  type PledgeRefundResult = { pledgeId: string; pledgerUserId: string; steamAppId: number; refundCents: number; viaWallet: boolean };
+  const pledgeRefunds: PledgeRefundResult[] = [];
+
+  for (const pledge of paidPledges) {
+    if (!pledge.pledgerUserId) continue;
+    const pixCents = pledge.mpAmountCents ?? 0;
+    const walletCents = pledge.creditsCentsUsed ?? 0;
+    let viaWallet = false;
+
+    if (pixCents > 0 && pledge.mpPaymentId) {
+      try {
+        await refundPayment(pledge.mpPaymentId, pixCents);
+      } catch {
+        // Asaas failed (expired window, etc.) → credit wallet instead
+        viaWallet = true;
+      }
+    }
+
+    pledgeRefunds.push({
+      pledgeId: pledge.id,
+      pledgerUserId: pledge.pledgerUserId,
+      steamAppId: pledge.wishlistItem.steamAppId,
+      refundCents: pixCents + walletCents,
+      viaWallet,
+    });
+  }
+
+  // ── Refund paid entry fees ───────────────────────────────────────────────
+  type MembershipRefundResult = { membershipId: string; userId: string; refunded: boolean };
+  const membershipRefunds: MembershipRefundResult[] = [];
+
+  for (const membership of paidMemberships) {
+    let refunded = false;
+    if (membership.mpPaymentId && membership.feeChargedCents) {
+      try {
+        await refundPayment(membership.mpPaymentId, membership.feeChargedCents);
+        refunded = true;
+      } catch {
+        console.error(`Entry fee refund failed for membership ${membership.id} on family deletion`);
+      }
+    }
+    membershipRefunds.push({ membershipId: membership.id, userId: membership.userId, refunded });
+  }
+
+  // ── Get active members for FAMILY_DELETED notification ──────────────────
+  const activeMembers = await prisma.familyMembership.findMany({
+    where: { familyId: params.id, status: "active", userId: { not: user.id } },
+    select: { userId: true },
+  });
+
+  // ── Load game names for pledge refund notifications ──────────────────────
+  const appIds = [...new Set(pledgeRefunds.map((r) => r.steamAppId))];
+  const gameNames = new Map<number, string>();
+  await Promise.all(
+    appIds.map(async (appId) => {
+      const data = await getAppDetails(appId).catch(() => null);
+      gameNames.set(appId, data?.name ?? `App #${appId}`);
+    })
+  );
+
+  // ── Delete family + notify + re-credit wallets in transaction ────────────
+  await prisma.$transaction(async (tx) => {
+    // Re-credit wallet for pledges where Asaas failed or credits were used
+    for (const r of pledgeRefunds) {
+      if (r.viaWallet && r.refundCents > 0) {
+        await creditWallet(tx, r.pledgerUserId, r.refundCents, "item_cancelled", r.pledgeId);
+      } else if ((r.refundCents - (paidPledges.find((p) => p.id === r.pledgeId)?.mpAmountCents ?? 0)) > 0) {
+        // Re-credit the wallet-credits portion even when PIX refund succeeded
+        const walletPortion = paidPledges.find((p) => p.id === r.pledgeId)?.creditsCentsUsed ?? 0;
+        if (walletPortion > 0) {
+          await creditWallet(tx, r.pledgerUserId, walletPortion, "item_cancelled", r.pledgeId);
+        }
+      }
+
+      await createNotification(tx, {
+        recipientUserId: r.pledgerUserId,
+        type: "PLEDGE_REFUNDED_FAMILY_DELETED",
+        payload: {
+          familyName: family.name,
+          gameName: gameNames.get(r.steamAppId) ?? `App #${r.steamAppId}`,
+          refundAmountFormatted: formatCurrency(r.refundCents, family.currency),
+        },
+      });
+    }
+
+    // Mark refunded memberships
+    for (const r of membershipRefunds.filter((r) => r.refunded)) {
+      await tx.familyMembership.update({
+        where: { id: r.membershipId },
+        data: { feeRefundedAt: new Date() },
+      });
+    }
+
+    // Notify all active members
+    for (const { userId } of activeMembers) {
+      await createNotification(tx, {
+        recipientUserId: userId,
+        type: "FAMILY_DELETED",
+        payload: { familyName: family.name },
+      });
+    }
+
+    // Cascade delete
+    await tx.voteBallot.deleteMany({ where: { vote: { familyId: params.id } } });
+    await tx.vote.deleteMany({ where: { familyId: params.id } });
+    await tx.pledge.deleteMany({ where: { wishlistItem: { familyId: params.id } } });
+    await tx.wishlistItem.deleteMany({ where: { familyId: params.id } });
+    await tx.familyMembership.deleteMany({ where: { familyId: params.id } });
+    await tx.family.delete({ where: { id: params.id } });
+  });
 
   return ok({ message: "Family deleted" });
 }
