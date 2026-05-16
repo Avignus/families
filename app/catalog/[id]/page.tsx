@@ -68,9 +68,11 @@ export default async function CatalogFamilyPage({ params }: { params: { id: stri
 
   // Calculate personalized spot price for logged-in non-members
   let spotPriceCents: number | null = null;
+  let spotCoverage: { familyGamesPriced: number; familyGamesTotal: number } | null = null;
   if (family.spotPricingEnabled && currentUserId && !isMember) {
     const spotResult = await calculateSpotPrice(params.id, currentUserId).catch(() => null);
     spotPriceCents = spotResult?.spotPriceCents ?? null;
+    if (spotResult) spotCoverage = { familyGamesPriced: spotResult.coverage.familyGamesPriced, familyGamesTotal: spotResult.coverage.familyGamesTotal };
   }
   const memberCount = family.memberships.length;
   const isFull = family.maxMembers ? memberCount >= family.maxMembers : false;
@@ -185,6 +187,15 @@ export default async function CatalogFamilyPage({ params }: { params: { id: stri
                 </Badge>
               ) : null}
             </div>
+            {/* Low coverage warning: fewer than 50% of family games are priced */}
+            {family.spotPricingEnabled && spotCoverage && spotCoverage.familyGamesTotal > 0 &&
+              spotCoverage.familyGamesPriced / spotCoverage.familyGamesTotal < 0.5 && (
+              <p className="text-[11px] text-amber-400/80 flex items-center gap-1">
+                <Zap className="h-3 w-3 shrink-0" />
+                {t.catalogFamily.spotPartialCoverage(spotCoverage.familyGamesPriced, spotCoverage.familyGamesTotal)}
+              </p>
+            )}
+
             {currentUserId && !isMember && (family.isPublic && !isFull || hasPendingPayment) && (
               <CatalogJoinButton
                 familyId={params.id}

@@ -24,9 +24,11 @@ export async function GET(req: NextRequest) {
     where: {
       isPublic: true,
       ...(search ? { name: { contains: search, mode: "insensitive" } } : {}),
-      ...(freeOnly ? { entryFeeCents: 0 } : {}),
+      ...(freeOnly ? { entryFeeCents: 0, spotPricingEnabled: false } : {}),
     },
-    include: {
+    select: {
+      id: true, name: true, description: true, currency: true, isPublic: true,
+      entryFeeCents: true, maxMembers: true, spotPricingEnabled: true,
       chief: { select: { id: true, personaName: true, avatarUrl: true, avatarMedium: true } },
       _count: { select: { memberships: { where: { status: "active" } } } },
       wishlistItems: {
@@ -37,7 +39,7 @@ export async function GET(req: NextRequest) {
       },
       memberships: currentUserId
         ? { where: { userId: currentUserId }, select: { status: true } }
-        : false,
+        : undefined,
     },
     orderBy: { createdAt: "desc" },
   });
@@ -64,6 +66,7 @@ export async function GET(req: NextRequest) {
         description: f.description,
         currency: f.currency,
         entryFeeCents: f.entryFeeCents,
+        spotPricingEnabled: f.spotPricingEnabled,
         maxMembers: f.maxMembers,
         memberCount,
         spotsLeft,

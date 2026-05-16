@@ -61,7 +61,7 @@ export function GameSearchModal({ open, onOpenChange, onSelect, title, familyId,
   const [filter, setFilter] = useState<"all" | "most">("most");
 
   // Reuses the same cache as SteamLibraryPanel
-  const { data: libraryData } = useQuery<{ data: { members: MemberData[] } }>({
+  const { data: libraryData, isLoading: suggestionsLoading } = useQuery<{ data: { members: MemberData[] } }>({
     queryKey: ["steam-library", familyId],
     queryFn: async () => {
       const r = await fetch(`/api/families/${familyId}/steam-library`);
@@ -217,7 +217,12 @@ export function GameSearchModal({ open, onOpenChange, onSelect, title, familyId,
 
             {/* Grid */}
             <div className="overflow-y-auto max-h-80 px-5 pb-5">
-              {suggestions.length === 0 ? (
+              {suggestionsLoading ? (
+                <div className="flex items-center justify-center py-10 gap-2 text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span className="text-sm">{t.gameSearch.loadingSuggestions}</span>
+                </div>
+              ) : suggestions.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-8">
                   {t.gameSearch.suggestionsEmpty}
                 </p>

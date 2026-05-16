@@ -5,7 +5,7 @@ import { useState, useTransition } from "react";
 import { formatCurrency } from "@/lib/utils";
 import {
   Users, Lock, Unlock, Crown, Search, ChevronLeft, ChevronRight,
-  SlidersHorizontal, X, Gamepad2, CheckCircle2, PlusCircle,
+  SlidersHorizontal, X, Gamepad2, CheckCircle2, PlusCircle, Zap,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,7 @@ type Family = {
   currency: string;
   isPublic: boolean;
   entryFeeCents: number;
+  spotPricingEnabled: boolean;
   maxMembers: number | null;
   memberCount: number;
   spotsLeft: number | null;
@@ -489,7 +490,11 @@ function FamilyCard({
               {family.maxMembers ? `/${family.maxMembers}` : ""} membros
             </span>
           </div>
-          {hasFee ? (
+          {family.spotPricingEnabled ? (
+            <span className="flex items-center gap-1 text-primary font-semibold text-xs">
+              <Zap className="h-3 w-3" /> Spot
+            </span>
+          ) : hasFee ? (
             <span className="text-primary font-semibold">
               {formatCurrency(family.entryFeeCents, family.currency)}
             </span>
@@ -520,6 +525,8 @@ function FamilyCard({
             >
               {loading
                 ? "..."
+                : family.spotPricingEnabled
+                ? t.catalog.joinSpot
                 : hasFee
                 ? t.catalogJoinBtn.join(formatCurrency(family.entryFeeCents, family.currency))
                 : t.catalog.joinRequest}

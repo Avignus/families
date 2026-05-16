@@ -73,6 +73,7 @@ export default async function CatalogPage({
     },
     orderBy: { createdAt: "desc" },
   });
+  // spotPricingEnabled is available on all family rows since the migration
 
   // Compute library stats when user is logged in or game filters are active.
   // familyAppIdsMap is also used for cover images, so it's declared outside the block.
@@ -310,6 +311,7 @@ export default async function CatalogPage({
         currency: f.currency,
         isPublic: f.isPublic,
         entryFeeCents: f.entryFeeCents,
+        spotPricingEnabled: f.spotPricingEnabled,
         maxMembers: f.maxMembers,
         memberCount,
         spotsLeft: f.maxMembers ? f.maxMembers - memberCount : null,

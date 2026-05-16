@@ -122,6 +122,7 @@ export const translations = {
       privateFamily: "Private family",
       noSlots: "No slots",
       joinRequest: "Request to join",
+      joinSpot: "See my price",
     },
     catalogFamily: {
       backLink: "Catalog",
@@ -138,6 +139,7 @@ export const translations = {
       noSlots: "Full",
       private: "Private",
       free: "Free",
+      spotPartialCoverage: (priced: number, total: number) => `Estimated price — only ${priced}/${total} games are priced so far.`,
       members: (n: number, max: number | null) => max ? `${n}/${max} members` : `${n} members`,
     },
     admin: {
@@ -248,6 +250,7 @@ export const translations = {
       placeholder: "Search Steam games...",
       noResults: "No games found",
       suggestions: "From members' wishlists",
+      loadingSuggestions: "Loading suggestions...",
       suggestionsEmpty: "No games in members' wishlists yet.",
       wantedBy: (n: number) => n === 1 ? "1 member wants this" : `${n} members want this`,
       alreadyAdded: "Already in wishlist",
@@ -523,6 +526,7 @@ export const translations = {
       privateFamily: "Família privada",
       noSlots: "Sem vagas",
       joinRequest: "Pedir entrada",
+      joinSpot: "Ver meu preço",
     },
     catalogFamily: {
       backLink: "Catálogo",
@@ -539,6 +543,7 @@ export const translations = {
       noSlots: "Sem vagas",
       private: "Privada",
       free: "Gratuito",
+      spotPartialCoverage: (priced: number, total: number) => `Preço estimado — apenas ${priced}/${total} jogos têm preço catalogado.`,
       members: (n: number, max: number | null) => max ? `${n}/${max} membros` : `${n} membros`,
     },
     admin: {
@@ -649,6 +654,7 @@ export const translations = {
       placeholder: "Buscar jogos na Steam...",
       noResults: "Nenhum jogo encontrado",
       suggestions: "Da wishlist dos membros",
+      loadingSuggestions: "Carregando sugestões...",
       suggestionsEmpty: "Nenhum jogo na wishlist dos membros ainda.",
       wantedBy: (n: number) => n === 1 ? "1 membro quer este jogo" : `${n} membros querem este jogo`,
       alreadyAdded: "Já na lista",
