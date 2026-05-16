@@ -196,7 +196,7 @@ export default async function CatalogFamilyPage({ params }: { params: { id: stri
               </p>
             )}
 
-            {currentUserId && !isMember && (family.isPublic && !isFull || hasPendingPayment) && (
+            {currentUserId && !isMember && (!isFull || hasPendingPayment) && (
               <CatalogJoinButton
                 familyId={params.id}
                 familyName={family.name}
@@ -260,7 +260,7 @@ export default async function CatalogFamilyPage({ params }: { params: { id: stri
         </div>
       )}
 
-      {!isMember && currentUserId && (family.isPublic && !isFull || hasPendingPayment) && (
+      {!isMember && currentUserId && (!isFull || hasPendingPayment) && (
         <div className="rounded-2xl border border-primary/25 overflow-hidden">
           {/* subtle gradient bg */}
           <div className="relative px-6 py-5 flex flex-col sm:flex-row items-center justify-between gap-4"
