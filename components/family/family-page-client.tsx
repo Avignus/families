@@ -175,7 +175,11 @@ export function FamilyPageClient({ familyId }: { familyId: string }) {
   }
 
   if (error) {
-    if ((error as { status?: number }).status === 403) return <JoinRequestScreen familyId={familyId} />;
+    if ((error as { status?: number }).status === 403) {
+      // Redirect to the public catalog page where the join flow lives
+      if (typeof window !== "undefined") window.location.replace(`/catalog/${familyId}`);
+      return null;
+    }
     return (
       <div className="container py-8 text-center text-muted-foreground">
         {t.family.notFound}

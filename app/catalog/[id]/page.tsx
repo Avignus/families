@@ -240,6 +240,67 @@ export default async function CatalogFamilyPage({ params }: { params: { id: stri
         </div>
       </div>
 
+      {/* Join banner — prominent CTA for non-members */}
+      {!isMember && !currentUserId && (
+        <div className="rounded-2xl border border-primary/25 bg-primary/5 px-6 py-5 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="space-y-0.5 text-center sm:text-left">
+            <p className="font-semibold text-base">{t.catalogFamily.joinBannerTitle}</p>
+            <p className="text-sm text-muted-foreground">{t.catalogFamily.joinBannerLogin}</p>
+          </div>
+          <Link
+            href="/"
+            className="shrink-0 px-6 py-3 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90 active:scale-[0.98]"
+            style={{
+              background: "linear-gradient(135deg, hsl(258 82% 60%), hsl(258 82% 48%))",
+              boxShadow: "0 0 24px hsl(258 82% 60% / 0.4), 0 4px 12px hsl(258 82% 50% / 0.25)",
+            }}
+          >
+            {t.catalogFamily.joinBannerBtn}
+          </Link>
+        </div>
+      )}
+
+      {!isMember && currentUserId && (family.isPublic && !isFull || hasPendingPayment) && (
+        <div className="rounded-2xl border border-primary/25 overflow-hidden">
+          {/* subtle gradient bg */}
+          <div className="relative px-6 py-5 flex flex-col sm:flex-row items-center justify-between gap-4"
+            style={{ background: "linear-gradient(135deg, hsl(258 82% 10% / 0.6), hsl(258 82% 6% / 0.8))" }}>
+            <div className="space-y-1 text-center sm:text-left">
+              <p className="font-semibold text-lg">{t.catalogFamily.joinBannerTitle}</p>
+              {family.spotPricingEnabled && spotPriceCents !== null ? (
+                <p className="text-muted-foreground text-sm flex items-center gap-1.5 justify-center sm:justify-start">
+                  <Zap className="h-4 w-4 text-primary" />
+                  {spotPriceCents > 0
+                    ? t.catalogFamily.joinBannerSpot(formatCurrency(spotPriceCents, family.currency))
+                    : t.catalogFamily.joinBannerFree}
+                </p>
+              ) : family.entryFeeCents > 0 ? (
+                <p className="text-muted-foreground text-sm">{t.catalogFamily.joinBannerFee(formatCurrency(family.entryFeeCents, family.currency))}</p>
+              ) : (
+                <p className="text-muted-foreground text-sm">{t.catalogFamily.joinBannerFree}</p>
+              )}
+            </div>
+            <div className="shrink-0">
+              <CatalogJoinButton
+                familyId={params.id}
+                familyName={family.name}
+                entryFeeCents={family.entryFeeCents}
+                currency={family.currency}
+                initialStatus={myMembership?.status ?? null}
+                spotPriceCents={family.spotPricingEnabled ? spotPriceCents : null}
+                large
+                pendingPix={hasPendingPayment && myMembership?.mpQrCode ? {
+                  qrCode: myMembership.mpQrCode,
+                  qrCodeBase64: myMembership.mpQrCodeBase64 ?? "",
+                  ticketUrl: myMembership.mpTicketUrl ?? "",
+                  paymentId: myMembership.mpPaymentId!,
+                } : null}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3">
         <StatCard
