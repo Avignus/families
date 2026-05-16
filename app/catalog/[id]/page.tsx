@@ -187,31 +187,6 @@ export default async function CatalogFamilyPage({ params }: { params: { id: stri
                 </Badge>
               ) : null}
             </div>
-            {/* Low coverage warning: fewer than 50% of family games are priced */}
-            {family.spotPricingEnabled && spotCoverage && spotCoverage.familyGamesTotal > 0 &&
-              spotCoverage.familyGamesPriced / spotCoverage.familyGamesTotal < 0.5 && (
-              <p className="text-[11px] text-amber-400/80 flex items-center gap-1">
-                <Zap className="h-3 w-3 shrink-0" />
-                {t.catalogFamily.spotPartialCoverage(spotCoverage.familyGamesPriced, spotCoverage.familyGamesTotal)}
-              </p>
-            )}
-
-            {currentUserId && !isMember && (!isFull || hasPendingPayment) && (
-              <CatalogJoinButton
-                familyId={params.id}
-                familyName={family.name}
-                entryFeeCents={family.entryFeeCents}
-                currency={family.currency}
-                initialStatus={myMembership?.status ?? null}
-                spotPriceCents={family.spotPricingEnabled ? spotPriceCents : null}
-                pendingPix={hasPendingPayment && myMembership?.mpQrCode ? {
-                  qrCode: myMembership.mpQrCode,
-                  qrCodeBase64: myMembership.mpQrCodeBase64 ?? "",
-                  ticketUrl: myMembership.mpTicketUrl ?? "",
-                  paymentId: myMembership.mpPaymentId!,
-                } : null}
-              />
-            )}
           </div>
         </div>
 
