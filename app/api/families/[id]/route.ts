@@ -14,6 +14,9 @@ const UpdateFamilySchema = z.object({
   description: z.string().max(300).nullable().optional(),
   maxMembers: z.number().int().min(2).max(100).nullable().optional(),
   entryFeeCents: z.number().int().min(0).optional(),
+  spotPricingEnabled: z.boolean().optional(),
+  spotFraction: z.number().min(0.01).max(1).optional(),
+  spotMinPriceCents: z.number().int().min(0).optional(),
 });
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
@@ -162,6 +165,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       ...(body.description !== undefined && { description: body.description }),
       ...(body.maxMembers !== undefined && { maxMembers: body.maxMembers }),
       ...(body.entryFeeCents !== undefined && { entryFeeCents: body.entryFeeCents }),
+      ...(body.spotPricingEnabled !== undefined && { spotPricingEnabled: body.spotPricingEnabled }),
+      ...(body.spotFraction !== undefined && { spotFraction: body.spotFraction }),
+      ...(body.spotMinPriceCents !== undefined && { spotMinPriceCents: body.spotMinPriceCents }),
     },
   });
 

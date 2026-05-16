@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Globe, Lock, Users, Crown, Unlock } from "lucide-react";
+import { Globe, Lock, Users, Crown, Unlock, TrendingUp } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { FamilyCoverArt } from "@/components/family-cover-art";
 import { useLanguage } from "@/lib/i18n/context";
@@ -17,6 +17,7 @@ type Props = {
   familyName: string;
   chiefName: string;
   chiefAvatar: string;
+  chiefHasPixKey: boolean;
   initial: {
     isPublic: boolean;
     description: string | null;
@@ -24,10 +25,13 @@ type Props = {
     entryFeeCents: number;
     currency: string;
     memberCount: number;
+    spotPricingEnabled: boolean;
+    spotFraction: number;
+    spotMinPriceCents: number;
   };
 };
 
-export function CatalogSettingsForm({ familyId, familyName, chiefName, chiefAvatar, initial }: Props) {
+export function CatalogSettingsForm({ familyId, familyName, chiefName, chiefAvatar, chiefHasPixKey, initial }: Props) {
   const { t } = useLanguage();
   const [isPublic, setIsPublic] = useState(initial.isPublic);
   const [description, setDescription] = useState(initial.description ?? "");
@@ -35,10 +39,19 @@ export function CatalogSettingsForm({ familyId, familyName, chiefName, chiefAvat
   const [entryFee, setEntryFee] = useState(
     initial.entryFeeCents > 0 ? (initial.entryFeeCents / 100).toFixed(2) : ""
   );
+  const [spotEnabled, setSpotEnabled] = useState(initial.spotPricingEnabled);
+  const [spotFraction, setSpotFraction] = useState(
+    Math.round(initial.spotFraction * 100).toString()
+  );
+  const [spotMinPrice, setSpotMinPrice] = useState(
+    initial.spotMinPriceCents > 0 ? (initial.spotMinPriceCents / 100).toFixed(2) : ""
+  );
   const [saving, setSaving] = useState(false);
 
   const previewFeeCents = entryFee ? Math.round(parseFloat(entryFee) * 100) : 0;
   const previewMax = maxMembers ? parseInt(maxMembers) : null;
+  const spotFractionValue = spotFraction ? Math.min(1, Math.max(0.01, parseFloat(spotFraction) / 100)) : 0.2;
+  const spotMinPriceCents = spotMinPrice ? Math.round(parseFloat(spotMinPrice) * 100) : 0;
 
   const handleSave = async () => {
     setSaving(true);
@@ -50,7 +63,10 @@ export function CatalogSettingsForm({ familyId, familyName, chiefName, chiefAvat
           isPublic,
           description: description.trim() || null,
           maxMembers: previewMax,
-          entryFeeCents: previewFeeCents,
+          entryFeeCents: spotEnabled ? 0 : previewFeeCents,
+          spotPricingEnabled: spotEnabled,
+          spotFraction: spotFractionValue,
+          spotMinPriceCents,
         }),
       });
       const data = await res.json();
@@ -112,11 +128,62 @@ export function CatalogSettingsForm({ familyId, familyName, chiefName, chiefAvat
           <Input
             type="number" min={0} step={0.01}
             placeholder={t.catalogSettings.free}
-            value={entryFee}
+            value={spotEnabled ? "" : entryFee}
             onChange={(e) => setEntryFee(e.target.value)}
+            disabled={spotEnabled}
             className="text-sm"
           />
         </div>
+      </div>
+
+      {/* Spot pricing */}
+      <div className={`space-y-4 rounded-lg border p-4 transition-colors ${spotEnabled ? "border-primary/40 bg-primary/5" : "border-border/50 bg-secondary/20"}`}>
+        <div className="flex items-center justify-between">
+          <div className="space-y-0.5">
+            <p className="text-sm font-medium flex items-center gap-1.5">
+              <TrendingUp className="h-3.5 w-3.5 text-primary" />
+              {t.catalogSettings.spotPricingLabel}
+            </p>
+            <p className="text-xs text-muted-foreground">{t.catalogSettings.spotPricingDesc}</p>
+          </div>
+          <Switch checked={spotEnabled} onCheckedChange={setSpotEnabled} />
+        </div>
+
+        {spotEnabled && !chiefHasPixKey && (
+          <p className="text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-md px-3 py-2">
+            {t.catalogSettings.spotPixKeyWarning}
+          </p>
+        )}
+
+        {spotEnabled && (
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <Label className="text-sm">{t.catalogSettings.spotFraction}</Label>
+              <div className="relative">
+                <Input
+                  type="number" min={1} max={100} step={1}
+                  placeholder="20"
+                  value={spotFraction}
+                  onChange={(e) => setSpotFraction(e.target.value)}
+                  className="text-sm pr-7"
+                />
+                <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">%</span>
+              </div>
+              <p className="text-xs text-muted-foreground">{t.catalogSettings.spotFractionHint}</p>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-sm">{t.catalogSettings.spotMinPrice(initial.currency)}</Label>
+              <Input
+                type="number" min={0} step={0.01}
+                placeholder={t.catalogSettings.free}
+                value={spotMinPrice}
+                onChange={(e) => setSpotMinPrice(e.target.value)}
+                className="text-sm"
+              />
+              <p className="text-xs text-muted-foreground">{t.catalogSettings.spotMinPriceHint}</p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Preview */}

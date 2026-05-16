@@ -1,0 +1,5 @@
+-- AlterTable
+ALTER TABLE "Family"
+  ADD COLUMN "spotPricingEnabled" BOOLEAN NOT NULL DEFAULT false,
+  ADD COLUMN "spotFraction"       DOUBLE PRECISION NOT NULL DEFAULT 0.20,
+  ADD COLUMN "spotMinPriceCents"  INTEGER NOT NULL DEFAULT 0;

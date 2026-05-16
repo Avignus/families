@@ -23,6 +23,7 @@ type Props = {
   currency: string;
   initialStatus: string | null;
   pendingPix?: PixData | null;
+  spotPriceCents?: number | null;
 };
 
 export function CatalogJoinButton({
@@ -32,6 +33,7 @@ export function CatalogJoinButton({
   currency,
   initialStatus,
   pendingPix = null,
+  spotPriceCents = null,
 }: Props) {
   const router = useRouter();
   const { t } = useLanguage();
@@ -39,6 +41,9 @@ export function CatalogJoinButton({
   const [loading, setLoading] = useState(false);
   const [pix, setPix] = useState<PixData | null>(pendingPix ?? null);
   const [pixOpen, setPixOpen] = useState(false);
+
+  const [resolvedSpotPrice, setResolvedSpotPrice] = useState<number | null>(spotPriceCents ?? null);
+  const displayFeeCents = resolvedSpotPrice !== null ? resolvedSpotPrice : entryFeeCents;
 
   const handleJoin = async () => {
     setLoading(true);
@@ -48,6 +53,9 @@ export function CatalogJoinButton({
       if (!res.ok) {
         toast.error(data.error?.message ?? t.catalogJoinBtn.error);
         return;
+      }
+      if (data.data?.spotPriceCents !== undefined) {
+        setResolvedSpotPrice(data.data.spotPriceCents);
       }
       if (data.data?.pendingPayment && data.data?.pix) {
         setPix(data.data.pix);
@@ -84,7 +92,7 @@ export function CatalogJoinButton({
         <PixPaymentModal
           open={pixOpen}
           onOpenChange={setPixOpen}
-          amountCents={entryFeeCents}
+          amountCents={displayFeeCents}
           currency={currency}
           gameName={t.catalogJoinBtn.entryInto(familyName)}
           pix={pix}
@@ -105,15 +113,15 @@ export function CatalogJoinButton({
       <Button size="sm" onClick={handleJoin} disabled={loading}>
         {loading
           ? "..."
-          : entryFeeCents > 0
-          ? t.catalogJoinBtn.join(formatCurrency(entryFeeCents, currency))
+          : displayFeeCents > 0
+          ? t.catalogJoinBtn.join(formatCurrency(displayFeeCents, currency))
           : t.catalogJoinBtn.request}
       </Button>
       {pix && (
         <PixPaymentModal
           open={pixOpen}
           onOpenChange={setPixOpen}
-          amountCents={entryFeeCents}
+          amountCents={displayFeeCents}
           currency={currency}
           gameName={t.catalogJoinBtn.entryInto(familyName)}
           pix={pix}

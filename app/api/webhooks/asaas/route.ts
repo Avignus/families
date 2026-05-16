@@ -39,6 +39,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
+  if (externalRef.startsWith("spot:")) {
+    const membershipId = externalRef.replace("spot:", "");
+    const membership = await prisma.familyMembership.findUnique({
+      where: { id: membershipId },
+      include: {
+        family: { select: { id: true, name: true, chiefId: true, entryFeeCents: true, currency: true } },
+        user: { select: { id: true, personaName: true } },
+      },
+    });
+    if (membership) await handleSpotPayment(membership, status);
+    return NextResponse.json({ ok: true });
+  }
+
   if (externalRef.startsWith("pledge:")) {
     const pledgeId = externalRef.replace("pledge:", "");
     await handlePledgePayment(pledgeId, paymentId, status);
@@ -143,6 +156,98 @@ async function handleMembershipPayment(membership: MembershipWithFamily, status:
         pixKey: chief.pixKey,
         description: `Families — Taxa de entrada em ${membership.family.name}`,
       }).catch((err) => console.error("Entry fee disbursement error:", err));
+    }
+  }
+
+  if (status === "rejected" || status === "cancelled") {
+    await prisma.familyMembership.update({
+      where: { id: membership.id },
+      data: { status: "rejected" },
+    });
+  }
+}
+
+const SPOT_COMMISSION_RATE = 0.12; // platform keeps 12%, chief receives 88%
+
+async function handleSpotPayment(membership: MembershipWithFamily, status: string) {
+  await prisma.familyMembership.update({
+    where: { id: membership.id },
+    data: { mpStatus: status },
+  });
+
+  if (status === "approved" && !membership.feePaidAt) {
+    const otherActive = await prisma.familyMembership.findFirst({
+      where: { userId: membership.userId, status: "active", familyId: { not: membership.familyId } },
+      select: { familyId: true },
+    });
+    if (otherActive) {
+      let refunded = false;
+      if (membership.mpPaymentId && membership.feeChargedCents && !membership.feeRefundedAt) {
+        try {
+          await refundPayment(membership.mpPaymentId, membership.feeChargedCents);
+          refunded = true;
+        } catch (refundErr) {
+          console.error("Auto-refund error (single-family rule, spot):", refundErr);
+        }
+      }
+      await prisma.$transaction(async (tx) => {
+        await tx.familyMembership.update({
+          where: { id: membership.id },
+          data: {
+            status: "rejected",
+            mpStatus: "rejected",
+            ...(refunded ? { feeRefundedAt: new Date() } : {}),
+          },
+        });
+        const refundAmountFormatted = membership.feeChargedCents
+          ? new Intl.NumberFormat("pt-BR", { style: "currency", currency: membership.family.currency })
+              .format(membership.feeChargedCents / 100)
+          : null;
+        await createNotification(tx, {
+          recipientUserId: membership.userId,
+          type: "JOIN_REJECTED",
+          payload: { familyId: membership.family.id, familyName: membership.family.name, refunded, refundAmountFormatted },
+        });
+      });
+      return;
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await tx.familyMembership.update({
+        where: { id: membership.id },
+        data: { status: "active", feePaidAt: new Date(), joinedAt: new Date() },
+      });
+      await createNotification(tx, {
+        recipientUserId: membership.family.chiefId,
+        type: "JOIN_FEE_PAID",
+        payload: {
+          familyId: membership.family.id,
+          familyName: membership.family.name,
+          memberId: membership.userId,
+          personaName: membership.user.personaName,
+        },
+      });
+      await createNotification(tx, {
+        recipientUserId: membership.userId,
+        type: "JOIN_APPROVED",
+        payload: { familyId: membership.family.id, familyName: membership.family.name },
+      });
+    });
+
+    // Disburse 88% to chief (platform retains 12% commission)
+    if (membership.feeChargedCents && membership.feeChargedCents > 0) {
+      const chief = await prisma.user.findUnique({
+        where: { id: membership.family.chiefId },
+        select: { pixKey: true },
+      });
+      const chiefAmountCents = Math.floor(membership.feeChargedCents * (1 - SPOT_COMMISSION_RATE));
+      if (chief?.pixKey && chiefAmountCents > 0) {
+        await sendPixDisbursement({
+          amountCents: chiefAmountCents,
+          pixKey: chief.pixKey,
+          description: `Families — Spot em ${membership.family.name}`,
+        }).catch((err) => console.error("Spot disbursement error:", err));
+      }
     }
   }
 

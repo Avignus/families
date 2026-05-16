@@ -23,7 +23,7 @@ export default async function AdminPage({ params }: { params: { id: string } }) 
   const family = await prisma.family.findUnique({
     where: { id: params.id },
     include: {
-      chief: { select: { personaName: true, avatarMedium: true, avatarUrl: true } },
+      chief: { select: { personaName: true, avatarMedium: true, avatarUrl: true, pixKey: true } },
       memberships: {
         where: { status: { in: ["active", "pending"] } },
         include: { user: { select: { id: true, personaName: true, avatarUrl: true, avatarMedium: true, reputationScore: true } } },
@@ -159,7 +159,11 @@ export default async function AdminPage({ params }: { params: { id: string } }) 
               entryFeeCents: family.entryFeeCents,
               currency: family.currency,
               memberCount: activeMembers.length,
+              spotPricingEnabled: family.spotPricingEnabled,
+              spotFraction: family.spotFraction,
+              spotMinPriceCents: family.spotMinPriceCents,
             }}
+            chiefHasPixKey={!!family.chief.pixKey}
           />
         </CardContent>
       </Card>

@@ -5,10 +5,11 @@ import { notFound } from "next/navigation";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/utils";
-import { ArrowLeft, Crown, Users, Lock, Unlock, Gamepad2, ShoppingCart, TrendingUp, Library, Trophy } from "lucide-react";
+import { ArrowLeft, Crown, Users, Lock, Unlock, Gamepad2, ShoppingCart, TrendingUp, Library, Trophy, Zap } from "lucide-react";
 import { FamilyCoverArt } from "@/components/family-cover-art";
 import Link from "next/link";
 import { CatalogJoinButton } from "@/components/catalog/catalog-join-button";
+import { calculateSpotPrice } from "@/lib/spot-price";
 import { CatalogWishlistItem } from "@/components/catalog/catalog-wishlist-item";
 import { CatalogSteamPanel } from "@/components/catalog/catalog-steam-panel";
 import { getServerTranslations } from "@/lib/i18n/server";
@@ -64,6 +65,13 @@ export default async function CatalogFamilyPage({ params }: { params: { id: stri
     myMembership?.status === "pending" &&
     !!myMembership.mpPaymentId &&
     !myMembership.feePaidAt;
+
+  // Calculate personalized spot price for logged-in non-members
+  let spotPriceCents: number | null = null;
+  if (family.spotPricingEnabled && currentUserId && !isMember) {
+    const spotResult = await calculateSpotPrice(params.id, currentUserId).catch(() => null);
+    spotPriceCents = spotResult?.spotPriceCents ?? null;
+  }
   const memberCount = family.memberships.length;
   const isFull = family.maxMembers ? memberCount >= family.maxMembers : false;
 
@@ -166,11 +174,16 @@ export default async function CatalogFamilyPage({ params }: { params: { id: stri
                   <Lock className="h-3.5 w-3.5" /> {isFull ? t.catalogFamily.noSlots : t.catalogFamily.private}
                 </span>
               )}
-              {family.entryFeeCents > 0 && (
+              {family.spotPricingEnabled && spotPriceCents !== null ? (
+                <Badge variant="outline" className="text-primary border-primary/40 flex items-center gap-1">
+                  <Zap className="h-3 w-3" />
+                  {spotPriceCents > 0 ? formatCurrency(spotPriceCents, family.currency) : t.catalogFamily.free}
+                </Badge>
+              ) : family.entryFeeCents > 0 ? (
                 <Badge variant="outline" className="text-primary border-primary/40">
                   {formatCurrency(family.entryFeeCents, family.currency)}
                 </Badge>
-              )}
+              ) : null}
             </div>
             {currentUserId && !isMember && (family.isPublic && !isFull || hasPendingPayment) && (
               <CatalogJoinButton
@@ -179,6 +192,7 @@ export default async function CatalogFamilyPage({ params }: { params: { id: stri
                 entryFeeCents={family.entryFeeCents}
                 currency={family.currency}
                 initialStatus={myMembership?.status ?? null}
+                spotPriceCents={family.spotPricingEnabled ? spotPriceCents : null}
                 pendingPix={hasPendingPayment && myMembership?.mpQrCode ? {
                   qrCode: myMembership.mpQrCode,
                   qrCodeBase64: myMembership.mpQrCodeBase64 ?? "",

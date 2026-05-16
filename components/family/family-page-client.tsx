@@ -439,6 +439,8 @@ export function FamilyPageClient({ familyId }: { familyId: string }) {
         onOpenChange={setAddGameOpen}
         onSelect={handleAddGame}
         title={t.family.addToWishlist}
+        familyId={familyId}
+        existingAppIds={new Set(family.wishlistItems.map((i) => i.steamAppId))}
       />
     </div>
   );

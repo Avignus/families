@@ -47,6 +47,11 @@ model Family {
   coverImageUrl String?
   inviteToken   String?  @unique
 
+  // Spot marketplace
+  spotPricingEnabled Boolean @default(false)
+  spotFraction       Float   @default(0.20)  // 0.0–1.0; chief's share of net value
+  spotMinPriceCents  Int     @default(0)     // floor price regardless of formula
+
   memberships   FamilyMembership[]
   wishlistItems WishlistItem[]
   votes         Vote[]

@@ -5,6 +5,7 @@ import { createNotification } from "@/lib/notifications/service";
 import { createPixPayment, ENTRY_FEE_SERVICE_RATE, ASAAS_MIN_CHARGE_CENTS } from "@/lib/asaas";
 import { getAppBaseUrl } from "@/lib/utils";
 import { getPlayerSummaries } from "@/lib/steam";
+import { calculateSpotPrice } from "@/lib/spot-price";
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -47,6 +48,9 @@ async function handlePost(req: NextRequest, params: { id: string }) {
     include: { chief: { select: { id: true, personaName: true } } },
   });
   if (!family) return err("NOT_FOUND", "Family not found", 404);
+
+  // Spot marketplace takes precedence over fixed entry fee
+  const useSpotPricing = family.spotPricingEnabled;
 
   const memberCount = await prisma.familyMembership.count({
     where: { familyId: params.id, status: "active" },
@@ -93,6 +97,109 @@ async function handlePost(req: NextRequest, params: { id: string }) {
     }
   }
 
+  // ── Spot marketplace path ────────────────────────────────────────────────
+  if (useSpotPricing) {
+    const spotResult = await calculateSpotPrice(params.id, user.id);
+    const spotPriceCents = spotResult.spotPriceCents;
+
+    // Free spot (buyer contributes more than they gain)
+    if (spotPriceCents === 0) {
+      if (existing) {
+        await prisma.familyMembership.update({
+          where: { id: existing.id },
+          data: { status: "pending", joinedAt: new Date() },
+        });
+      } else {
+        await prisma.$transaction(async (tx) => {
+          await tx.familyMembership.create({
+            data: { userId: user.id, familyId: params.id, status: "pending" },
+          });
+          await createNotification(tx, {
+            recipientUserId: family.chiefId,
+            type: "JOIN_REQUEST",
+            payload: { familyId: family.id, familyName: family.name, requesterId: user.id, personaName },
+          });
+        });
+      }
+      return ok({ message: "Join request sent" }, 201);
+    }
+
+    if (spotPriceCents < ASAAS_MIN_CHARGE_CENTS) {
+      return err(
+        "SPOT_BELOW_MINIMUM",
+        `Valor mínimo de cobrança é R$ ${(ASAAS_MIN_CHARGE_CENTS / 100).toFixed(2).replace(".", ",")}`,
+        400
+      );
+    }
+
+    // Resume existing pending spot payment
+    if (existing?.status === "pending" && existing.mpPaymentId && !existing.feePaidAt) {
+      return ok({
+        message: "Spot payment pending",
+        pendingPayment: true,
+        spotPriceCents,
+        pix: {
+          qrCode: existing.mpQrCode,
+          qrCodeBase64: existing.mpQrCodeBase64,
+          ticketUrl: existing.mpTicketUrl,
+          paymentId: existing.mpPaymentId,
+          expiresAt: new Date(existing.joinedAt.getTime() + 24 * 60 * 60 * 1000).toISOString(),
+        },
+      });
+    }
+
+    const baseUrl = getAppBaseUrl(req);
+    const membership = existing
+      ? await prisma.familyMembership.update({
+          where: { id: existing.id },
+          data: { status: "pending", joinedAt: new Date(), feeChargedCents: spotPriceCents },
+        })
+      : await prisma.familyMembership.create({
+          data: { userId: user.id, familyId: params.id, status: "pending", feeChargedCents: spotPriceCents },
+        });
+
+    let pix;
+    try {
+      pix = await createPixPayment({
+        amountCents: spotPriceCents,
+        description: `Spot marketplace — ${family.name}`,
+        payerSteamId: user.steamId,
+        payerName: personaName,
+        externalReference: `spot:${membership.id}`,
+        notificationUrl: `${baseUrl}/api/webhooks/asaas`,
+      });
+    } catch (asaasErr: unknown) {
+      const msg = asaasErr instanceof Error ? asaasErr.message : JSON.stringify(asaasErr);
+      console.error("Asaas spot payment error:", msg);
+      return err("PIX_UNAVAILABLE", "Não foi possível gerar o PIX no momento. Tente novamente em alguns instantes.", 503);
+    }
+
+    await prisma.familyMembership.update({
+      where: { id: membership.id },
+      data: {
+        mpPaymentId: pix.paymentId,
+        mpStatus: pix.status,
+        mpQrCode: pix.qrCode,
+        mpQrCodeBase64: pix.qrCodeBase64,
+        mpTicketUrl: pix.ticketUrl,
+      },
+    });
+
+    return ok({
+      message: "Pay the spot price to join",
+      pendingPayment: true,
+      spotPriceCents,
+      pix: {
+        qrCode: pix.qrCode,
+        qrCodeBase64: pix.qrCodeBase64,
+        ticketUrl: pix.ticketUrl,
+        paymentId: pix.paymentId,
+        expiresAt: pix.expiresAt.toISOString(),
+      },
+    }, 201);
+  }
+
+  // ── Fixed entry fee path ─────────────────────────────────────────────────
   // No entry fee — create pending membership and notify chief
   if (!family.entryFeeCents) {
     if (existing) {
