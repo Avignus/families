@@ -43,7 +43,7 @@ export async function autoDistributeCredits(userId: string, budgetCents: number)
       return { item, remaining, percent, alreadyPledged };
     })
     .filter((c) => c.remaining > 0 && !c.alreadyPledged && c.item.ownerUserId !== userId)
-    .sort((a, b) => b.percent - a.percent);
+    .sort((a, b) => b.percent - a.percent || a.remaining - b.remaining);
 
   if (candidates.length === 0) return 0;
 
