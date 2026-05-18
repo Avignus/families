@@ -14,7 +14,7 @@ import { GameSearchModal } from "@/components/wishlist/game-search-modal";
 import { VotesPanel } from "@/components/votes/votes-panel";
 import { SteamLibraryPanel } from "@/components/family/steam-library-panel";
 import { MemberActions } from "@/components/family/member-actions";
-import { Plus, ChevronDown, ChevronUp, Settings, Copy, LogIn, Gamepad2, Check, X, Camera } from "lucide-react";
+import { Plus, ChevronDown, ChevronUp, Settings, Copy, LogIn, Gamepad2, Check, X, Camera, AlertTriangle, Library, Share2 } from "lucide-react";
 import { MonthlyBudgetForm } from "@/components/family/monthly-budget-form";
 import { FamilyCoverArt } from "@/components/family-cover-art";
 import { getMemberColor, formatCurrency } from "@/lib/utils";
@@ -71,7 +71,15 @@ type FamilyData = {
   wishlistItems: WishlistItem[];
 };
 
-export function FamilyPageClient({ familyId }: { familyId: string }) {
+export function FamilyPageClient({
+  familyId,
+  gameStats,
+  totalPendingRequests,
+}: {
+  familyId: string;
+  gameStats: { total: number; own: number; viaFamilies: number } | null;
+  totalPendingRequests: number;
+}) {
   const { data: session } = useSession();
   const { t } = useLanguage();
   const userId = (session?.user as { id?: string })?.id ?? "";
@@ -320,6 +328,52 @@ export function FamilyPageClient({ familyId }: { familyId: string }) {
           </div>
 
           <Separator />
+
+          {/* Pending join request banner (chief only) */}
+          {family.isChief && totalPendingRequests > 0 && (
+            <div className="flex items-center gap-3 p-4 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400">
+              <AlertTriangle className="h-5 w-5 shrink-0" />
+              <span dangerouslySetInnerHTML={{ __html: t.dashboard.pendingAlert(totalPendingRequests).replace(String(totalPendingRequests), `<strong>${totalPendingRequests}</strong>`) }} />
+            </div>
+          )}
+
+          {/* Total accessible games stat card */}
+          {gameStats && (
+            <Card className="border-primary/20 overflow-hidden">
+              <CardContent className="p-0">
+                <div className="flex flex-col sm:flex-row items-stretch">
+                  <div className="flex items-center gap-4 px-6 py-5 flex-1"
+                    style={{ background: "linear-gradient(135deg, hsl(258 82% 60% / 0.12), hsl(258 82% 60% / 0.04))" }}>
+                    <div className="h-11 w-11 rounded-xl flex items-center justify-center shrink-0"
+                      style={{ background: "hsl(258 82% 60% / 0.18)", border: "1px solid hsl(258 82% 60% / 0.3)" }}>
+                      <Library className="h-5 w-5" style={{ color: "hsl(258 82% 66%)" }} />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold leading-none" style={{ fontFamily: "var(--font-space-grotesk)" }}>
+                        {gameStats.total.toLocaleString(t.dateLocale)}
+                      </p>
+                      <p className="text-sm text-muted-foreground mt-0.5">{t.dashboard.totalGames}</p>
+                    </div>
+                  </div>
+                  <div className="flex sm:flex-col justify-around sm:justify-center gap-0 sm:min-w-[180px] border-t sm:border-t-0 sm:border-l border-border/60 px-6 py-4 sm:py-5 bg-card/40">
+                    <div className="flex items-center gap-2">
+                      <Gamepad2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                      <span className="text-sm font-semibold">{gameStats.own.toLocaleString(t.dateLocale)}</span>
+                      <span className="text-xs text-muted-foreground">{t.dashboard.yours}</span>
+                    </div>
+                    <div className="hidden sm:block h-px bg-border/60 my-2.5" />
+                    <div className="flex items-center gap-2">
+                      <Share2 className="h-3.5 w-3.5 shrink-0" style={{ color: "hsl(258 82% 66%)" }} />
+                      <span className="text-sm font-semibold" style={{ color: "hsl(258 82% 66%)" }}>
+                        {gameStats.viaFamilies.toLocaleString(t.dateLocale)}
+                      </span>
+                      <span className="text-xs text-muted-foreground">{t.dashboard.viaFamilies}</span>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Shared family wishlist */}
           <div id="family-wishlist">

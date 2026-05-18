@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { Bell, LogOut, Settings, Globe, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -36,6 +37,8 @@ export function Navbar() {
   const { data: session, update } = useSession();
   const { unreadCount, recent, markRead } = useNotifications();
   const { t } = useLanguage();
+  const pathname = usePathname();
+  const isCatalog = pathname?.startsWith("/catalog");
   const [freshName, setFreshName] = useState<string | null>(null);
   const [freshAvatar, setFreshAvatar] = useState<string | null>(null);
   const [creditsCents, setCreditsCents] = useState<number | null>(null);
@@ -80,7 +83,16 @@ export function Navbar() {
   };
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border/60 bg-background/80 backdrop-blur-md">
+    <header
+      className="sticky top-0 z-40 border-b backdrop-blur-md transition-colors duration-300"
+      style={isCatalog ? {
+        borderColor: "hsl(186 90% 48% / 0.35)",
+        background: "hsl(186 90% 48% / 0.06)",
+      } : {
+        borderColor: "hsl(var(--border) / 0.6)",
+        background: "hsl(var(--background) / 0.8)",
+      }}
+    >
       <div className="container flex h-14 items-center justify-between">
         <div className="flex items-center gap-6">
           <Link href="/dashboard">
@@ -88,10 +100,16 @@ export function Navbar() {
           </Link>
           <Link
             href="/catalog"
-            className="hidden md:flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            className="hidden md:flex items-center gap-1.5 text-sm transition-colors"
+            style={isCatalog ? {
+              color: "hsl(186 90% 48%)",
+              fontWeight: 600,
+            } : undefined}
           >
-            <Globe className="h-4 w-4" />
-            {t.nav.catalog}
+            <Globe className="h-4 w-4" style={isCatalog ? { color: "hsl(186 90% 48%)" } : undefined} />
+            <span className={isCatalog ? "" : "text-muted-foreground hover:text-foreground"}>
+              {t.nav.catalog}
+            </span>
           </Link>
         </div>
 

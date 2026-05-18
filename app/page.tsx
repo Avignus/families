@@ -4,10 +4,19 @@ import { FamiliesLogo } from "@/components/layout/logo";
 import { Gift, Users, Zap, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { getServerTranslations } from "@/lib/i18n/server";
+import { prisma } from "@/lib/prisma";
 
 export default async function LandingPage() {
   const session = await getSession();
-  if (session?.user) redirect("/dashboard");
+  if (session?.user) {
+    const userId = (session.user as { id?: string }).id ?? "";
+    const membership = await prisma.familyMembership.findFirst({
+      where: { userId, status: "active" },
+      select: { familyId: true },
+    });
+    if (membership) redirect(`/families/${membership.familyId}`);
+    else redirect("/catalog");
+  }
 
   const { t } = getServerTranslations();
 
