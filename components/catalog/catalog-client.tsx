@@ -401,18 +401,19 @@ function FamilyCard({
   const status = statusLabel();
 
   return (
-    <div className="rounded-xl border border-border/50 bg-card overflow-hidden flex flex-col hover:border-primary/30 transition-colors">
-      <Link href={`/catalog/${family.id}`} className="block">
-        <div className="h-20 flex overflow-hidden bg-secondary">
-          {family.gameCovers.length > 0 ? (
-            family.gameCovers.map((src, i) => (
-              <img key={i} src={src} alt="" className="h-full object-cover flex-1 min-w-0" />
-            ))
-          ) : (
-            <FamilyCoverArt familyId={family.id} />
-          )}
-        </div>
-      </Link>
+    <div className="relative rounded-xl border border-border/50 bg-card overflow-hidden flex flex-col hover:border-primary/30 transition-colors">
+      {/* Full-card link overlay */}
+      <Link href={`/catalog/${family.id}`} className="absolute inset-0 z-0" aria-label={family.name} />
+
+      <div className="h-20 flex overflow-hidden bg-secondary pointer-events-none">
+        {family.gameCovers.length > 0 ? (
+          family.gameCovers.map((src, i) => (
+            <img key={i} src={src} alt="" className="h-full object-cover flex-1 min-w-0" />
+          ))
+        ) : (
+          <FamilyCoverArt familyId={family.id} />
+        )}
+      </div>
 
       <div className="p-4 flex flex-col gap-3 flex-1">
         <div>
@@ -510,7 +511,7 @@ function FamilyCard({
           )}
         </div>
 
-        <div className="mt-auto">
+        <div className="mt-auto relative z-10">
           {status ? (
             <span className={`text-xs font-semibold ${status.color}`}>{status.text}</span>
           ) : !family.isPublic ? (
