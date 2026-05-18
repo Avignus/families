@@ -5,6 +5,7 @@ import { createNotification } from "@/lib/notifications/service";
 import { computeAndSaveReputation } from "@/lib/reputation";
 import { maybeDisburseFunds } from "@/lib/disbursement";
 import { creditWallet } from "@/lib/wallet";
+import { autoDistributeCredits } from "@/lib/auto-distribute";
 
 export const dynamic = "force-dynamic";
 
@@ -66,6 +67,17 @@ export async function POST(req: NextRequest) {
             payload: { amountCents, currency: "BRL" },
           });
         });
+        // Auto-distribute only if user has a monthly budget configured
+        const membership = await prisma.familyMembership.findFirst({
+          where: { userId, status: "active", monthlyBudgetCents: { gt: 0 } },
+          select: { monthlyBudgetCents: true },
+        });
+        if (membership) {
+          const budget = Math.min(membership.monthlyBudgetCents, amountCents);
+          await autoDistributeCredits(userId, budget).catch((err) =>
+            console.error("Auto-distribute error after top-up:", err)
+          );
+        }
       }
     }
     return NextResponse.json({ ok: true });

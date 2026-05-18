@@ -14,7 +14,7 @@ import { GameSearchModal } from "@/components/wishlist/game-search-modal";
 import { VotesPanel } from "@/components/votes/votes-panel";
 import { SteamLibraryPanel } from "@/components/family/steam-library-panel";
 import { MemberActions } from "@/components/family/member-actions";
-import { Plus, ChevronDown, ChevronUp, Settings, Copy, LogIn, Gamepad2, Check, X, Camera, AlertTriangle, Library, Share2 } from "lucide-react";
+import { Plus, ChevronDown, ChevronUp, Settings, Copy, LogIn, Gamepad2, Check, X, Camera, AlertTriangle, Library, Share2, Wallet } from "lucide-react";
 import { MonthlyBudgetForm } from "@/components/family/monthly-budget-form";
 import { FamilyCoverArt } from "@/components/family-cover-art";
 import { getMemberColor, formatCurrency } from "@/lib/utils";
@@ -76,10 +76,14 @@ export function FamilyPageClient({
   familyId,
   gameStats,
   totalPendingRequests,
+  creditsCents,
+  monthlyBudgetCents,
 }: {
   familyId: string;
   gameStats: { total: number; own: number; viaFamilies: number } | null;
   totalPendingRequests: number;
+  creditsCents: number;
+  monthlyBudgetCents: number;
 }) {
   const { data: session } = useSession();
   const { t } = useLanguage();
@@ -111,6 +115,26 @@ export function FamilyPageClient({
   const [addGameOpen, setAddGameOpen] = useState(false);
   const [votesExpanded, setVotesExpanded] = useState(false);
   const [steamExpanded, setSteamExpanded] = useState(true);
+  const [distributing, setDistributing] = useState(false);
+  const [localCredits, setLocalCredits] = useState(creditsCents);
+
+  const handleDistributeCredits = async () => {
+    setDistributing(true);
+    try {
+      const res = await fetch(`/api/families/${familyId}/distribute-credits`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) { toast.error(data.error?.message ?? "Erro ao distribuir"); return; }
+      if (data.data?.distributed > 0) {
+        setLocalCredits((prev) => prev - data.data.distributed);
+        toast.success(`${formatCurrency(data.data.distributed, "BRL")} distribuídos na família!`);
+        refetch();
+      } else {
+        toast.info("Nenhum item disponível para contribuição no momento.");
+      }
+    } finally {
+      setDistributing(false);
+    }
+  };
 
   const sortedMemberships = family
     ? [...family.memberships].sort((a, b) =>
@@ -386,9 +410,23 @@ export function FamilyPageClient({
           <div id="family-wishlist">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold">{t.family.wishlistTitle}</h3>
-              <Button size="sm" variant="outline" onClick={() => setAddGameOpen(true)}>
-                <Plus className="h-4 w-4 mr-1" /> {t.family.addGame}
-              </Button>
+              <div className="flex items-center gap-2">
+                {monthlyBudgetCents === 0 && localCredits > 0 && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleDistributeCredits}
+                    disabled={distributing}
+                    className="border-primary/30 text-primary hover:bg-primary/10"
+                  >
+                    <Wallet className="h-3.5 w-3.5 mr-1" />
+                    {distributing ? "Distribuindo…" : `Distribuir ${formatCurrency(localCredits, "BRL")}`}
+                  </Button>
+                )}
+                <Button size="sm" variant="outline" onClick={() => setAddGameOpen(true)}>
+                  <Plus className="h-4 w-4 mr-1" /> {t.family.addGame}
+                </Button>
+              </div>
             </div>
 
             <MonthlyBudgetForm

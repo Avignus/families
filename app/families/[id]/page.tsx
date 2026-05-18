@@ -45,11 +45,22 @@ export default async function FamilyPage({ params }: { params: { id: string } })
     where: { familyId, family: { chiefId: userId }, status: "pending" },
   });
 
+  // User credits and monthly budget for on-demand distribution button
+  const [dbUser, userMembership] = await Promise.all([
+    prisma.user.findUnique({ where: { id: userId }, select: { creditsCents: true } }),
+    prisma.familyMembership.findFirst({
+      where: { userId, familyId, status: "active" },
+      select: { monthlyBudgetCents: true },
+    }),
+  ]);
+
   return (
     <FamilyPageClient
       familyId={familyId}
       gameStats={totalAccessible > 0 ? { total: totalAccessible, own: ownGames, viaFamilies } : null}
       totalPendingRequests={pendingCount}
+      creditsCents={dbUser?.creditsCents ?? 0}
+      monthlyBudgetCents={userMembership?.monthlyBudgetCents ?? 0}
     />
   );
 }
