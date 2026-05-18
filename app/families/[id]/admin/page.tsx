@@ -12,6 +12,7 @@ import { DeleteFamilyButton } from "@/components/family/delete-family-button";
 import { InviteLinkPanel } from "@/components/family/invite-link-panel";
 import { ArrowLeft, Crown, Users, Globe, Link2 } from "lucide-react";
 import { FamilyTierBadge } from "@/components/family-tier-badge";
+import { WithdrawPanel } from "@/components/family/withdraw-panel";
 import Link from "next/link";
 import { getServerTranslations } from "@/lib/i18n/server";
 
@@ -188,6 +189,9 @@ export default async function AdminPage({ params }: { params: { id: string } }) 
           />
         </CardContent>
       </Card>
+
+      {/* Spot earnings withdrawal */}
+      <WithdrawPanel hasPixKey={!!family.chief.pixKey} />
 
       {/* Danger zone */}
       <Card className="border-destructive/30">

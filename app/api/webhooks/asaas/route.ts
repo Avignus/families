@@ -272,19 +272,15 @@ async function handleSpotPayment(membership: MembershipWithFamily, status: strin
       });
     });
 
-    // Disburse 88% to chief (platform retains 12% commission)
+    // Credit 88% to chief's spot earnings balance (platform retains 12% commission)
+    // Chief withdraws manually from the admin panel — allows batching to reduce transfer fees
     if (membership.feeChargedCents && membership.feeChargedCents > 0) {
-      const chief = await prisma.user.findUnique({
-        where: { id: membership.family.chiefId },
-        select: { pixKey: true },
-      });
       const chiefAmountCents = Math.floor(membership.feeChargedCents * (1 - SPOT_COMMISSION_RATE));
-      if (chief?.pixKey && chiefAmountCents > 0) {
-        await sendPixDisbursement({
-          amountCents: chiefAmountCents,
-          pixKey: chief.pixKey,
-          description: `Families — Spot em ${membership.family.name}`,
-        }).catch((err) => console.error("Spot disbursement error:", err));
+      if (chiefAmountCents > 0) {
+        await prisma.user.update({
+          where: { id: membership.family.chiefId },
+          data: { chiefSpotEarningsCents: { increment: chiefAmountCents } },
+        });
       }
     }
   }

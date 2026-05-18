@@ -17,9 +17,10 @@ model User {
   profileUrl   String?
   pixKey           String?  @unique
   email            String?  @unique
-  reputationScore  Int      @default(0)
-  creditsCents     Int      @default(0)
-  isPremium        Boolean  @default(false)
+  reputationScore        Int      @default(0)
+  creditsCents           Int      @default(0)
+  chiefSpotEarningsCents Int      @default(0)
+  isPremium              Boolean  @default(false)
   createdAt        DateTime @default(now())
 
   memberships        FamilyMembership[]
