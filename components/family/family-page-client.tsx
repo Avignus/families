@@ -367,6 +367,12 @@ export function FamilyPageClient({
                     {user.id === family.chiefId && (
                       <Badge variant="outline" className="text-[9px] px-1 py-0">{t.family.chief}</Badge>
                     )}
+                    {user.id === userId && (
+                      <span className="flex items-center gap-0.5 text-[10px] font-semibold tabular-nums" style={{ color: localCredits > 0 ? "hsl(258 82% 72%)" : undefined, opacity: localCredits > 0 ? 1 : 0.45 }}>
+                        <Wallet className="h-2.5 w-2.5" />
+                        {formatCurrency(localCredits, "BRL")}
+                      </span>
+                    )}
                   </div>
                 );
               })}
