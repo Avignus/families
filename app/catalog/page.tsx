@@ -73,6 +73,7 @@ export default async function CatalogPage({
     },
     orderBy: { createdAt: "desc" },
   });
+  // familyScore is available on all family rows since the migration
   // spotPricingEnabled is available on all family rows since the migration
 
   // Compute library stats when user is logged in or game filters are active.
@@ -319,6 +320,7 @@ export default async function CatalogPage({
         chief: f.chief,
         gameCovers: covers,
         myStatus: myMembership?.status ?? null,
+        familyScore: f.familyScore,
         libraryStats: familyLibraryStats.get(f.id) ?? null,
         gameNames: (gameNameAppIdsPerFamily.get(f.id)?.ids ?? [])
           .map((id) => nameMap.get(id))

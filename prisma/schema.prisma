@@ -52,6 +52,8 @@ model Family {
   spotFraction       Float   @default(0.20)  // 0.0–1.0; chief's share of net value
   spotMinPriceCents  Int     @default(0)     // floor price regardless of formula
 
+  familyScore Int @default(0)
+
   memberships   FamilyMembership[]
   wishlistItems WishlistItem[]
   votes         Vote[]

@@ -15,6 +15,7 @@ import { VotesPanel } from "@/components/votes/votes-panel";
 import { SteamLibraryPanel } from "@/components/family/steam-library-panel";
 import { MemberActions } from "@/components/family/member-actions";
 import { Plus, ChevronDown, ChevronUp, Settings, Copy, LogIn, Gamepad2, Check, X, Camera, AlertTriangle, Library, Share2, Wallet } from "lucide-react";
+import { FamilyTierBadge } from "@/components/family-tier-badge";
 import { MonthlyBudgetForm } from "@/components/family/monthly-budget-form";
 import { FamilyCoverArt } from "@/components/family-cover-art";
 import { getMemberColor, formatCurrency } from "@/lib/utils";
@@ -67,6 +68,7 @@ type FamilyData = {
   currentUserId: string;
   monthlyBudgetCents: number;
   coverImageUrl: string | null;
+  familyScore: number;
   memberships: Array<{ user: Member }>;
   pendingMemberships: PendingMember[];
   wishlistItems: WishlistItem[];
@@ -291,9 +293,12 @@ export function FamilyPageClient({
 
           <div className="absolute bottom-0 left-0 right-0 px-6 pb-4 flex items-end justify-between gap-3">
             <div>
-              <h1 className="text-2xl font-bold leading-tight" style={{ fontFamily: "var(--font-space-grotesk)" }}>
-                {family.name}
-              </h1>
+              <div className="flex items-center gap-2">
+                <h1 className="text-2xl font-bold leading-tight" style={{ fontFamily: "var(--font-space-grotesk)" }}>
+                  {family.name}
+                </h1>
+                <FamilyTierBadge score={family.familyScore} size="md" />
+              </div>
               <div className="flex items-center gap-2 mt-1">
                 <span className="text-xs text-muted-foreground font-mono">{familyId}</span>
                 <button onClick={copyId} className="text-muted-foreground hover:text-foreground">

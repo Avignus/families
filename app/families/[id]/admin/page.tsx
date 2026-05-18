@@ -11,6 +11,7 @@ import { ReputationBadge } from "@/components/reputation-badge";
 import { DeleteFamilyButton } from "@/components/family/delete-family-button";
 import { InviteLinkPanel } from "@/components/family/invite-link-panel";
 import { ArrowLeft, Crown, Users, Globe, Link2 } from "lucide-react";
+import { FamilyTierBadge } from "@/components/family-tier-badge";
 import Link from "next/link";
 import { getServerTranslations } from "@/lib/i18n/server";
 
@@ -45,10 +46,13 @@ export default async function AdminPage({ params }: { params: { id: string } }) 
         <ArrowLeft className="h-4 w-4" /> {t.admin.back(family.name)}
       </Link>
 
-      <h1 className="text-2xl font-bold flex items-center gap-2">
-        <Crown className="h-5 w-5 text-amber-400" />
-        {t.admin.title(family.name)}
-      </h1>
+      <div className="flex items-center gap-3 flex-wrap">
+        <h1 className="text-2xl font-bold flex items-center gap-2">
+          <Crown className="h-5 w-5 text-amber-400" />
+          {t.admin.title(family.name)}
+        </h1>
+        <FamilyTierBadge score={family.familyScore} size="md" showScore />
+      </div>
 
       {/* Pending join requests */}
       <Card>

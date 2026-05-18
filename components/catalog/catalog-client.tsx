@@ -14,6 +14,7 @@ import { PixPaymentModal } from "@/components/wishlist/pix-payment-modal";
 import Link from "next/link";
 import { FamilyCoverArt } from "@/components/family-cover-art";
 import { useLanguage } from "@/lib/i18n/context";
+import { FamilyTierBadge } from "@/components/family-tier-badge";
 
 type LibraryStats = { totalGames: number; ownedGames: number; missingGames: number };
 
@@ -35,6 +36,7 @@ type Family = {
   libraryStats: LibraryStats | null;
   gameNames: string[];
   gameNamesLabel: "missing" | "library";
+  familyScore: number;
 };
 
 type PixData = {
@@ -414,9 +416,12 @@ function FamilyCard({
 
       <div className="p-4 flex flex-col gap-3 flex-1">
         <div>
-          <h2 className="font-semibold text-sm truncate" style={{ fontFamily: "var(--font-space-grotesk)" }}>
-            {family.name}
-          </h2>
+          <div className="flex items-center gap-1.5">
+            <h2 className="font-semibold text-sm truncate" style={{ fontFamily: "var(--font-space-grotesk)" }}>
+              {family.name}
+            </h2>
+            <FamilyTierBadge score={family.familyScore} />
+          </div>
           {family.description && (
             <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{family.description}</p>
           )}

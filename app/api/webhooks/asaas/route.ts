@@ -6,6 +6,7 @@ import { computeAndSaveReputation } from "@/lib/reputation";
 import { maybeDisburseFunds } from "@/lib/disbursement";
 import { creditWallet } from "@/lib/wallet";
 import { autoDistributeCredits } from "@/lib/auto-distribute";
+import { computeAndSaveFamilyReputation } from "@/lib/family-reputation";
 
 export const dynamic = "force-dynamic";
 
@@ -354,6 +355,7 @@ async function handlePledgePayment(pledgeId: string, paymentId: string, status: 
 
   if (status === "approved") {
     await computeAndSaveReputation(pledge.pledgerUserId).catch(() => {});
+    await computeAndSaveFamilyReputation(pledge.wishlistItem.familyId).catch(() => {});
     await maybeDisburseFunds(pledge.wishlistItemId);
   }
 }

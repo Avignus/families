@@ -13,6 +13,7 @@ import { calculateSpotPrice } from "@/lib/spot-price";
 import { CatalogWishlistItem } from "@/components/catalog/catalog-wishlist-item";
 import { CatalogSteamPanel } from "@/components/catalog/catalog-steam-panel";
 import { getServerTranslations } from "@/lib/i18n/server";
+import { FamilyTierBadge } from "@/components/family-tier-badge";
 
 export const dynamic = "force-dynamic";
 
@@ -157,9 +158,12 @@ export default async function CatalogFamilyPage({ params }: { params: { id: stri
       <div className="space-y-4">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div className="space-y-1">
-            <h1 className="text-2xl font-bold" style={{ fontFamily: "var(--font-space-grotesk)" }}>
-              {family.name}
-            </h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-bold" style={{ fontFamily: "var(--font-space-grotesk)" }}>
+                {family.name}
+              </h1>
+              <FamilyTierBadge score={family.familyScore} size="md" showScore />
+            </div>
             {family.description && (
               <p className="text-sm text-muted-foreground max-w-md">{family.description}</p>
             )}
