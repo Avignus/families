@@ -33,6 +33,7 @@ export default function SettingsPage() {
   const [topupAmount, setTopupAmount] = useState("");
   const [topupLoading, setTopupLoading] = useState(false);
   const [topupPixOpen, setTopupPixOpen] = useState(false);
+  const [recovering, setRecovering] = useState(false);
   const [topupPix, setTopupPix] = useState<{ qrCode: string; qrCodeBase64: string; ticketUrl: string; paymentId: string; expiresAt?: string } | null>(null);
   const [topupAmountCents, setTopupAmountCents] = useState(0);
   const router = useRouter();
@@ -74,6 +75,26 @@ export default function SettingsPage() {
     }
     setSaved(true);
     toast.success(t.settings.pixSaved);
+  }
+
+  async function handleRecover() {
+    setRecovering(true);
+    try {
+      const res = await fetch("/api/me/credits/recover", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) {
+        if (data.error?.code === "NO_APPROVED_PAYMENTS" || data.error?.code === "ALREADY_PROCESSED") {
+          toast.info("Nenhum crédito pendente para recuperar.");
+        } else {
+          toast.error(data.error?.message ?? "Erro ao recuperar créditos");
+        }
+        return;
+      }
+      setCreditsCents((prev) => (prev ?? 0) + data.data.totalCredited);
+      toast.success(`${formatCurrency(data.data.totalCredited, "BRL")} recuperados com sucesso!`);
+    } finally {
+      setRecovering(false);
+    }
   }
 
   async function handleTopup(e: React.FormEvent) {
@@ -188,19 +209,30 @@ export default function SettingsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-baseline gap-2">
-              <span
-                className="text-2xl font-bold tabular-nums"
-                style={{ color: creditsCents > 0 ? "hsl(258 82% 72%)" : undefined }}
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-baseline gap-2">
+                <span
+                  className="text-2xl font-bold tabular-nums"
+                  style={{ color: creditsCents > 0 ? "hsl(258 82% 72%)" : undefined }}
+                >
+                  {formatCurrency(creditsCents, "BRL")}
+                </span>
+                {creditsCents > 0 && (
+                  <span className="text-xs text-muted-foreground">{t.settings.creditsAvailable}</span>
+                )}
+                {creditsCents === 0 && (
+                  <span className="text-xs text-muted-foreground">{t.settings.noCredits}</span>
+                )}
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-xs text-muted-foreground h-7 px-2"
+                onClick={handleRecover}
+                disabled={recovering}
               >
-                {formatCurrency(creditsCents, "BRL")}
-              </span>
-              {creditsCents > 0 && (
-                <span className="text-xs text-muted-foreground">{t.settings.creditsAvailable}</span>
-              )}
-              {creditsCents === 0 && (
-                <span className="text-xs text-muted-foreground">{t.settings.noCredits}</span>
-              )}
+                {recovering ? <Loader2 className="h-3 w-3 animate-spin" /> : "Recuperar créditos"}
+              </Button>
             </div>
 
             <form onSubmit={handleTopup} className="flex items-center gap-2">
