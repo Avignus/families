@@ -162,7 +162,10 @@ export async function GET(req: NextRequest) {
 
     // ── Price dropped ─────────────────────────────────────────────────────
     if (newPrice < oldPrice) {
-      const rawSurplus = Math.max(0, totalPledged - newPrice);
+      // Only paid pledges generate surplus — pending PIX hasn't settled yet
+      const paidPledges = item.pledges.filter((p) => p.paidAt !== null);
+      const totalPaid = paidPledges.reduce((s, p) => s + p.amountCents, 0);
+      const rawSurplus = Math.max(0, totalPaid - newPrice);
       const feeBps = getSurplusFeeBps();
       const platformFee = rawSurplus > 0 ? Math.floor(rawSurplus * feeBps / 10000) : 0;
       const distributableSurplus = rawSurplus - platformFee;
@@ -181,15 +184,26 @@ export async function GET(req: NextRequest) {
           });
         }
 
+        // Distribute cashback proportionally among paid pledgers only
         let distributed = 0;
-        for (const pledge of item.pledges) {
-          const share = distributableSurplus > 0 ? Math.floor(distributableSurplus * pledge.amountCents / totalPledged) : 0;
+        for (const pledge of paidPledges) {
+          const share = distributableSurplus > 0 && totalPaid > 0
+            ? Math.floor(distributableSurplus * pledge.amountCents / totalPaid)
+            : 0;
           distributed += share;
           if (share > 0) await creditWallet(tx, pledge.pledgerUserId, share, "price_dropped", item.id);
           await createNotification(tx, {
             recipientUserId: pledge.pledgerUserId,
             type: "PRICE_DROPPED",
             payload: { gameName, familyId, familyName, newPriceFormatted: formatCurrency(newPrice, currency), surplusCents: share, surplusFormatted: share > 0 ? formatCurrency(share, currency) : "" },
+          });
+        }
+        // Notify pending pledgers (no cashback, but they should know the price dropped)
+        for (const pledge of item.pledges.filter((p) => !p.paidAt)) {
+          await createNotification(tx, {
+            recipientUserId: pledge.pledgerUserId,
+            type: "PRICE_DROPPED",
+            payload: { gameName, familyId, familyName, newPriceFormatted: formatCurrency(newPrice, currency), surplusCents: 0, surplusFormatted: "" },
           });
         }
 
