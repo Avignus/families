@@ -184,8 +184,8 @@ function TermsPT() {
       <Section title="5. Contribuições e pagamentos">
         <ul className="list-disc pl-5 space-y-1">
           <li>Contribuições ("pledges") são realizadas via PIX e processadas pela Asaas.</li>
-          <li>O valor mínimo por contribuição ou taxa de entrada é de R$ 5,00.</li>
-          <li>Sobre cada transação incide uma <strong>taxa de serviço</strong> retida pela plataforma: 5% sobre pledges e 15% sobre taxas de entrada.</li>
+          <li>O valor mínimo por contribuição ou taxa de entrada é de R$ 20,00.</li>
+          <li>Sobre cada transação incide uma <strong>taxa de serviço</strong> retida pela plataforma: 15% sobre pledges e 15% sobre taxas de entrada.</li>
           <li>Quando um item da lista de desejos é 100% financiado, o valor arrecadado (descontada a taxa de serviço) é repassado automaticamente via PIX para a chave cadastrada pelo dono do item.</li>
           <li>O repasse pode levar até 1 dia útil para ser creditado, conforme regras do sistema PIX.</li>
           <li>Pledges são cancelados automaticamente caso o pagamento PIX não seja realizado dentro de 24 horas.</li>

@@ -1,6 +1,6 @@
-export const SERVICE_FEE_RATE = parseFloat(process.env.SERVICE_FEE_RATE ?? "0.05");
+export const SERVICE_FEE_RATE = parseFloat(process.env.SERVICE_FEE_RATE ?? "0.15");
 export const ENTRY_FEE_SERVICE_RATE = parseFloat(process.env.ENTRY_FEE_SERVICE_RATE ?? "0.15");
-export const ASAAS_MIN_CHARGE_CENTS = 500; // R$ 5,00 mínimo por cobrança
+export const ASAAS_MIN_CHARGE_CENTS = 2000; // R$ 20,00 mínimo para cobrir taxa fixa Asaas (R$1,99)
 
 type AsaasPixKeyType = "CPF" | "CNPJ" | "EMAIL" | "PHONE" | "EVP";
 
