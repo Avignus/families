@@ -59,14 +59,20 @@ export async function POST(req: NextRequest) {
     if (status === "approved") {
       const amountCents = Math.round((paymentData.value ?? 0) * 100);
       if (amountCents > 0) {
-        await prisma.$transaction(async (tx) => {
-          await creditWallet(tx, userId, amountCents, "topup", undefined);
-          await createNotification(tx, {
-            recipientUserId: userId,
-            type: "CREDITS_ADDED",
-            payload: { amountCents, currency: "BRL" },
-          });
+        // Idempotency: skip if this paymentId was already processed
+        const alreadyProcessed = await prisma.walletTransaction.findFirst({
+          where: { userId, reason: "topup", pledgeId: paymentId },
         });
+        if (!alreadyProcessed) {
+          await prisma.$transaction(async (tx) => {
+            await creditWallet(tx, userId, amountCents, "topup", paymentId);
+            await createNotification(tx, {
+              recipientUserId: userId,
+              type: "CREDITS_ADDED",
+              payload: { amountCents, currency: "BRL" },
+            });
+          });
+        }
         // Auto-distribute only if user has a monthly budget configured
         const membership = await prisma.familyMembership.findFirst({
           where: { userId, status: "active", monthlyBudgetCents: { gt: 0 } },

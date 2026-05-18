@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireSession, isApiError, ok, err, parseBody } from "@/lib/api";
 import { createPixPayment, ASAAS_MIN_CHARGE_CENTS } from "@/lib/asaas";
 import { prisma } from "@/lib/prisma";
+import { getAppBaseUrl } from "@/lib/utils";
 
 const BodySchema = z.object({
   amountCents: z.number().int().min(ASAAS_MIN_CHARGE_CENTS),
@@ -21,7 +22,7 @@ export async function POST(req: NextRequest) {
   });
   if (!dbUser) return err("NOT_FOUND", "User not found", 404);
 
-  const notificationUrl = `${process.env.NEXTAUTH_URL}/api/webhooks/asaas`;
+  const notificationUrl = `${getAppBaseUrl(req)}/api/webhooks/asaas`;
 
   const pix = await createPixPayment({
     amountCents: body.amountCents,
