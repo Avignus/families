@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { sendPixDisbursement } from "@/lib/asaas";
+import { sendPixDisbursement, ASAAS_MIN_CHARGE_CENTS } from "@/lib/asaas";
 import { createNotification } from "@/lib/notifications/service";
 
 export async function maybeDisburseFunds(wishlistItemId: string): Promise<void> {
@@ -21,7 +21,8 @@ export async function maybeDisburseFunds(wishlistItemId: string): Promise<void> 
     _sum: { amountCents: true },
   });
   const totalCents = aggregate._sum.amountCents ?? 0;
-  if (totalCents <= 0) return;
+  // Don't disburse if below the minimum — Asaas charges R$1.99/transfer regardless
+  if (totalCents < ASAAS_MIN_CHARGE_CENTS) return;
 
   const owner = item.owner;
   const steamData = await import("@/lib/steam").then((m) => m.getAppDetails(item.steamAppId));
