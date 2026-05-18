@@ -48,6 +48,7 @@ type WishlistItem = {
     pledgerUserId: string;
     amountCents: number;
     percent: number;
+    paidAt: string | null;
     pledger: Member;
   }>;
 };

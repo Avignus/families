@@ -3,6 +3,21 @@ import { requireSession, isApiError, ok, err } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { createNotification } from "@/lib/notifications/service";
 import { getAppDetails } from "@/lib/steam";
+
+export async function GET(_req: NextRequest, { params }: { params: { pledgeId: string } }) {
+  const user = await requireSession();
+  if (isApiError(user)) return user;
+
+  const pledge = await prisma.pledge.findUnique({
+    where: { id: params.pledgeId },
+    select: { pledgerUserId: true, paidAt: true },
+  });
+
+  if (!pledge) return err("NOT_FOUND", "Pledge not found", 404);
+  if (pledge.pledgerUserId !== user.id) return err("FORBIDDEN", "Access denied", 403);
+
+  return ok({ paid: pledge.paidAt !== null });
+}
 import { refundPayment } from "@/lib/asaas";
 import { creditWallet } from "@/lib/wallet";
 

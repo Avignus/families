@@ -46,6 +46,7 @@ export function PledgeModal({
   const [pixOpen, setPixOpen] = useState(false);
   const [pixData, setPixData] = useState<PixData | null>(null);
   const [confirmedAmount, setConfirmedAmount] = useState(0);
+  const [pledgeId, setPledgeId] = useState<string | null>(null);
 
   const remaining = targetPriceCents - totalPledgedCents;
   const amountCents = Math.round(parseFloat(amountStr.replace(",", ".")) * 100) || 0;
@@ -72,6 +73,7 @@ export function PledgeModal({
 
       setConfirmedAmount(amountCents);
       setPixData(data.data?.pix ?? null);
+      setPledgeId(data.data?.pledge?.id ?? null);
       onOpenChange(false);
       setAmountStr("");
       setPixOpen(true);
@@ -155,6 +157,8 @@ export function PledgeModal({
         currency={currency}
         gameName={gameName}
         pix={pixData}
+        pollUrl={pledgeId ? `/api/pledges/${pledgeId}` : undefined}
+        onConfirmed={onSuccess}
       />
     </>
   );

@@ -5,7 +5,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { formatCurrency, getMemberColor } from "@/lib/utils";
 import { PledgeModal } from "./pledge-modal";
-import { ShoppingCart, Minus, X, Sparkles, RefreshCw, Clock, PackageOpen, CheckCircle2, Trash2, Link2, Copy, Check } from "lucide-react";
+import { ShoppingCart, Minus, X, Sparkles, RefreshCw, Clock, PackageOpen, CheckCircle2, Trash2, Link2, Copy, Check, Receipt, ChevronDown, ChevronUp } from "lucide-react";
 import { toast } from "sonner";
 import { useLanguage } from "@/lib/i18n/context";
 
@@ -21,6 +21,7 @@ type PledgeData = {
   pledgerUserId: string;
   amountCents: number;
   percent: number;
+  paidAt: string | null;
   pledger: Pledger;
 };
 
@@ -68,6 +69,7 @@ export function WishlistItemCard({ item, familyId, currentUserId, memberColors, 
   const [shareOpen, setShareOpen] = useState(false);
   const [sharePct, setSharePct] = useState<number>(50);
   const [copied, setCopied] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const autoOpenFired = useRef(false);
 
   const initialAmountCents = initialPct && item.targetPriceCents
@@ -96,6 +98,11 @@ export function WishlistItemCard({ item, familyId, currentUserId, memberColors, 
   const remaining = item.targetPriceCents - item.totalPledgedCents;
   const gameName = item.steamData?.name ?? `App #${item.steamAppId}`;
   const isFunded = item.status === "funded";
+
+  const paidPledges = item.pledges.filter((p) => p.paidAt !== null);
+  const pendingPledges = item.pledges.filter((p) => p.paidAt === null);
+  const paidPledgedCents = paidPledges.reduce((s, p) => s + p.amountCents, 0);
+  const paidPercent = item.targetPriceCents > 0 ? Math.round((paidPledgedCents / item.targetPriceCents) * 100) : 0;
   const isPurchased = item.status === "purchased";
   const comingSoon = item.steamData?.comingSoon ?? false;
   const noPriceDefined = !item.steamData?.isFree && item.targetPriceCents === 0;
@@ -294,10 +301,10 @@ export function WishlistItemCard({ item, familyId, currentUserId, memberColors, 
 
         {!item.steamData?.isFree && !noPriceDefined && (
           <div className="space-y-2">
-            {/* Stats row */}
+            {/* Stats row — only confirmed (paid) amounts */}
             <div className="flex justify-between text-xs">
               <span className="text-muted-foreground">
-                {formatCurrency(item.totalPledgedCents, item.currency)}
+                {formatCurrency(paidPledgedCents, item.currency)}
                 <span className="text-muted-foreground/50"> / {formatCurrency(item.targetPriceCents, item.currency)}</span>
                 {priceChanged && (
                   <span className="ml-1 text-amber-400/80" title={`Alvo registrado: ${formatCurrency(item.targetPriceCents, item.currency)}`}>
@@ -305,25 +312,45 @@ export function WishlistItemCard({ item, familyId, currentUserId, memberColors, 
                   </span>
                 )}
               </span>
-              <span
-                className="font-bold tabular-nums"
-                style={{ color: isFunded ? "hsl(258 82% 72%)" : "hsl(214 30% 92%)" }}
-              >
-                {item.percentFunded}%
-              </span>
+              <div className="flex items-center gap-1.5">
+                {pendingPledges.length > 0 && (
+                  <span className="text-amber-400/70 flex items-center gap-0.5 tabular-nums">
+                    <Clock className="h-2.5 w-2.5" />
+                    +{formatCurrency(pendingPledges.reduce((s, p) => s + p.amountCents, 0), item.currency)}
+                  </span>
+                )}
+                <span
+                  className="font-bold tabular-nums"
+                  style={{ color: isFunded ? "hsl(258 82% 72%)" : "hsl(214 30% 92%)" }}
+                >
+                  {paidPercent}%
+                </span>
+              </div>
             </div>
 
-            {/* Segmented progress bar */}
+            {/* Segmented progress bar — paid solid, pending muted */}
             <div className="h-1.5 w-full rounded-full bg-secondary overflow-hidden flex">
-              {item.pledges.map((pledge, i) => {
+              {paidPledges.map((pledge, i) => {
                 const color = memberColors.get(pledge.pledgerUserId) ?? getMemberColor(i);
                 const width = (pledge.amountCents / item.targetPriceCents) * 100;
                 return (
                   <div
                     key={pledge.id}
-                    className="pledge-segment h-full first:rounded-l-full last:rounded-r-full"
+                    className="h-full"
                     style={{ width: `${width}%`, backgroundColor: color, minWidth: width > 0 ? 2 : 0 }}
                     title={`${pledge.pledger.personaName}: ${formatCurrency(pledge.amountCents, item.currency)}`}
+                  />
+                );
+              })}
+              {pendingPledges.map((pledge, i) => {
+                const color = memberColors.get(pledge.pledgerUserId) ?? getMemberColor(i);
+                const width = (pledge.amountCents / item.targetPriceCents) * 100;
+                return (
+                  <div
+                    key={pledge.id}
+                    className="h-full"
+                    style={{ width: `${width}%`, backgroundColor: color, opacity: 0.3, minWidth: width > 0 ? 2 : 0 }}
+                    title={`${pledge.pledger.personaName} (pendente): ${formatCurrency(pledge.amountCents, item.currency)}`}
                   />
                 );
               })}
@@ -336,7 +363,7 @@ export function WishlistItemCard({ item, familyId, currentUserId, memberColors, 
                   const color = memberColors.get(pledge.pledgerUserId) ?? getMemberColor(i);
                   const isMyPledge = pledge.pledgerUserId === currentUserId;
                   return (
-                    <div key={pledge.id} className="flex items-center gap-1.5 text-xs">
+                    <div key={pledge.id} className={`flex items-center gap-1.5 text-xs ${!pledge.paidAt ? "opacity-60" : ""}`}>
                       <Avatar className="h-4 w-4 flex-shrink-0">
                         <AvatarImage src={pledge.pledger.avatarMedium} />
                         <AvatarFallback style={{ backgroundColor: color, fontSize: 8 }}>
@@ -350,6 +377,9 @@ export function WishlistItemCard({ item, familyId, currentUserId, memberColors, 
                         {formatCurrency(pledge.amountCents, item.currency)}
                         <span className="text-muted-foreground/60"> ({pledge.percent}%)</span>
                       </span>
+                      {!pledge.paidAt && (
+                        <span title="Pagamento pendente"><Clock className="h-2.5 w-2.5 text-amber-400/70 flex-shrink-0" /></span>
+                      )}
                       {isMyPledge && (item.status === "open" || item.status === "funded") && (
                         <button
                           onClick={() => handleWithdrawPledge(pledge.id)}
@@ -371,6 +401,46 @@ export function WishlistItemCard({ item, familyId, currentUserId, memberColors, 
                     </div>
                   );
                 })}
+              </div>
+            )}
+
+            {/* Payment history toggle */}
+            {paidPledges.length > 0 && (
+              <div>
+                <button
+                  onClick={() => setHistoryOpen((v) => !v)}
+                  className="flex items-center gap-1 text-[10px] text-muted-foreground/50 hover:text-muted-foreground transition-colors mt-1"
+                >
+                  <Receipt className="h-2.5 w-2.5" />
+                  {historyOpen ? "Ocultar histórico" : `Histórico (${paidPledges.length})`}
+                  {historyOpen ? <ChevronUp className="h-2.5 w-2.5" /> : <ChevronDown className="h-2.5 w-2.5" />}
+                </button>
+                {historyOpen && (
+                  <div className="mt-1.5 rounded-lg border border-border/40 bg-secondary/30 p-2 space-y-1.5">
+                    {paidPledges.map((pledge, i) => {
+                      const color = memberColors.get(pledge.pledgerUserId) ?? getMemberColor(i);
+                      return (
+                        <div key={pledge.id} className="flex items-center gap-1.5 text-xs">
+                          <Avatar className="h-4 w-4 flex-shrink-0">
+                            <AvatarImage src={pledge.pledger.avatarMedium} />
+                            <AvatarFallback style={{ backgroundColor: color, fontSize: 8 }}>
+                              {pledge.pledger.personaName[0]}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span style={{ color }} className="font-medium truncate max-w-[70px]">
+                            {pledge.pledger.personaName}
+                          </span>
+                          <span className="text-muted-foreground tabular-nums flex-1 text-right">
+                            {formatCurrency(pledge.amountCents, item.currency)}
+                          </span>
+                          <span className="text-muted-foreground/50 text-[10px] tabular-nums whitespace-nowrap">
+                            {new Date(pledge.paidAt!).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
           </div>
