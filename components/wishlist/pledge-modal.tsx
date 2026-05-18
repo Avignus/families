@@ -35,11 +35,13 @@ export function PledgeModal({
   targetPriceCents, totalPledgedCents, currency, onSuccess, initialAmountCents,
 }: Props) {
   const { t } = useLanguage();
-  const [amountStr, setAmountStr] = useState("");
+  const [mode, setMode] = useState<"amount" | "percent">("amount");
+  const [inputStr, setInputStr] = useState("");
 
   useEffect(() => {
     if (open && initialAmountCents && initialAmountCents > 0) {
-      setAmountStr((initialAmountCents / 100).toFixed(2));
+      setMode("amount");
+      setInputStr((initialAmountCents / 100).toFixed(2));
     }
   }, [open, initialAmountCents]);
   const [loading, setLoading] = useState(false);
@@ -49,9 +51,22 @@ export function PledgeModal({
   const [pledgeId, setPledgeId] = useState<string | null>(null);
 
   const remaining = targetPriceCents - totalPledgedCents;
-  const amountCents = Math.round(parseFloat(amountStr.replace(",", ".")) * 100) || 0;
+  const inputNum = parseFloat(inputStr.replace(",", ".")) || 0;
+  const amountCents = mode === "amount"
+    ? Math.round(inputNum * 100)
+    : Math.round((inputNum / 100) * targetPriceCents);
   const percent = targetPriceCents > 0 ? Math.round((amountCents / targetPriceCents) * 100) : 0;
   const isValid = amountCents > 0 && amountCents <= remaining;
+
+  const switchMode = (next: "amount" | "percent") => {
+    if (next === mode) return;
+    if (next === "percent") {
+      setInputStr(amountCents > 0 ? String(percent) : "");
+    } else {
+      setInputStr(amountCents > 0 ? (amountCents / 100).toFixed(2) : "");
+    }
+    setMode(next);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,7 +90,7 @@ export function PledgeModal({
       setPixData(data.data?.pix ?? null);
       setPledgeId(data.data?.pledge?.id ?? null);
       onOpenChange(false);
-      setAmountStr("");
+      setInputStr("");
       setPixOpen(true);
       onSuccess();
     } finally {
@@ -107,24 +122,47 @@ export function PledgeModal({
             </div>
 
             <div>
-              <label className="text-sm font-medium mb-1.5 block">
-                {t.pledge.yourContribution(currency)}
-              </label>
-              <Input
-                type="number"
-                min="0.01"
-                step="0.01"
-                max={(remaining / 100).toFixed(2)}
-                value={amountStr}
-                onChange={(e) => setAmountStr(e.target.value)}
-                placeholder="0,00"
-                required
-                className="text-lg"
-              />
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-sm font-medium">
+                  {t.pledge.yourContribution(currency)}
+                </label>
+                <div className="flex rounded-md border border-border/60 overflow-hidden text-xs">
+                  {(["amount", "percent"] as const).map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => switchMode(m)}
+                      className={`px-2.5 py-1 transition-colors ${
+                        mode === m
+                          ? "bg-primary text-white font-semibold"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {m === "amount" ? currency : "%"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="relative">
+                <Input
+                  type="number"
+                  min="0.01"
+                  step={mode === "percent" ? "1" : "0.01"}
+                  max={mode === "percent" ? "100" : (remaining / 100).toFixed(2)}
+                  value={inputStr}
+                  onChange={(e) => setInputStr(e.target.value)}
+                  placeholder={mode === "percent" ? "0" : "0,00"}
+                  required
+                  className="text-lg pr-10"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">
+                  {mode === "percent" ? "%" : currency}
+                </span>
+              </div>
               {amountCents > 0 && (
                 <p className={`text-xs mt-1.5 ${isValid ? "text-primary" : "text-destructive"}`}>
                   {isValid
-                    ? t.pledge.willCover(percent, totalPledgedCents + amountCents >= targetPriceCents)
+                    ? `${formatCurrency(amountCents, currency)} · ${t.pledge.willCover(percent, totalPledgedCents + amountCents >= targetPriceCents)}`
                     : t.pledge.exceedsRemaining(formatCurrency(remaining, currency))}
                 </p>
               )}
