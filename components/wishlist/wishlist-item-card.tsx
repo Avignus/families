@@ -356,6 +356,20 @@ export function WishlistItemCard({ item, familyId, currentUserId, memberColors, 
               })}
             </div>
 
+            {/* Contribute button — above contributions */}
+            {item.status === "open" && remaining > 0 && (
+              <button
+                onClick={() => setPledgeOpen(true)}
+                className="w-full h-8 rounded-md text-xs font-semibold text-white transition-all hover:opacity-90 active:scale-[0.98]"
+                style={{
+                  background: "linear-gradient(135deg, hsl(258 82% 60%), hsl(258 82% 50%))",
+                  boxShadow: "0 0 12px hsl(258 82% 66% / 0.2)",
+                }}
+              >
+                {t.wishlist.contribute}
+              </button>
+            )}
+
             {/* Pledge breakdown */}
             {item.pledges.length > 0 && (
               <div className="space-y-1.5 pt-0.5">
@@ -476,54 +490,46 @@ export function WishlistItemCard({ item, familyId, currentUserId, memberColors, 
           </div>
         )}
 
-        {/* Actions */}
-        <div className="flex gap-2 pt-0.5">
-          {item.status === "open" && noPriceDefined && isOwner && (
-            <button
-              onClick={handleUpdatePrice}
-              className="flex-1 h-8 rounded-md text-xs font-semibold border border-amber-500/40 text-amber-400 hover:bg-amber-500/10 transition-colors flex items-center justify-center gap-1.5"
-            >
-              <RefreshCw className="h-3 w-3" />
-              {t.wishlist.updatePrice}
-            </button>
-          )}
-          {item.status === "open" && remaining > 0 && (
-            <button
-              onClick={() => setPledgeOpen(true)}
-              className="flex-1 h-8 rounded-md text-xs font-semibold text-white transition-all hover:opacity-90 active:scale-[0.98]"
-              style={{
-                background: "linear-gradient(135deg, hsl(258 82% 60%), hsl(258 82% 50%))",
-                boxShadow: "0 0 12px hsl(258 82% 66% / 0.2)",
-              }}
-            >
-              {t.wishlist.contribute}
-            </button>
-          )}
-          {item.status === "open" && !item.steamData?.isFree && (
-            <button
-              onClick={() => setShareOpen((v) => !v)}
-              className={`h-8 w-8 rounded-md flex items-center justify-center border transition-colors ${
-                shareOpen
-                  ? "border-primary/40 text-primary bg-primary/10"
-                  : "border-transparent text-muted-foreground/50 hover:text-primary hover:border-primary/20 hover:bg-primary/5"
-              }`}
-              title={t.wishlist.requestContribution}
-            >
-              <Link2 className="h-3.5 w-3.5" />
-            </button>
-          )}
-          {isFunded && isOwner && (
-            <Button
-              size="sm"
-              variant="outline"
-              className="flex-1 h-8 text-xs border-primary/30 text-primary hover:bg-primary/10"
-              onClick={handleMarkPurchased}
-            >
-              <ShoppingCart className="h-3 w-3 mr-1" />
-              {t.wishlist.markPurchased}
-            </Button>
-          )}
-        </div>
+        {/* Actions — update price, share link, mark purchased */}
+        {(noPriceDefined && isOwner && item.status === "open") ||
+         (item.status === "open" && !item.steamData?.isFree) ||
+         (isFunded && isOwner) ? (
+          <div className="flex gap-2 pt-0.5">
+            {item.status === "open" && noPriceDefined && isOwner && (
+              <button
+                onClick={handleUpdatePrice}
+                className="flex-1 h-8 rounded-md text-xs font-semibold border border-amber-500/40 text-amber-400 hover:bg-amber-500/10 transition-colors flex items-center justify-center gap-1.5"
+              >
+                <RefreshCw className="h-3 w-3" />
+                {t.wishlist.updatePrice}
+              </button>
+            )}
+            {item.status === "open" && !item.steamData?.isFree && (
+              <button
+                onClick={() => setShareOpen((v) => !v)}
+                className={`h-8 w-8 rounded-md flex items-center justify-center border transition-colors ${
+                  shareOpen
+                    ? "border-primary/40 text-primary bg-primary/10"
+                    : "border-transparent text-muted-foreground/50 hover:text-primary hover:border-primary/20 hover:bg-primary/5"
+                }`}
+                title={t.wishlist.requestContribution}
+              >
+                <Link2 className="h-3.5 w-3.5" />
+              </button>
+            )}
+            {isFunded && isOwner && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="flex-1 h-8 text-xs border-primary/30 text-primary hover:bg-primary/10"
+                onClick={handleMarkPurchased}
+              >
+                <ShoppingCart className="h-3 w-3 mr-1" />
+                {t.wishlist.markPurchased}
+              </Button>
+            )}
+          </div>
+        ) : null}
       </div>
 
       <PledgeModal
