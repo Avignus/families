@@ -201,6 +201,15 @@ export function Navbar() {
                 {user.personaName && !user.personaName.startsWith("Steam user") && (
                   <span className="hidden md:block text-sm font-medium">{user.personaName}</span>
                 )}
+                {creditsCents !== null && (
+                  <span
+                    className="hidden md:flex items-center gap-0.5 text-xs font-semibold tabular-nums"
+                    style={{ color: creditsCents > 0 ? "hsl(258 82% 72%)" : undefined, opacity: creditsCents > 0 ? 1 : 0.45 }}
+                  >
+                    <Wallet className="h-3 w-3" />
+                    {formatCurrency(creditsCents, "BRL")}
+                  </span>
+                )}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="bg-card/95 backdrop-blur border-border/60">
@@ -208,8 +217,11 @@ export function Navbar() {
                 <div className="flex flex-col gap-0.5">
                   <span className="font-semibold text-sm">{user.personaName ?? user.name}</span>
                   <span className="text-xs text-muted-foreground">{t.nav.steamAccount}</span>
-                  {creditsCents != null && creditsCents > 0 && (
-                    <span className="flex items-center gap-1 text-xs font-medium mt-0.5" style={{ color: "hsl(258 82% 72%)" }}>
+                  {creditsCents != null && (
+                    <span
+                      className="flex items-center gap-1 text-xs font-medium mt-0.5"
+                      style={{ color: creditsCents > 0 ? "hsl(258 82% 72%)" : undefined, opacity: creditsCents > 0 ? 1 : 0.5 }}
+                    >
                       <Wallet className="h-3 w-3" />
                       {formatCurrency(creditsCents, "BRL")} {t.nav.credits}
                     </span>
