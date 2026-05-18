@@ -131,6 +131,17 @@ export async function createPixPayment(params: {
   };
 }
 
+export async function getPaymentsByExternalReference(externalRef: string): Promise<Array<{ id: string; status: string; value: number }>> {
+  try {
+    const res = await asaasRequest<{ data: Array<{ id: string; status: string; value: number }> }>(
+      `/payments?externalReference=${encodeURIComponent(externalRef)}`
+    );
+    return res.data ?? [];
+  } catch {
+    return [];
+  }
+}
+
 export async function getPaymentStatus(paymentId: string): Promise<string | null> {
   try {
     const payment = await asaasRequest<{ status: string }>(`/payments/${paymentId}`);
