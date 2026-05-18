@@ -4,7 +4,8 @@ import { requireSession, isApiError, ok, err, parseBody } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 
 const BudgetSchema = z.object({
-  monthlyBudgetCents: z.number().int().min(0),
+  monthlyBudgetCents: z.number().int().min(0).optional(),
+  autoDistributeEnabled: z.boolean().optional(),
 });
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
@@ -21,10 +22,14 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     return err("FORBIDDEN", "Você não é membro desta família", 403);
   }
 
+  const data: Record<string, unknown> = {};
+  if (body.monthlyBudgetCents !== undefined) data.monthlyBudgetCents = body.monthlyBudgetCents;
+  if (body.autoDistributeEnabled !== undefined) data.autoDistributeEnabled = body.autoDistributeEnabled;
+
   const updated = await prisma.familyMembership.update({
     where: { id: membership.id },
-    data: { monthlyBudgetCents: body.monthlyBudgetCents },
+    data,
   });
 
-  return ok({ monthlyBudgetCents: updated.monthlyBudgetCents });
+  return ok({ monthlyBudgetCents: updated.monthlyBudgetCents, autoDistributeEnabled: updated.autoDistributeEnabled });
 }

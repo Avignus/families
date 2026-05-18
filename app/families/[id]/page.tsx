@@ -50,7 +50,7 @@ export default async function FamilyPage({ params }: { params: { id: string } })
     prisma.user.findUnique({ where: { id: userId }, select: { creditsCents: true } }),
     prisma.familyMembership.findFirst({
       where: { userId, familyId, status: "active" },
-      select: { monthlyBudgetCents: true },
+      select: { monthlyBudgetCents: true, autoDistributeEnabled: true },
     }),
   ]);
 
@@ -61,6 +61,7 @@ export default async function FamilyPage({ params }: { params: { id: string } })
       totalPendingRequests={pendingCount}
       creditsCents={dbUser?.creditsCents ?? 0}
       monthlyBudgetCents={userMembership?.monthlyBudgetCents ?? 0}
+      autoDistributeEnabled={userMembership?.autoDistributeEnabled ?? false}
     />
   );
 }

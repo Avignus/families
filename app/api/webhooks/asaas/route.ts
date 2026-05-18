@@ -73,9 +73,9 @@ export async function POST(req: NextRequest) {
             });
           });
         }
-        // Auto-distribute only if user has a monthly budget configured
+        // Auto-distribute only if user opted in and has a monthly budget configured
         const membership = await prisma.familyMembership.findFirst({
-          where: { userId, status: "active", monthlyBudgetCents: { gt: 0 } },
+          where: { userId, status: "active", autoDistributeEnabled: true, monthlyBudgetCents: { gt: 0 } },
           select: { monthlyBudgetCents: true },
         });
         if (membership) {

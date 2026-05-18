@@ -78,6 +78,7 @@ model FamilyMembership {
 
   // Auto-distribution
   monthlyBudgetCents    Int       @default(0)
+  autoDistributeEnabled Boolean   @default(false)
   lastAutoDistributedAt DateTime?
 
   user   User   @relation(fields: [userId], references: [id])

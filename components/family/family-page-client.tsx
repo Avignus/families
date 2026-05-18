@@ -78,12 +78,14 @@ export function FamilyPageClient({
   totalPendingRequests,
   creditsCents,
   monthlyBudgetCents,
+  autoDistributeEnabled,
 }: {
   familyId: string;
   gameStats: { total: number; own: number; viaFamilies: number } | null;
   totalPendingRequests: number;
   creditsCents: number;
   monthlyBudgetCents: number;
+  autoDistributeEnabled: boolean;
 }) {
   const { data: session } = useSession();
   const { t } = useLanguage();
@@ -411,7 +413,7 @@ export function FamilyPageClient({
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold">{t.family.wishlistTitle}</h3>
               <div className="flex items-center gap-2">
-                {monthlyBudgetCents === 0 && localCredits > 0 && (
+                {!autoDistributeEnabled && localCredits > 0 && (
                   <Button
                     size="sm"
                     variant="outline"
@@ -433,6 +435,7 @@ export function FamilyPageClient({
               familyId={familyId}
               currency={family.currency}
               initialBudgetCents={family.monthlyBudgetCents}
+              initialAutoDistribute={autoDistributeEnabled}
             />
 
             {family.wishlistItems.length === 0 ? (
