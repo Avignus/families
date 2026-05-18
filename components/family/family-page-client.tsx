@@ -473,6 +473,7 @@ export function FamilyPageClient({
                     priceAvgCents={item.priceAvgCents}
                     autoOpen={item.id === pledgeItemId}
                     initialPct={item.id === pledgeItemId ? pledgePct : undefined}
+                    userCreditsCents={localCredits}
                   />
                 ))}
               </div>

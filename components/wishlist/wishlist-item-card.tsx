@@ -59,9 +59,10 @@ type Props = {
   priceAvgCents?: number | null;
   autoOpen?: boolean;
   initialPct?: number;
+  userCreditsCents?: number;
 };
 
-export function WishlistItemCard({ item, familyId, currentUserId, memberColors, onRefresh, ownedByCurrentUser = false, priceAlert, priceAvgCents, autoOpen = false, initialPct }: Props) {
+export function WishlistItemCard({ item, familyId, currentUserId, memberColors, onRefresh, ownedByCurrentUser = false, priceAlert, priceAvgCents, autoOpen = false, initialPct, userCreditsCents = 0 }: Props) {
   const { t } = useLanguage();
   const [pledgeOpen, setPledgeOpen] = useState(false);
   const [removeConfirm, setRemoveConfirm] = useState(false);
@@ -540,6 +541,7 @@ export function WishlistItemCard({ item, familyId, currentUserId, memberColors, 
         targetPriceCents={item.targetPriceCents}
         totalPledgedCents={item.totalPledgedCents}
         currency={item.currency}
+        userCreditsCents={userCreditsCents}
         onSuccess={onRefresh}
         initialAmountCents={initialAmountCents}
       />

@@ -10,6 +10,7 @@ import { formatCurrency } from "@/lib/utils";
 import { PixPaymentModal } from "./pix-payment-modal";
 import { toast } from "sonner";
 import { useLanguage } from "@/lib/i18n/context";
+import { Wallet, CreditCard } from "lucide-react";
 
 type PixData = {
   qrCode: string;
@@ -26,13 +27,14 @@ type Props = {
   targetPriceCents: number;
   totalPledgedCents: number;
   currency: string;
+  userCreditsCents: number;
   onSuccess: () => void;
   initialAmountCents?: number;
 };
 
 export function PledgeModal({
   open, onOpenChange, itemId, gameName,
-  targetPriceCents, totalPledgedCents, currency, onSuccess, initialAmountCents,
+  targetPriceCents, totalPledgedCents, currency, userCreditsCents, onSuccess, initialAmountCents,
 }: Props) {
   const { t } = useLanguage();
   const [mode, setMode] = useState<"amount" | "percent">("amount");
@@ -57,6 +59,10 @@ export function PledgeModal({
     : Math.round((inputNum / 100) * targetPriceCents);
   const percent = targetPriceCents > 0 ? Math.round((amountCents / targetPriceCents) * 100) : 0;
   const isValid = amountCents > 0 && amountCents <= remaining;
+
+  // Credits vs PIX split (mirrors backend logic)
+  const creditsUsed = Math.min(userCreditsCents, amountCents);
+  const pixPortion = amountCents - creditsUsed;
 
   const switchMode = (next: "amount" | "percent") => {
     if (next === mode) return;
@@ -168,13 +174,44 @@ export function PledgeModal({
               )}
             </div>
 
-            <div className="rounded-lg bg-secondary/30 border border-border/40 px-3 py-2 text-xs text-muted-foreground">
-              {t.pledge.pixNote.split("QR Code PIX").map((part, i, arr) =>
-                i < arr.length - 1
-                  ? <span key={i}>{part}<strong>QR Code PIX</strong></span>
-                  : <span key={i}>{part}</span>
-              )}
-            </div>
+            {/* Payment split preview */}
+            {amountCents > 0 && isValid ? (
+              <div className="rounded-lg border border-border/40 bg-secondary/30 px-3 py-2.5 space-y-1.5 text-xs">
+                {creditsUsed > 0 && (
+                  <div className="flex items-center justify-between">
+                    <span className="flex items-center gap-1.5 text-muted-foreground">
+                      <Wallet className="h-3 w-3" style={{ color: "hsl(258 82% 66%)" }} />
+                      Saldo da carteira
+                    </span>
+                    <span className="font-semibold" style={{ color: "hsl(258 82% 66%)" }}>
+                      − {formatCurrency(creditsUsed, currency)}
+                    </span>
+                  </div>
+                )}
+                {pixPortion > 0 && (
+                  <div className="flex items-center justify-between">
+                    <span className="flex items-center gap-1.5 text-muted-foreground">
+                      <CreditCard className="h-3 w-3" />
+                      PIX (QR Code)
+                    </span>
+                    <span className="font-semibold">{formatCurrency(pixPortion, currency)}</span>
+                  </div>
+                )}
+                {pixPortion === 0 && (
+                  <p className="text-center text-muted-foreground">
+                    Coberto integralmente pelo seu saldo — sem PIX necessário.
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="rounded-lg bg-secondary/30 border border-border/40 px-3 py-2 text-xs text-muted-foreground">
+                {t.pledge.pixNote.split("QR Code PIX").map((part, i, arr) =>
+                  i < arr.length - 1
+                    ? <span key={i}>{part}<strong>QR Code PIX</strong></span>
+                    : <span key={i}>{part}</span>
+                )}
+              </div>
+            )}
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

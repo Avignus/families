@@ -454,6 +454,7 @@ function WishEntry({
           targetPriceCents={sharedItem.targetPriceCents}
           totalPledgedCents={sharedItem.totalPledgedCents}
           currency={sharedItem.currency}
+          userCreditsCents={0}
           onSuccess={onRefresh}
         />
       )}
