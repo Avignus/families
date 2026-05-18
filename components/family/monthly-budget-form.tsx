@@ -13,9 +13,10 @@ type Props = {
   currency: string;
   initialBudgetCents: number;
   initialAutoDistribute: boolean;
+  onAutoDistributeChange?: (enabled: boolean) => void;
 };
 
-export function MonthlyBudgetForm({ familyId, currency, initialBudgetCents, initialAutoDistribute }: Props) {
+export function MonthlyBudgetForm({ familyId, currency, initialBudgetCents, initialAutoDistribute, onAutoDistributeChange }: Props) {
   const { t } = useLanguage();
   const [value, setValue] = useState(
     initialBudgetCents > 0 ? (initialBudgetCents / 100).toFixed(2) : ""
@@ -44,6 +45,7 @@ export function MonthlyBudgetForm({ familyId, currency, initialBudgetCents, init
   const handleToggle = async (enabled: boolean) => {
     setToggling(true);
     setAutoDistribute(enabled);
+    onAutoDistributeChange?.(enabled);
     try {
       const res = await fetch(`/api/families/${familyId}/budget`, {
         method: "PATCH",
@@ -53,6 +55,7 @@ export function MonthlyBudgetForm({ familyId, currency, initialBudgetCents, init
       const data = await res.json();
       if (!res.ok) {
         setAutoDistribute(!enabled);
+        onAutoDistributeChange?.(!enabled);
         toast.error(data.error?.message ?? "Erro ao salvar preferência");
         return;
       }

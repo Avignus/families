@@ -14,7 +14,8 @@ import { GameSearchModal } from "@/components/wishlist/game-search-modal";
 import { VotesPanel } from "@/components/votes/votes-panel";
 import { SteamLibraryPanel } from "@/components/family/steam-library-panel";
 import { MemberActions } from "@/components/family/member-actions";
-import { Plus, ChevronDown, ChevronUp, Settings, Copy, LogIn, Gamepad2, Check, X, Camera, AlertTriangle, Library, Share2, Wallet } from "lucide-react";
+import { Plus, ChevronDown, ChevronUp, Settings, Copy, LogIn, Gamepad2, Check, X, Camera, AlertTriangle, Library, Share2, Wallet, Zap } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { MonthlyBudgetForm } from "@/components/family/monthly-budget-form";
 import { FamilyCoverArt } from "@/components/family-cover-art";
 import { getMemberColor, formatCurrency } from "@/lib/utils";
@@ -119,6 +120,8 @@ export function FamilyPageClient({
   const [steamExpanded, setSteamExpanded] = useState(true);
   const [distributing, setDistributing] = useState(false);
   const [localCredits, setLocalCredits] = useState(creditsCents);
+  const [autoDistribute, setAutoDistribute] = useState(autoDistributeEnabled);
+  const [togglingAutoDistribute, setTogglingAutoDistribute] = useState(false);
 
   const handleDistributeCredits = async () => {
     setDistributing(true);
@@ -135,6 +138,27 @@ export function FamilyPageClient({
       }
     } finally {
       setDistributing(false);
+    }
+  };
+
+  const handleEnableAutoDistribute = async () => {
+    setTogglingAutoDistribute(true);
+    setAutoDistribute(true);
+    try {
+      const res = await fetch(`/api/families/${familyId}/budget`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ autoDistributeEnabled: true }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setAutoDistribute(false);
+        toast.error(data.error?.message ?? "Erro ao ativar redistribuição automática");
+      } else {
+        toast.success("Redistribuição automática ativada");
+      }
+    } finally {
+      setTogglingAutoDistribute(false);
     }
   };
 
@@ -412,31 +436,54 @@ export function FamilyPageClient({
           <div id="family-wishlist">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold">{t.family.wishlistTitle}</h3>
-              <div className="flex items-center gap-2">
-                {!autoDistributeEnabled && localCredits > 0 && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={handleDistributeCredits}
-                    disabled={distributing}
-                    className="border-primary/30 text-primary hover:bg-primary/10"
-                  >
-                    <Wallet className="h-3.5 w-3.5 mr-1" />
-                    {distributing ? "Distribuindo…" : `Distribuir ${formatCurrency(localCredits, "BRL")}`}
-                  </Button>
-                )}
-                <Button size="sm" variant="outline" onClick={() => setAddGameOpen(true)}>
-                  <Plus className="h-4 w-4 mr-1" /> {t.family.addGame}
-                </Button>
-              </div>
+              <Button size="sm" variant="outline" onClick={() => setAddGameOpen(true)}>
+                <Plus className="h-4 w-4 mr-1" /> {t.family.addGame}
+              </Button>
             </div>
 
-            <MonthlyBudgetForm
-              familyId={familyId}
-              currency={family.currency}
-              initialBudgetCents={family.monthlyBudgetCents}
-              initialAutoDistribute={autoDistributeEnabled}
-            />
+            {/* Manual distribute banner — shown when auto-distribute is OFF and there are credits */}
+            {!autoDistribute && localCredits > 0 && (
+              <div className="flex items-center gap-4 p-4 mb-4 rounded-xl border border-primary/30 bg-primary/8">
+                <div className="h-10 w-10 rounded-lg flex items-center justify-center bg-primary/15 shrink-0">
+                  <Wallet className="h-5 w-5 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold">{formatCurrency(localCredits, "BRL")} disponíveis</p>
+                  <p className="text-xs text-muted-foreground">Distribua seus créditos entre os jogos da wishlist</p>
+                </div>
+                <Button onClick={handleDistributeCredits} disabled={distributing} className="shrink-0">
+                  <Wallet className="h-4 w-4 mr-2" />
+                  {distributing ? "Distribuindo…" : "Distribuir"}
+                </Button>
+              </div>
+            )}
+
+            {/* Auto-distribute form — only when enabled */}
+            {autoDistribute ? (
+              <MonthlyBudgetForm
+                familyId={familyId}
+                currency={family.currency}
+                initialBudgetCents={family.monthlyBudgetCents}
+                initialAutoDistribute={autoDistribute}
+                onAutoDistributeChange={setAutoDistribute}
+              />
+            ) : family.isChief && (
+              <div className="flex items-center justify-between p-3 mb-4 rounded-lg border border-border/50 bg-secondary/30">
+                <div className="flex items-center gap-2">
+                  <Zap className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                  <div>
+                    <p className="text-xs font-medium">Redistribuição automática</p>
+                    <p className="text-[10px] text-muted-foreground">Ativar para distribuir créditos automaticamente ao receber</p>
+                  </div>
+                </div>
+                <Switch
+                  checked={false}
+                  onCheckedChange={handleEnableAutoDistribute}
+                  disabled={togglingAutoDistribute}
+                  aria-label="Ativar redistribuição automática"
+                />
+              </div>
+            )}
 
             {family.wishlistItems.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground text-sm">
