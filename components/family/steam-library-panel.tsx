@@ -111,6 +111,7 @@ function WishesTab({
   familyId: string;
   onRefresh: () => void;
 }) {
+  const { t } = useLanguage();
   const [filterUserId, setFilterUserId] = useState<string | null>(null);
   const [filterIntersections, setFilterIntersections] = useState(false);
   const [showAll, setShowAll] = useState(false);
@@ -166,7 +167,7 @@ function WishesTab({
     return (
       <div className="flex flex-col items-center gap-2 py-10 text-muted-foreground text-sm">
         <Lock className="h-8 w-8 opacity-40" />
-        <p>Todos os perfis Steam são privados.</p>
+        <p>{t.steamLibrary.allPrivate}</p>
       </div>
     );
   }
@@ -183,7 +184,7 @@ function WishesTab({
       <div className="relative max-w-xs">
         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
         <Input
-          placeholder="Buscar jogo..."
+          placeholder={t.steamLibrary.searchPlaceholder}
           className="pl-8 h-8 text-sm"
           value={search}
           onChange={(e) => { setSearch(e.target.value); setShowAll(false); }}
@@ -193,7 +194,7 @@ function WishesTab({
       {privateMembers.length > 0 && (
         <p className="text-xs text-muted-foreground flex items-center gap-1.5">
           <Lock className="h-3 w-3" />
-          {privateMembers.map((m) => m.personaName).join(", ")} tem perfil privado — lista de desejos não disponível.
+          {privateMembers.map((m) => m.personaName).join(", ")} {t.steamLibrary.profilePrivateWishlist}
         </p>
       )}
 
@@ -207,7 +208,7 @@ function WishesTab({
               : "bg-secondary text-muted-foreground hover:text-foreground"
           }`}
         >
-          Todos ({allEntries.length})
+          {t.steamLibrary.all(allEntries.length)}
         </button>
 
         {intersectionCount > 0 && (
@@ -220,7 +221,7 @@ function WishesTab({
             }`}
           >
             <Users className="h-3 w-3" />
-            Interseções ({intersectionCount})
+            {t.steamLibrary.intersections(intersectionCount)}
           </button>
         )}
 
@@ -241,7 +242,7 @@ function WishesTab({
               }}
             >
               <MemberAvatar member={m} color={color} size="xs" />
-              {m.userId === currentUserId ? "Você" : m.personaName} ({count})
+              {m.userId === currentUserId ? t.steamLibrary.you : m.personaName} ({count})
             </button>
           );
         })}
@@ -266,7 +267,7 @@ function WishesTab({
       ) : (
         <div className="flex flex-col items-center gap-2 py-10 text-muted-foreground text-sm">
           <Heart className="h-8 w-8 opacity-30" />
-          <p>Nenhum desejo encontrado.</p>
+          <p>{t.steamLibrary.noWishesFound}</p>
         </div>
       )}
 
@@ -275,7 +276,7 @@ function WishesTab({
           onClick={() => setShowAll(true)}
           className="w-full py-2 text-xs text-muted-foreground hover:text-foreground transition-colors border border-border/40 rounded-lg hover:border-border"
         >
-          Mostrar mais {filtered.length - PAGE} desejos
+          {t.steamLibrary.showMoreWishes(filtered.length - PAGE)}
         </button>
       )}
     </div>
@@ -353,36 +354,36 @@ function WishEntry({
             {entry.isShared && (
               <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-violet-600/90 text-white">
                 <Gift className="h-2.5 w-2.5" />
-                Lista Compartilhada
+                {t.steamLibrary.sharedWishlist}
               </span>
             )}
             {entry.comingSoon && (
               <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-sky-600/85 text-white">
                 <Clock className="h-2.5 w-2.5" />
-                Em breve{entry.releaseDate && entry.releaseDate !== "Em breve" ? ` · ${entry.releaseDate}` : ""}
+                {t.steamLibrary.comingSoon}{entry.releaseDate && entry.releaseDate !== "Em breve" ? ` · ${entry.releaseDate}` : ""}
               </span>
             )}
             {entry.isFree && (
               <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-teal-600/85 text-white">
-                Gratuito
+                {t.steamLibrary.free}
               </span>
             )}
             {entry.ownedByCurrentUser && !entry.isFree && (
               <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-600/85 text-white">
                 <CheckCircle2 className="h-2.5 w-2.5" />
-                Você já tem
+                {t.steamLibrary.youOwn}
               </span>
             )}
             {!entry.ownedByCurrentUser && isCrossover && (
               <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-sky-600/90 text-white">
                 <Users className="h-2.5 w-2.5" />
-                Cruzamento · {entry.wantedBy.length} querem
+                {t.steamLibrary.crossover(entry.wantedBy.length)}
               </span>
             )}
             {!entry.ownedByCurrentUser && isMine && !isCrossover && (
               <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-600/90 text-white">
                 <Heart className="h-2.5 w-2.5" />
-                Você quer
+                {t.steamLibrary.youWant}
               </span>
             )}
           </div>
@@ -394,11 +395,11 @@ function WishEntry({
             <p className="text-xs font-semibold leading-tight line-clamp-1">{entry.name}</p>
             <p className="text-[11px] text-muted-foreground shrink-0">
               {entry.isFree
-                ? "Gratuito"
+                ? t.steamLibrary.free
                 : entry.priceCents > 0
                 ? formatCurrency(entry.priceCents, entry.currency)
                 : entry.comingSoon
-                ? "Por anunciar"
+                ? t.steamLibrary.toBeAnnounced
                 : ""}
             </p>
           </div>
@@ -414,7 +415,7 @@ function WishEntry({
               <span className="text-[10px] text-muted-foreground ml-0.5">
                 {entry.wantedBy.length === 1
                   ? memberMap.get(entry.wantedBy[0])?.personaName ?? ""
-                  : `${entry.wantedBy.length} membros`}
+                  : t.steamLibrary.members(entry.wantedBy.length)}
               </span>
             </div>
           )}
@@ -427,7 +428,7 @@ function WishEntry({
               className="w-full h-7 rounded-md text-[11px] font-semibold border border-dashed border-border/60 text-muted-foreground hover:border-primary/40 hover:text-primary transition-colors flex items-center justify-center gap-1"
             >
               <Plus className="h-3 w-3" />
-              {adding ? "Adicionando..." : "Adicionar à Lista"}
+              {adding ? t.steamLibrary.adding : t.steamLibrary.addToList}
             </button>
           )}
           {canPledge && (
@@ -439,7 +440,7 @@ function WishEntry({
                 boxShadow: "0 0 10px hsl(258 82% 66% / 0.2)",
               }}
             >
-              Contribuir
+              {t.steamLibrary.contribute}
             </button>
           )}
         </div>
@@ -482,6 +483,7 @@ function LibraryTab({
   memberColors: Map<string, string>;
   memberMap: Map<string, MemberSteamData>;
 }) {
+  const { t } = useLanguage();
   const [filterUserId, setFilterUserId] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
   const [search, setSearch] = useState("");
@@ -523,7 +525,7 @@ function LibraryTab({
     return (
       <div className="flex flex-col items-center gap-2 py-10 text-muted-foreground text-sm">
         <Lock className="h-8 w-8 opacity-40" />
-        <p>Todos os perfis Steam são privados.</p>
+        <p>{t.steamLibrary.allPrivate}</p>
       </div>
     );
   }
@@ -534,7 +536,7 @@ function LibraryTab({
       <div className="relative max-w-xs">
         <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
         <Input
-          placeholder="Buscar jogo..."
+          placeholder={t.steamLibrary.searchPlaceholder}
           className="pl-8 h-8 text-sm"
           value={search}
           onChange={(e) => { setSearch(e.target.value); setShowAll(false); }}
@@ -551,7 +553,7 @@ function LibraryTab({
               : "bg-secondary text-muted-foreground hover:text-foreground"
           }`}
         >
-          Todos ({games.length})
+          {t.steamLibrary.all(games.length)}
         </button>
         {membersWithLibrary.map((m) => {
           const count = games.filter((g) => g.ownedBy.includes(m.userId)).length;
@@ -570,7 +572,7 @@ function LibraryTab({
               }}
             >
               <MemberAvatar member={m} color={color} size="xs" />
-              {m.userId === currentUserId ? "Você" : m.personaName} ({count})
+              {m.userId === currentUserId ? t.steamLibrary.you : m.personaName} ({count})
             </button>
           );
         })}
@@ -579,7 +581,7 @@ function LibraryTab({
       {privateMembers.length > 0 && (
         <p className="text-xs text-muted-foreground flex items-center gap-1.5">
           <Lock className="h-3 w-3" />
-          {privateMembers.map((m) => m.personaName).join(", ")} tem perfil privado — biblioteca não disponível.
+          {privateMembers.map((m) => m.personaName).join(", ")} {t.steamLibrary.profilePrivateLibrary}
         </p>
       )}
 
@@ -601,12 +603,12 @@ function LibraryTab({
           onClick={() => setShowAll(true)}
           className="w-full py-2 text-xs text-muted-foreground hover:text-foreground transition-colors border border-border/40 rounded-lg hover:border-border"
         >
-          Mostrar mais {filtered.length - PAGE} jogos
+          {t.steamLibrary.showMoreGames(filtered.length - PAGE)}
         </button>
       )}
 
       {filtered.length === 0 && (
-        <p className="text-center py-8 text-sm text-muted-foreground">Nenhum jogo encontrado.</p>
+        <p className="text-center py-8 text-sm text-muted-foreground">{t.steamLibrary.noWishesFound}</p>
       )}
     </div>
   );

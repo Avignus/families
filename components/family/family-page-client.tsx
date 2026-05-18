@@ -128,13 +128,13 @@ export function FamilyPageClient({
     try {
       const res = await fetch(`/api/families/${familyId}/distribute-credits`, { method: "POST" });
       const data = await res.json();
-      if (!res.ok) { toast.error(data.error?.message ?? "Erro ao distribuir"); return; }
+      if (!res.ok) { toast.error(data.error?.message ?? t.family.distributeError); return; }
       if (data.data?.distributed > 0) {
         setLocalCredits((prev) => prev - data.data.distributed);
-        toast.success(`${formatCurrency(data.data.distributed, "BRL")} distribuídos na família!`);
+        toast.success(t.family.creditsDistributed(formatCurrency(data.data.distributed, "BRL")));
         refetch();
       } else {
-        toast.info("Nenhum item disponível para contribuição no momento.");
+        toast.info(t.family.noItemsForContribution);
       }
     } finally {
       setDistributing(false);
@@ -436,12 +436,12 @@ export function FamilyPageClient({
                   <Wallet className="h-5 w-5 text-primary" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold">{formatCurrency(localCredits, "BRL")} disponíveis</p>
-                  <p className="text-xs text-muted-foreground">Distribua seus créditos entre os jogos da wishlist</p>
+                  <p className="text-sm font-semibold">{t.family.creditsAvailableStr(formatCurrency(localCredits, "BRL"))}</p>
+                  <p className="text-xs text-muted-foreground">{t.family.distributeHint}</p>
                 </div>
                 <Button onClick={handleDistributeCredits} disabled={distributing} className="shrink-0">
                   <Wallet className="h-4 w-4 mr-2" />
-                  {distributing ? "Distribuindo…" : "Distribuir"}
+                  {distributing ? t.family.distributing : t.family.distribute}
                 </Button>
               </div>
             )}

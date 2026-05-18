@@ -11,7 +11,7 @@ type Props = { familyId: string; requestId: string };
 
 export function JoinRequestActions({ familyId, requestId }: Props) {
   const router = useRouter();
-  const { lang } = useLanguage();
+  const { t } = useLanguage();
   const [loading, setLoading] = useState<"approve" | "reject" | null>(null);
 
   const handle = async (action: "approve" | "reject") => {
@@ -25,9 +25,7 @@ export function JoinRequestActions({ familyId, requestId }: Props) {
         toast.error(data.error?.message ?? "Erro");
         return;
       }
-      toast.success(action === "approve"
-        ? (lang === "en" ? "Member approved!" : "Membro aprovado!")
-        : (lang === "en" ? "Request rejected" : "Solicitação rejeitada"));
+      toast.success(action === "approve" ? t.family.memberApproved : t.family.requestRejected);
       router.refresh();
     } finally {
       setLoading(null);

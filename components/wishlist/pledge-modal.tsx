@@ -181,7 +181,7 @@ export function PledgeModal({
                   <div className="flex items-center justify-between">
                     <span className="flex items-center gap-1.5 text-muted-foreground">
                       <Wallet className="h-3 w-3" style={{ color: "hsl(258 82% 66%)" }} />
-                      Saldo da carteira
+                      {t.pledge.walletBalance}
                     </span>
                     <span className="font-semibold" style={{ color: "hsl(258 82% 66%)" }}>
                       − {formatCurrency(creditsUsed, currency)}
@@ -192,14 +192,14 @@ export function PledgeModal({
                   <div className="flex items-center justify-between">
                     <span className="flex items-center gap-1.5 text-muted-foreground">
                       <CreditCard className="h-3 w-3" />
-                      PIX (QR Code)
+                      {t.pledge.pixQrCode}
                     </span>
                     <span className="font-semibold">{formatCurrency(pixPortion, currency)}</span>
                   </div>
                 )}
                 {pixPortion === 0 && (
                   <p className="text-center text-muted-foreground">
-                    Coberto integralmente pelo seu saldo — sem PIX necessário.
+                    {t.pledge.fullyByBalance}
                   </p>
                 )}
               </div>

@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
 import { Banknote, ArrowDownToLine, Loader2 } from "lucide-react";
+import { useLanguage } from "@/lib/i18n/context";
 
 type WithdrawInfo = {
   availableCents: number;
@@ -17,6 +18,7 @@ type WithdrawInfo = {
 };
 
 export function WithdrawPanel({ hasPixKey }: { hasPixKey: boolean }) {
+  const { t } = useLanguage();
   const [info, setInfo] = useState<WithdrawInfo | null>(null);
   const [amountStr, setAmountStr] = useState("");
   const [loading, setLoading] = useState(false);
@@ -35,12 +37,12 @@ export function WithdrawPanel({ hasPixKey }: { hasPixKey: boolean }) {
       <CardHeader className="pb-3">
         <CardTitle className="text-base flex items-center gap-2">
           <Banknote className="h-4 w-4 text-primary" />
-          Ganhos de Spot
+          {t.withdraw.title}
         </CardTitle>
-        <CardDescription>Receba o valor angariado pela venda de spots da sua família.</CardDescription>
+        <CardDescription>{t.withdraw.description}</CardDescription>
       </CardHeader>
       <CardContent>
-        <p className="text-sm text-muted-foreground">Nenhum ganho disponível para saque no momento.</p>
+        <p className="text-sm text-muted-foreground">{t.withdraw.noBalance}</p>
       </CardContent>
     </Card>
   );
@@ -65,7 +67,7 @@ export function WithdrawPanel({ hasPixKey }: { hasPixKey: boolean }) {
         toast.error(data.error?.message ?? "Erro ao processar saque");
         return;
       }
-      toast.success(`${formatCurrency(data.data.netCents, "BRL")} enviados para sua chave PIX!`);
+      toast.success(t.withdraw.submitBtn + ` — ${formatCurrency(data.data.netCents, "BRL")}`);
       setAmountStr("");
       await fetchInfo();
     } finally {
@@ -80,24 +82,20 @@ export function WithdrawPanel({ hasPixKey }: { hasPixKey: boolean }) {
       <CardHeader className="pb-3">
         <CardTitle className="text-base flex items-center gap-2">
           <Banknote className="h-4 w-4 text-primary" />
-          Ganhos de Spot
+          {t.withdraw.title}
         </CardTitle>
-        <CardDescription>
-          Saldo acumulado pela venda de spots. Taxa de saque: {feePercent}%.
-        </CardDescription>
+        <CardDescription>{t.withdraw.feeDescription(feePercent)}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex items-baseline gap-2">
           <span className="text-2xl font-bold tabular-nums" style={{ color: "hsl(258 82% 72%)" }}>
             {formatCurrency(info.availableCents, "BRL")}
           </span>
-          <span className="text-xs text-muted-foreground">disponíveis para saque</span>
+          <span className="text-xs text-muted-foreground">{t.withdraw.available}</span>
         </div>
 
         {!hasPixKey && (
-          <p className="text-xs text-amber-400">
-            Cadastre uma chave PIX em Configurações antes de sacar.
-          </p>
+          <p className="text-xs text-amber-400">{t.withdraw.pixKeyRequired}</p>
         )}
 
         {hasPixKey && (
@@ -110,7 +108,7 @@ export function WithdrawPanel({ hasPixKey }: { hasPixKey: boolean }) {
                   min={(info.minWithdrawalCents / 100).toFixed(2)}
                   max={(info.availableCents / 100).toFixed(2)}
                   step="0.01"
-                  placeholder={`mín. ${formatCurrency(info.minWithdrawalCents, "BRL")}`}
+                  placeholder={t.withdraw.minPlaceholder(formatCurrency(info.minWithdrawalCents, "BRL"))}
                   value={amountStr}
                   onChange={(e) => setAmountStr(e.target.value)}
                   className="pl-9"
@@ -123,22 +121,22 @@ export function WithdrawPanel({ hasPixKey }: { hasPixKey: boolean }) {
                 className="shrink-0 text-xs"
                 onClick={() => setAmountStr((info.availableCents / 100).toFixed(2))}
               >
-                Tudo
+                {t.withdraw.all}
               </Button>
             </div>
 
             {inputCents > 0 && (
               <div className="rounded-lg bg-secondary/40 border border-border/40 px-3 py-2 space-y-1 text-xs">
                 <div className="flex justify-between text-muted-foreground">
-                  <span>Valor bruto</span>
+                  <span>{t.withdraw.grossAmount}</span>
                   <span>{formatCurrency(inputCents, "BRL")}</span>
                 </div>
                 <div className="flex justify-between text-muted-foreground">
-                  <span>Taxa ({feePercent}%)</span>
+                  <span>{t.withdraw.fee(feePercent)}</span>
                   <span>− {formatCurrency(previewFee, "BRL")}</span>
                 </div>
                 <div className="flex justify-between font-semibold border-t border-border/40 pt-1 mt-1">
-                  <span>Você recebe</span>
+                  <span>{t.withdraw.youReceive}</span>
                   <span style={{ color: "hsl(258 82% 72%)" }}>{formatCurrency(previewNet, "BRL")}</span>
                 </div>
               </div>
@@ -151,7 +149,7 @@ export function WithdrawPanel({ hasPixKey }: { hasPixKey: boolean }) {
             >
               {loading
                 ? <Loader2 className="h-4 w-4 animate-spin" />
-                : <><ArrowDownToLine className="h-4 w-4 mr-2" /> Sacar via PIX</>}
+                : <><ArrowDownToLine className="h-4 w-4 mr-2" /> {t.withdraw.submitBtn}</>}
             </Button>
           </form>
         )}

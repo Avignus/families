@@ -56,10 +56,10 @@ export function MonthlyBudgetForm({ familyId, currency, initialBudgetCents, init
       if (!res.ok) {
         setAutoDistribute(!enabled);
         onAutoDistributeChange?.(!enabled);
-        toast.error(data.error?.message ?? "Erro ao salvar preferência");
+        toast.error(data.error?.message ?? t.monthlyBudget.saveError);
         return;
       }
-      toast.success(enabled ? "Redistribuição automática ativada" : "Redistribuição automática desativada");
+      toast.success(enabled ? t.monthlyBudget.autoDistributeEnabled : t.monthlyBudget.autoDistributeDisabled);
     } finally {
       setToggling(false);
     }
@@ -94,11 +94,11 @@ export function MonthlyBudgetForm({ familyId, currency, initialBudgetCents, init
       {/* Auto-distribute toggle row */}
       <div className="flex items-center justify-between pt-1 border-t border-border/40">
         <div>
-          <p className="text-xs font-medium">Redistribuição automática</p>
+          <p className="text-xs font-medium">{t.monthlyBudget.autoDistributeLabel}</p>
           <p className="text-[10px] text-muted-foreground">
             {autoDistribute
-              ? "Créditos recebidos serão distribuídos automaticamente"
-              : "Créditos acumulam — distribua manualmente quando quiser"}
+              ? t.monthlyBudget.autoDistributeDescEnabled
+              : t.monthlyBudget.autoDistributeDescDisabled}
           </p>
         </div>
         <Switch

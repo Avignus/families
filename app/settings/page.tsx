@@ -84,14 +84,14 @@ export default function SettingsPage() {
       const data = await res.json();
       if (!res.ok) {
         if (data.error?.code === "NO_APPROVED_PAYMENTS" || data.error?.code === "ALREADY_PROCESSED") {
-          toast.info("Nenhum crédito pendente para recuperar.");
+          toast.info(t.settings.noPendingCredits);
         } else {
-          toast.error(data.error?.message ?? "Erro ao recuperar créditos");
+          toast.error(data.error?.message ?? t.settings.recoverError);
         }
         return;
       }
       setCreditsCents((prev) => (prev ?? 0) + data.data.totalCredited);
-      toast.success(`${formatCurrency(data.data.totalCredited, "BRL")} recuperados com sucesso!`);
+      toast.success(t.settings.creditsRecovered(formatCurrency(data.data.totalCredited, "BRL")));
     } finally {
       setRecovering(false);
     }
@@ -110,7 +110,7 @@ export default function SettingsPage() {
     });
     const data = await res.json();
     setTopupLoading(false);
-    if (!res.ok) { toast.error(data.error?.message ?? "Erro ao gerar cobrança"); return; }
+    if (!res.ok) { toast.error(data.error?.message ?? t.settings.chargeError); return; }
     setTopupAmountCents(amountCents);
     setTopupPix(data.data?.pix ?? null);
     setTopupAmount("");
@@ -253,10 +253,10 @@ export default function SettingsPage() {
               <Button type="submit" disabled={topupLoading || !topupAmount || parseFloat(topupAmount) < 20} size="sm">
                 {topupLoading
                   ? <Loader2 className="h-4 w-4 animate-spin" />
-                  : <><Plus className="h-4 w-4 mr-1" /> Adicionar</>}
+                  : <><Plus className="h-4 w-4 mr-1" /> {t.settings.addBtn}</>}
               </Button>
             </form>
-            <p className="text-xs text-muted-foreground">Mínimo R$20,00 · Pago via PIX · Créditos adicionados automaticamente após confirmação</p>
+            <p className="text-xs text-muted-foreground">{t.settings.topupHint}</p>
           </CardContent>
         </Card>
       )}
@@ -271,7 +271,7 @@ export default function SettingsPage() {
         pollUrl={topupPix ? `/api/me/credits/${topupPix.paymentId}` : undefined}
         onConfirmed={() => {
           setCreditsCents((prev) => (prev ?? 0) + topupAmountCents);
-          toast.success(`${formatCurrency(topupAmountCents, "BRL")} adicionados aos seus créditos!`);
+          toast.success(t.settings.creditsAdded(formatCurrency(topupAmountCents, "BRL")));
         }}
       />
 

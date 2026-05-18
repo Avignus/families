@@ -151,7 +151,7 @@ export function WishlistItemCard({ item, familyId, currentUserId, memberColors, 
     try {
       const res = await fetch(`/api/wishlist/${item.id}`, { method: "DELETE" });
       const data = await res.json();
-      if (!res.ok) { toast.error(data.error?.message ?? "Erro ao remover"); return; }
+      if (!res.ok) { toast.error(data.error?.message ?? t.wishlist.removeError); return; }
       toast.success(t.wishlist.gameRemoved(gameName));
       onRefresh();
     } finally {
