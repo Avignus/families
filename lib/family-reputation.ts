@@ -19,9 +19,9 @@ export const FAMILY_TIER_LABELS: Record<FamilyTier, string> = {
 };
 
 export const FAMILY_TIER_COLORS: Record<FamilyTier, string> = {
-  ferro: "hsl(0 0% 55%)",
+  ferro: "hsl(220 10% 60%)",
   bronze: "hsl(25 60% 55%)",
-  prata: "hsl(220 15% 65%)",
+  prata: "hsl(220 15% 70%)",
   ouro: "hsl(45 90% 55%)",
   elite: "hsl(258 82% 66%)",
 };

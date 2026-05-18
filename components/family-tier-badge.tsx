@@ -17,7 +17,7 @@ export function FamilyTierBadge({ score, showScore = false, size = "sm" }: Props
   return (
     <span
       className={`inline-flex items-center gap-1 rounded-full font-semibold ${padding} ${fontSize}`}
-      style={{ backgroundColor: `${color}22`, color, border: `1px solid ${color}55` }}
+      style={{ backgroundColor: `${color}28`, color, border: `1px solid ${color}80` }}
     >
       {label}
       {showScore && <span className="opacity-70">· {score}</span>}
