@@ -4,7 +4,8 @@ import { useEffect, useState, useDeferredValue } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { KeyRound, CheckCircle2, Loader2, Star, XCircle, Mail, Trash2, Wallet } from "lucide-react";
+import { KeyRound, CheckCircle2, Loader2, Star, XCircle, Mail, Trash2, Wallet, Plus } from "lucide-react";
+import { PixPaymentModal } from "@/components/wishlist/pix-payment-modal";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -29,6 +30,11 @@ export default function SettingsPage() {
   const [emailLoading, setEmailLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [topupAmount, setTopupAmount] = useState("");
+  const [topupLoading, setTopupLoading] = useState(false);
+  const [topupPixOpen, setTopupPixOpen] = useState(false);
+  const [topupPix, setTopupPix] = useState<{ qrCode: string; qrCodeBase64: string; ticketUrl: string; paymentId: string; expiresAt?: string } | null>(null);
+  const [topupAmountCents, setTopupAmountCents] = useState(0);
   const router = useRouter();
 
   const emailValid = !email.trim() || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
@@ -70,6 +76,26 @@ export default function SettingsPage() {
     toast.success(t.settings.pixSaved);
   }
 
+  async function handleTopup(e: React.FormEvent) {
+    e.preventDefault();
+    const amountCents = Math.round(parseFloat(topupAmount.replace(",", ".")) * 100);
+    if (!amountCents || amountCents < 2000) return;
+
+    setTopupLoading(true);
+    const res = await fetch("/api/me/credits", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ amountCents }),
+    });
+    const data = await res.json();
+    setTopupLoading(false);
+    if (!res.ok) { toast.error(data.error?.message ?? "Erro ao gerar cobrança"); return; }
+    setTopupAmountCents(amountCents);
+    setTopupPix(data.data?.pix ?? null);
+    setTopupAmount("");
+    setTopupPixOpen(true);
+  }
+
   async function handleDeleteAccount() {
     if (!confirm(t.settings.deleteConfirm)) return;
     setDeleteLoading(true);
@@ -108,12 +134,20 @@ export default function SettingsPage() {
   return (
     <div className="container py-8 max-w-lg">
       <div className="flex items-center gap-4 mb-8">
-        <Avatar className="h-14 w-14 ring-2 ring-border">
-          <AvatarImage src={sessionUser?.avatarMedium ?? sessionUser?.image ?? ""} alt={sessionUser?.personaName ?? ""} />
-          <AvatarFallback className="text-lg bg-primary/20 text-primary">
-            {(sessionUser?.personaName ?? "?")[0].toUpperCase()}
-          </AvatarFallback>
-        </Avatar>
+        <div className="flex flex-col items-center gap-1">
+          <Avatar className="h-14 w-14 ring-2 ring-border">
+            <AvatarImage src={sessionUser?.avatarMedium ?? sessionUser?.image ?? ""} alt={sessionUser?.personaName ?? ""} />
+            <AvatarFallback className="text-lg bg-primary/20 text-primary">
+              {(sessionUser?.personaName ?? "?")[0].toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+          {creditsCents !== null && creditsCents > 0 && (
+            <span className="flex items-center gap-0.5 text-[11px] font-semibold tabular-nums" style={{ color: "hsl(258 82% 72%)" }}>
+              <Wallet className="h-3 w-3" />
+              {formatCurrency(creditsCents, "BRL")}
+            </span>
+          )}
+        </div>
         <div>
           <h1 className="text-2xl font-bold">{sessionUser?.personaName ?? t.settings.loading}</h1>
           <p className="text-sm text-muted-foreground">{t.settings.accountSettings}</p>
@@ -153,7 +187,7 @@ export default function SettingsPage() {
               {t.settings.creditsDesc}
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             <div className="flex items-baseline gap-2">
               <span
                 className="text-2xl font-bold tabular-nums"
@@ -168,9 +202,44 @@ export default function SettingsPage() {
                 <span className="text-xs text-muted-foreground">{t.settings.noCredits}</span>
               )}
             </div>
+
+            <form onSubmit={handleTopup} className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">R$</span>
+                <Input
+                  type="number"
+                  min="20"
+                  step="1"
+                  placeholder="20,00"
+                  value={topupAmount}
+                  onChange={(e) => setTopupAmount(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <Button type="submit" disabled={topupLoading || !topupAmount || parseFloat(topupAmount) < 20} size="sm">
+                {topupLoading
+                  ? <Loader2 className="h-4 w-4 animate-spin" />
+                  : <><Plus className="h-4 w-4 mr-1" /> Adicionar</>}
+              </Button>
+            </form>
+            <p className="text-xs text-muted-foreground">Mínimo R$20,00 · Pago via PIX · Créditos adicionados automaticamente após confirmação</p>
           </CardContent>
         </Card>
       )}
+
+      <PixPaymentModal
+        open={topupPixOpen}
+        onOpenChange={setTopupPixOpen}
+        amountCents={topupAmountCents}
+        currency="BRL"
+        gameName="carteira"
+        pix={topupPix}
+        pollUrl={topupPix ? `/api/me/credits/${topupPix.paymentId}` : undefined}
+        onConfirmed={() => {
+          setCreditsCents((prev) => (prev ?? 0) + topupAmountCents);
+          toast.success(`${formatCurrency(topupAmountCents, "BRL")} adicionados aos seus créditos!`);
+        }}
+      />
 
       <Card>
         <CardHeader>

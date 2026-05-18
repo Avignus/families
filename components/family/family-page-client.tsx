@@ -112,8 +112,14 @@ export function FamilyPageClient({
   const [votesExpanded, setVotesExpanded] = useState(false);
   const [steamExpanded, setSteamExpanded] = useState(true);
 
+  const sortedMemberships = family
+    ? [...family.memberships].sort((a, b) =>
+        a.user.id === family.chiefId ? -1 : b.user.id === family.chiefId ? 1 : 0
+      )
+    : [];
+
   const memberColors = new Map(
-    family?.memberships.map((m, i) => [m.user.id, getMemberColor(i)]) ?? []
+    sortedMemberships.map((m, i) => [m.user.id, getMemberColor(i)])
   );
 
   // Shares the same cache key as SteamLibraryPanel — no extra request
@@ -283,7 +289,7 @@ export function FamilyPageClient({
           <div>
             <h3 className="text-sm font-medium text-muted-foreground mb-3">{t.family.members}</h3>
             <div className="flex flex-wrap gap-4">
-              {family.memberships.map(({ user }) => {
+              {sortedMemberships.map(({ user }) => {
                 const color = memberColors.get(user.id)!;
                 const canRemove = family.isChief && user.id !== family.chiefId;
                 return (

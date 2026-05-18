@@ -139,6 +139,11 @@ const templates: Record<Locale, Templates> = {
       body: (p) => `Sua contribuição de ${p.refundAmountFormatted} para "${p.gameName}" foi estornada porque a família "${p.familyName}" foi excluída.`,
       link: () => `/dashboard`,
     },
+    CREDITS_ADDED: {
+      title: () => "Créditos adicionados",
+      body: (p) => `${new Intl.NumberFormat("pt-BR", { style: "currency", currency: String(p.currency ?? "BRL") }).format(Number(p.amountCents ?? 0) / 100)} foram adicionados à sua carteira.`,
+      link: () => `/settings`,
+    },
   },
   en: {
     JOIN_REQUEST: {
@@ -265,6 +270,11 @@ const templates: Record<Locale, Templates> = {
       title: () => "Pledge refunded",
       body: (p) => `Your contribution of ${p.refundAmountFormatted} for "${p.gameName}" was refunded because family "${p.familyName}" was deleted.`,
       link: () => `/dashboard`,
+    },
+    CREDITS_ADDED: {
+      title: () => "Credits added",
+      body: (p) => `${new Intl.NumberFormat("en-US", { style: "currency", currency: String(p.currency ?? "BRL") }).format(Number(p.amountCents ?? 0) / 100)} were added to your wallet.`,
+      link: () => `/settings`,
     },
   },
 };

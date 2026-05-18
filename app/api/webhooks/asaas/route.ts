@@ -4,6 +4,7 @@ import { normalizeAsaasStatus, sendPixDisbursement, refundPayment } from "@/lib/
 import { createNotification } from "@/lib/notifications/service";
 import { computeAndSaveReputation } from "@/lib/reputation";
 import { maybeDisburseFunds } from "@/lib/disbursement";
+import { creditWallet } from "@/lib/wallet";
 
 export const dynamic = "force-dynamic";
 
@@ -49,6 +50,24 @@ export async function POST(req: NextRequest) {
       },
     });
     if (membership) await handleSpotPayment(membership, status);
+    return NextResponse.json({ ok: true });
+  }
+
+  if (externalRef.startsWith("credits:")) {
+    const userId = externalRef.replace("credits:", "");
+    if (status === "approved") {
+      const amountCents = Math.round((paymentData.value ?? 0) * 100);
+      if (amountCents > 0) {
+        await prisma.$transaction(async (tx) => {
+          await creditWallet(tx, userId, amountCents, "topup", undefined);
+          await createNotification(tx, {
+            recipientUserId: userId,
+            type: "CREDITS_ADDED",
+            payload: { amountCents, currency: "BRL" },
+          });
+        });
+      }
+    }
     return NextResponse.json({ ok: true });
   }
 
