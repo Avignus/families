@@ -45,7 +45,7 @@ export async function POST(_req: NextRequest) {
   }
 
   const membership = await prisma.familyMembership.findFirst({
-    where: { userId: user.id, status: "active", monthlyBudgetCents: { gt: 0 } },
+    where: { userId: user.id, status: "active", autoDistributeEnabled: true, monthlyBudgetCents: { gt: 0 } },
     select: { monthlyBudgetCents: true },
   });
   if (membership && totalCredited > 0) {
