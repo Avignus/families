@@ -14,7 +14,7 @@ export function FamilyTierBadge({ score, showScore = false, size = "sm" }: Props
 
   const padding = size === "md" ? "px-2 py-0.5" : "px-1.5 py-0.5";
   const fontSize = size === "md" ? "text-xs" : "text-[10px]";
-  const iconSize = size === "md" ? 16 : 12;
+  const iconSize = size === "md" ? 20 : 14;
 
   return (
     <span
