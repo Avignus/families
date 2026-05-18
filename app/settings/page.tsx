@@ -224,15 +224,17 @@ export default function SettingsPage() {
                   <span className="text-xs text-muted-foreground">{t.settings.noCredits}</span>
                 )}
               </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-xs text-muted-foreground h-7 px-2"
-                onClick={handleRecover}
-                disabled={recovering}
-              >
-                {recovering ? <Loader2 className="h-3 w-3 animate-spin" /> : "Recuperar créditos"}
-              </Button>
+              {process.env.NODE_ENV === "development" && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-xs text-muted-foreground h-7 px-2"
+                  onClick={handleRecover}
+                  disabled={recovering}
+                >
+                  {recovering ? <Loader2 className="h-3 w-3 animate-spin" /> : "Recuperar créditos"}
+                </Button>
+              )}
             </div>
 
             <form onSubmit={handleTopup} className="flex items-center gap-2">
