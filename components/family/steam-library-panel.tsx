@@ -1,10 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Library, Heart, Users, Gift, Lock, AlertTriangle, Plus, Clock, CheckCircle2, Search } from "lucide-react";
+import { Library, Heart, Users, Gift, Lock, AlertTriangle, Plus, Clock, CheckCircle2, Search, RefreshCw } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { formatCurrency } from "@/lib/utils";
 import { PledgeModal } from "@/components/wishlist/pledge-modal";
@@ -671,6 +671,31 @@ function LibraryGameCard({
 
 export function SteamLibraryPanel({ familyId, currentUserId, memberColors, sharedWishlistItems, onRefresh }: Props) {
   const [tab, setTab] = useState<Tab>("library");
+  const [syncing, setSyncing] = useState(false);
+  const queryClient = useQueryClient();
+
+  async function handleSync() {
+    setSyncing(true);
+    try {
+      const res = await fetch("/api/me/steam/sync-wishlist", { method: "POST" });
+      if (res.ok) {
+        await queryClient.invalidateQueries({ queryKey: ["steam-library", familyId] });
+        toast.success("Wishlist sincronizada");
+      } else {
+        const data = await res.json();
+        const code = data.error?.code;
+        const msg =
+          code === "RATE_LIMITED" ? "Steam limitando requisições, tente em alguns segundos."
+          : code === "STEAM_PRIVATE" ? "Perfil Steam privado — wishlist indisponível."
+          : "Erro ao sincronizar wishlist.";
+        toast.error(msg);
+      }
+    } catch {
+      toast.error("Erro ao sincronizar wishlist.");
+    } finally {
+      setSyncing(false);
+    }
+  }
 
   const { data, isLoading } = useQuery({
     queryKey: ["steam-library", familyId],
@@ -695,20 +720,31 @@ export function SteamLibraryPanel({ familyId, currentUserId, memberColors, share
 
   return (
     <div className="space-y-4">
-      {/* Tab bar */}
-      <div className="flex gap-1 border-b border-border/50 pb-0">
-        <TabButton
-          active={tab === "library"}
-          onClick={() => setTab("library")}
-          icon={<Library className="h-3.5 w-3.5" />}
-          label="Biblioteca"
-        />
-        <TabButton
-          active={tab === "wishes"}
-          onClick={() => setTab("wishes")}
-          icon={<Heart className="h-3.5 w-3.5" />}
-          label="Desejos"
-        />
+      {/* Sync button + Tab bar */}
+      <div className="flex items-center justify-between gap-2 mb-1">
+        <div className="flex gap-1 border-b border-border/50 pb-0 flex-1">
+          <TabButton
+            active={tab === "library"}
+            onClick={() => setTab("library")}
+            icon={<Library className="h-3.5 w-3.5" />}
+            label="Biblioteca"
+          />
+          <TabButton
+            active={tab === "wishes"}
+            onClick={() => setTab("wishes")}
+            icon={<Heart className="h-3.5 w-3.5" />}
+            label="Desejos"
+          />
+        </div>
+        <button
+          onClick={handleSync}
+          disabled={syncing}
+          title="Sincronizar wishlist Steam"
+          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50 shrink-0 pb-0.5"
+        >
+          <RefreshCw className={`h-3.5 w-3.5 ${syncing ? "animate-spin" : ""}`} />
+          {syncing ? "Sincronizando…" : "Atualizar"}
+        </button>
       </div>
 
       {isLoading ? (
