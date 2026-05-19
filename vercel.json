@@ -7,6 +7,10 @@
     {
       "path": "/api/cron/monthly",
       "schedule": "0 10 1 * *"
+    },
+    {
+      "path": "/api/cron/library-sync",
+      "schedule": "0 9 * * *"
     }
   ]
 }
