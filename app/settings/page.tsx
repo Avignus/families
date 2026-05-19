@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useDeferredValue } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +20,7 @@ import { useLanguage } from "@/lib/i18n/context";
 export default function SettingsPage() {
   const { data: session } = useSession();
   const { t } = useLanguage();
+  const queryClient = useQueryClient();
   const sessionUser = session?.user as { personaName?: string; avatarMedium?: string; image?: string } | undefined;
   const [pixKey, setPixKey] = useState("");
   const [email, setEmail] = useState("");
@@ -141,7 +143,7 @@ export default function SettingsPage() {
       if (!res.ok) {
         const code = data.error?.code;
         const msg =
-          code === "STEAM_RATE_LIMITED" ? t.settings.steamSyncRateLimit
+          code === "RATE_LIMITED" ? t.settings.steamSyncRateLimit
           : code === "STEAM_PRIVATE" ? t.settings.steamSyncPrivate
           : t.settings.steamSyncError;
         setSteamSyncResult({ ok: false, msg });
@@ -149,6 +151,8 @@ export default function SettingsPage() {
       } else {
         setSteamSyncResult({ ok: true, count: data.data.count });
         toast.success(t.settings.steamSyncSuccess(data.data.count));
+        // Invalidate all steam-library queries so family page shows fresh data
+        queryClient.invalidateQueries({ queryKey: ["steam-library"] });
       }
     } catch {
       setSteamSyncResult({ ok: false, msg: t.settings.steamSyncError });
