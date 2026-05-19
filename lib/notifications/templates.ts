@@ -144,6 +144,11 @@ const templates: Record<Locale, Templates> = {
       body: (p) => `${new Intl.NumberFormat("pt-BR", { style: "currency", currency: String(p.currency ?? "BRL") }).format(Number(p.amountCents ?? 0) / 100)} foram adicionados à sua carteira.`,
       link: () => `/settings`,
     },
+    MEMBER_BOUGHT_GAME: {
+      title: (p) => `${p.personaName} comprou um jogo!`,
+      body: (p) => `${p.personaName} adicionou "${p.gameName}" à biblioteca na família "${p.familyName}".`,
+      link: (p) => `/families/${p.familyId}`,
+    },
   },
   en: {
     JOIN_REQUEST: {
@@ -275,6 +280,11 @@ const templates: Record<Locale, Templates> = {
       title: () => "Credits added",
       body: (p) => `${new Intl.NumberFormat("en-US", { style: "currency", currency: String(p.currency ?? "BRL") }).format(Number(p.amountCents ?? 0) / 100)} were added to your wallet.`,
       link: () => `/settings`,
+    },
+    MEMBER_BOUGHT_GAME: {
+      title: (p) => `${p.personaName} bought a game!`,
+      body: (p) => `${p.personaName} added "${p.gameName}" to their library in family "${p.familyName}".`,
+      link: (p) => `/families/${p.familyId}`,
     },
   },
 };
