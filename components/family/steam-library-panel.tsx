@@ -720,31 +720,20 @@ export function SteamLibraryPanel({ familyId, currentUserId, memberColors, share
 
   return (
     <div className="space-y-4">
-      {/* Sync button + Tab bar */}
-      <div className="flex items-center justify-between gap-2 mb-1">
-        <div className="flex gap-1 border-b border-border/50 pb-0 flex-1">
-          <TabButton
-            active={tab === "library"}
-            onClick={() => setTab("library")}
-            icon={<Library className="h-3.5 w-3.5" />}
-            label="Biblioteca"
-          />
-          <TabButton
-            active={tab === "wishes"}
-            onClick={() => setTab("wishes")}
-            icon={<Heart className="h-3.5 w-3.5" />}
-            label="Desejos"
-          />
-        </div>
-        <button
-          onClick={handleSync}
-          disabled={syncing}
-          title="Sincronizar wishlist Steam"
-          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50 shrink-0 pb-0.5"
-        >
-          <RefreshCw className={`h-3.5 w-3.5 ${syncing ? "animate-spin" : ""}`} />
-          {syncing ? "Sincronizando…" : "Atualizar"}
-        </button>
+      {/* Tab bar */}
+      <div className="flex gap-1 border-b border-border/50 pb-0">
+        <TabButton
+          active={tab === "library"}
+          onClick={() => setTab("library")}
+          icon={<Library className="h-3.5 w-3.5" />}
+          label="Biblioteca"
+        />
+        <TabButton
+          active={tab === "wishes"}
+          onClick={() => setTab("wishes")}
+          icon={<Heart className="h-3.5 w-3.5" />}
+          label="Desejos"
+        />
       </div>
 
       {isLoading ? (
@@ -772,6 +761,18 @@ export function SteamLibraryPanel({ familyId, currentUserId, memberColors, share
               </span>
             </div>
           )}
+          <div className="flex justify-end">
+            <button
+              onClick={handleSync}
+              disabled={syncing}
+              title="Sincronizar wishlist Steam"
+              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${syncing ? "animate-spin" : ""}`} />
+              {syncing ? "Sincronizando…" : "Atualizar"}
+            </button>
+          </div>
+
           {tab === "wishes" ? (
             <WishesTab
               members={members}
