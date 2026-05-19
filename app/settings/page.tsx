@@ -4,7 +4,7 @@ import { useEffect, useState, useDeferredValue } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { KeyRound, CheckCircle2, Loader2, Star, XCircle, Mail, Trash2, Wallet, Plus } from "lucide-react";
+import { KeyRound, CheckCircle2, Loader2, Star, XCircle, Mail, Trash2, Wallet, Plus, RefreshCw } from "lucide-react";
 import { PixPaymentModal } from "@/components/wishlist/pix-payment-modal";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -30,6 +30,8 @@ export default function SettingsPage() {
   const [emailLoading, setEmailLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [steamSyncing, setSteamSyncing] = useState(false);
+  const [steamSyncResult, setSteamSyncResult] = useState<{ ok: true; count: number } | { ok: false; msg: string } | null>(null);
   const [topupAmount, setTopupAmount] = useState("");
   const [topupLoading, setTopupLoading] = useState(false);
   const [topupPixOpen, setTopupPixOpen] = useState(false);
@@ -127,6 +129,32 @@ export default function SettingsPage() {
       const data = await res.json();
       toast.error(data.error?.message ?? t.settings.deleteError);
       setDeleteLoading(false);
+    }
+  }
+
+  async function handleSteamSync() {
+    setSteamSyncing(true);
+    setSteamSyncResult(null);
+    try {
+      const res = await fetch("/api/me/steam/sync-wishlist", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) {
+        const code = data.error?.code;
+        const msg =
+          code === "STEAM_RATE_LIMITED" ? t.settings.steamSyncRateLimit
+          : code === "STEAM_PRIVATE" ? t.settings.steamSyncPrivate
+          : t.settings.steamSyncError;
+        setSteamSyncResult({ ok: false, msg });
+        toast.error(msg);
+      } else {
+        setSteamSyncResult({ ok: true, count: data.data.count });
+        toast.success(t.settings.steamSyncSuccess(data.data.count));
+      }
+    } catch {
+      setSteamSyncResult({ ok: false, msg: t.settings.steamSyncError });
+      toast.error(t.settings.steamSyncError);
+    } finally {
+      setSteamSyncing(false);
     }
   }
 
@@ -404,6 +432,30 @@ export default function SettingsPage() {
                 )}
               </div>
             </form>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="mt-4">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <RefreshCw className="h-4 w-4 text-primary" />
+            {t.settings.steamSyncTitle}
+          </CardTitle>
+          <CardDescription>{t.settings.steamSyncDesc}</CardDescription>
+        </CardHeader>
+        <CardContent className="flex items-center gap-3">
+          <Button onClick={handleSteamSync} disabled={steamSyncing} variant="outline" size="sm">
+            {steamSyncing
+              ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />{t.settings.steamSyncing}</>
+              : <><RefreshCw className="h-4 w-4 mr-2" />{t.settings.steamSyncBtn}</>}
+          </Button>
+          {steamSyncResult && (
+            <span className={`flex items-center gap-1.5 text-sm ${steamSyncResult.ok ? "text-emerald-500" : "text-destructive"}`}>
+              {steamSyncResult.ok
+                ? <><CheckCircle2 className="h-4 w-4" />{t.settings.steamSyncSuccess(steamSyncResult.count)}</>
+                : <><XCircle className="h-4 w-4" />{steamSyncResult.msg}</>}
+            </span>
           )}
         </CardContent>
       </Card>

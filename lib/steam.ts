@@ -121,6 +121,10 @@ function steamHeaderImage(appId: number) {
 export const STEAM_KEY_ERROR = "STEAM_KEY_ERROR" as const;
 type SteamKeyError = typeof STEAM_KEY_ERROR;
 
+// Sentinel for when Steam is rate-limiting requests
+export const STEAM_RATE_LIMITED = "STEAM_RATE_LIMITED" as const;
+type SteamRateLimited = typeof STEAM_RATE_LIMITED;
+
 export async function getOwnedGames(steamId: string): Promise<OwnedGame[] | null | SteamKeyError> {
   const cached = await prisma.steamUserCache.findUnique({
     where: { userId_type: { userId: steamId, type: "library" } },
@@ -164,7 +168,7 @@ export async function getOwnedGames(steamId: string): Promise<OwnedGame[] | null
   }
 }
 
-export async function getSteamWishlist(steamId: string): Promise<SteamWishlistGame[] | null | SteamKeyError> {
+export async function getSteamWishlist(steamId: string): Promise<SteamWishlistGame[] | null | SteamKeyError | SteamRateLimited> {
   const cached = await prisma.steamUserCache.findUnique({
     where: { userId_type: { userId: steamId, type: "wishlist" } },
   });
@@ -184,6 +188,7 @@ export async function getSteamWishlist(steamId: string): Promise<SteamWishlistGa
     if (res.status === 401 || res.status === 403) {
       return cached ? (cached.payload as unknown as SteamWishlistGame[]) : STEAM_KEY_ERROR;
     }
+    if (res.status === 429) return STEAM_RATE_LIMITED;
     if (!res.ok) return cached ? (cached.payload as unknown as SteamWishlistGame[]) : null;
 
     const data = await res.json();

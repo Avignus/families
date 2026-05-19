@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { requireSession, isApiError, ok, err } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
-import { getOwnedGames, getSteamWishlist, getAppDetails, STEAM_KEY_ERROR } from "@/lib/steam";
+import { getOwnedGames, getSteamWishlist, getAppDetails, STEAM_KEY_ERROR, STEAM_RATE_LIMITED } from "@/lib/steam";
 import type { SteamAppDetails } from "@/lib/steam";
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
@@ -48,9 +48,12 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
         steamId: member.steamId,
         personaName: member.personaName,
         avatarMedium: member.avatarMedium,
-        // null = private profile, array = data (possibly empty)
+        // null = private profile or rate-limited, array = data (possibly empty)
         ownedGames: ownedGamesResult === STEAM_KEY_ERROR ? null : ownedGamesResult,
-        steamWishlist: steamWishlistResult === STEAM_KEY_ERROR ? null : steamWishlistResult,
+        steamWishlist:
+          steamWishlistResult === STEAM_KEY_ERROR || steamWishlistResult === STEAM_RATE_LIMITED
+            ? null
+            : steamWishlistResult,
       };
     })
   );

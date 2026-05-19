@@ -14,7 +14,7 @@ import { GameSearchModal } from "@/components/wishlist/game-search-modal";
 import { VotesPanel } from "@/components/votes/votes-panel";
 import { SteamLibraryPanel } from "@/components/family/steam-library-panel";
 import { MemberActions } from "@/components/family/member-actions";
-import { Plus, ChevronDown, ChevronUp, Settings, Copy, LogIn, Gamepad2, Check, X, Camera, AlertTriangle, Library, Share2, Wallet } from "lucide-react";
+import { Plus, ChevronDown, ChevronUp, Settings, Copy, LogIn, Gamepad2, Check, X, Camera, AlertTriangle, Library, Share2, Wallet, ShoppingCart } from "lucide-react";
 import { FamilyTierBadge } from "@/components/family-tier-badge";
 import { MonthlyBudgetForm } from "@/components/family/monthly-budget-form";
 import { FamilyCoverArt } from "@/components/family-cover-art";
@@ -454,30 +454,67 @@ export function FamilyPageClient({
               onAutoDistributeChange={setAutoDistribute}
             />
 
-            {family.wishlistItems.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground text-sm">
-                {t.family.noGames}
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {family.wishlistItems.map((item) => (
-                  <WishlistItemCard
-                    key={item.id}
-                    item={item}
-                    familyId={familyId}
-                    currentUserId={userId}
-                    memberColors={memberColors}
-                    onRefresh={() => refetch()}
-                    ownedByCurrentUser={userOwnedAppIds.has(item.steamAppId)}
-                    priceAlert={item.priceAlert}
-                    priceAvgCents={item.priceAvgCents}
-                    autoOpen={item.id === pledgeItemId}
-                    initialPct={item.id === pledgeItemId ? pledgePct : undefined}
-                    userCreditsCents={localCredits}
-                  />
-                ))}
-              </div>
-            )}
+            {(() => {
+              const openItems = family.wishlistItems.filter((i) => i.status === "open" || i.status === "funded");
+              const purchasedItems = family.wishlistItems.filter((i) => i.status === "purchased");
+              return (
+                <>
+                  {openItems.length === 0 && purchasedItems.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground text-sm">
+                      {t.family.noGames}
+                    </div>
+                  ) : openItems.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground text-sm">
+                      {t.family.noGames}
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {openItems.map((item) => (
+                        <WishlistItemCard
+                          key={item.id}
+                          item={item}
+                          familyId={familyId}
+                          currentUserId={userId}
+                          memberColors={memberColors}
+                          onRefresh={() => refetch()}
+                          ownedByCurrentUser={userOwnedAppIds.has(item.steamAppId)}
+                          priceAlert={item.priceAlert}
+                          priceAvgCents={item.priceAvgCents}
+                          autoOpen={item.id === pledgeItemId}
+                          initialPct={item.id === pledgeItemId ? pledgePct : undefined}
+                          userCreditsCents={localCredits}
+                        />
+                      ))}
+                    </div>
+                  )}
+
+                  {purchasedItems.length > 0 && (
+                    <div className="mt-6 space-y-2">
+                      <h4 className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5 uppercase tracking-wide">
+                        <ShoppingCart className="h-3.5 w-3.5 text-emerald-400" />
+                        {t.family.purchasedGames}
+                      </h4>
+                      <div className="flex gap-3 overflow-x-auto pb-1">
+                        {purchasedItems.map((item) => (
+                          <div key={item.id} className="flex-shrink-0 w-36 rounded-lg overflow-hidden border border-border/40 bg-card/60">
+                            {item.steamData?.headerImage ? (
+                              <img src={item.steamData.headerImage} alt={item.steamData.name} className="w-full h-[48px] object-cover opacity-80" />
+                            ) : (
+                              <div className="w-full h-[48px] bg-secondary" />
+                            )}
+                            <div className="px-2 py-1.5">
+                              <p className="text-[11px] font-medium leading-tight line-clamp-1 text-muted-foreground">
+                                {item.steamData?.name ?? `App #${item.steamAppId}`}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
           </div>
 
           {/* Votes panel */}
