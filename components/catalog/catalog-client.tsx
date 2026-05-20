@@ -146,26 +146,24 @@ export function CatalogClient({ families, isLoggedIn, total, page, pageSize, que
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Hero banner */}
-      <div className="relative h-36 overflow-hidden">
-        <img
-          src="/images/catalog-header-image.png"
-          alt=""
-          className="absolute inset-0 w-full h-full object-cover object-center"
-        />
-        <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, hsl(186 90% 10% / 0.55) 0%, hsl(var(--background)) 100%)" }} />
-        <div className="relative h-full max-w-5xl mx-auto px-4 flex flex-col justify-end pb-4">
-          <h1 className="text-2xl font-bold text-white drop-shadow" style={{ fontFamily: "var(--font-space-grotesk)" }}>
+    <div className="relative min-h-screen">
+      {/* Full-page background */}
+      <img
+        src="/images/catalog-header-image.png"
+        alt=""
+        className="fixed inset-0 w-full h-full object-cover object-center -z-10"
+      />
+      <div className="fixed inset-0 -z-10" style={{ background: "hsl(var(--background) / 0.82)" }} />
+
+      <div className="max-w-5xl mx-auto px-4 py-10 space-y-6">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-bold" style={{ fontFamily: "var(--font-space-grotesk)" }}>
             {t.catalog.title}
           </h1>
-          <p className="text-sm" style={{ color: "hsl(186 90% 75%)" }}>
+          <p className="text-sm text-muted-foreground">
             {t.catalog.found(total)}
           </p>
         </div>
-      </div>
-
-      <div className="max-w-5xl mx-auto px-4 py-6 space-y-6">
         <form onSubmit={handleSubmit} className="space-y-3">
           {/* Search row */}
           <div className="flex gap-2">
