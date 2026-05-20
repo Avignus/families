@@ -47,7 +47,7 @@ export default async function CatalogPage({
     minMissing !== null || maxMissing !== null;
 
   // Build WHERE clause for DB-level filtering
-  const where: Record<string, unknown> = {};
+  const where: Record<string, unknown> = { isPublic: true };
   if (q) {
     where.OR = [
       { name: { contains: q, mode: "insensitive" } },
