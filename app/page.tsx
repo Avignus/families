@@ -1,7 +1,7 @@
 import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { FamiliesLogo } from "@/components/layout/logo";
-import { Gift, Users, Zap, ShieldCheck } from "lucide-react";
+import { Gift, Users, Zap, ShieldCheck, Library, SlidersHorizontal, Banknote } from "lucide-react";
 import Link from "next/link";
 import { getServerTranslations } from "@/lib/i18n/server";
 import { prisma } from "@/lib/prisma";
@@ -27,8 +27,14 @@ export default async function LandingPage() {
     { icon: ShieldCheck, label: t.home.feature4, color: "hsl(186 90% 60%)" },
   ];
 
+  const steps = [
+    { icon: Library, title: t.home.step1, desc: t.home.step1Desc, color: "hsl(258 82% 66%)" },
+    { icon: SlidersHorizontal, title: t.home.step2, desc: t.home.step2Desc, color: "hsl(186 90% 48%)" },
+    { icon: Banknote, title: t.home.step3, desc: t.home.step3Desc, color: "hsl(258 82% 80%)" },
+  ];
+
   return (
-    <div className="relative min-h-[calc(100vh-3.5rem)] flex flex-col items-center justify-center overflow-hidden">
+    <div className="relative flex flex-col items-center overflow-hidden">
 
       {/* Background layers */}
       <div className="absolute inset-0 grid-pattern" />
@@ -42,7 +48,8 @@ export default async function LandingPage() {
         style={{ background: "radial-gradient(circle, hsl(186 90% 48%), transparent 70%)" }}
       />
 
-      <div className="relative z-10 max-w-2xl w-full mx-auto px-6 py-16 flex flex-col items-center gap-10">
+      {/* Hero — fills viewport */}
+      <div className="relative z-10 min-h-[calc(100vh-3.5rem)] max-w-2xl w-full mx-auto px-6 py-16 flex flex-col items-center justify-center gap-10">
 
         {/* Logo + tagline */}
         <div className="flex flex-col items-center gap-5 text-center">
@@ -109,6 +116,58 @@ export default async function LandingPage() {
           <p className="text-xs text-muted-foreground text-center leading-relaxed">
             {t.home.disclaimer}
           </p>
+        </div>
+      </div>
+
+      {/* Chiefs marketing section */}
+      <div className="relative z-10 w-full border-t border-border/30">
+        <div className="max-w-2xl w-full mx-auto px-6 py-16 flex flex-col items-center gap-10">
+
+          <div className="text-center space-y-2">
+            <h2
+              className="text-2xl sm:text-3xl font-bold tracking-tight"
+              style={{ fontFamily: "var(--font-space-grotesk)" }}
+            >
+              {t.home.chiefsHeading}
+            </h2>
+            <p className="text-muted-foreground">{t.home.chiefsSubtitle}</p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">
+            {steps.map(({ icon: Icon, title, desc, color }, i) => (
+              <div
+                key={title}
+                className="flex flex-col gap-3 px-4 py-5 rounded-xl border border-border/50 bg-card/40 backdrop-blur-sm"
+              >
+                <div className="flex items-center gap-2">
+                  <span
+                    className="text-xs font-bold px-1.5 py-0.5 rounded"
+                    style={{ color, background: `color-mix(in srgb, ${color} 12%, transparent)` }}
+                  >
+                    {i + 1}
+                  </span>
+                  <Icon className="h-4 w-4 flex-shrink-0" style={{ color }} />
+                </div>
+                <p className="font-semibold text-sm">{title}</p>
+                <p className="text-xs text-muted-foreground leading-relaxed">{desc}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="w-full max-w-md rounded-lg border border-border/40 bg-muted/30 px-4 py-3">
+            <p className="text-sm text-muted-foreground text-center leading-relaxed">
+              {t.home.chiefsNote}
+            </p>
+          </div>
+
+          <Link href="/api/auth/steam">
+            <button
+              className="flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] border border-border/60 bg-card/60 backdrop-blur-sm text-sm"
+            >
+              {t.home.chiefsCta} →
+            </button>
+          </Link>
+
         </div>
       </div>
     </div>

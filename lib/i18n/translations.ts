@@ -31,6 +31,16 @@ export const translations = {
       loginBtn: "Sign in with Steam",
       loginSubtext: "Secure authentication via Steam OpenID 2.0 · no password",
       disclaimer: "Contributions are accounting records. Real purchases are made directly on Steam. No real financial movement takes place in this app.",
+      chiefsHeading: "Big Steam library?",
+      chiefsSubtitle: "Turn your games into passive income.",
+      step1: "Create a family",
+      step1Desc: "Connect your Steam account and open your family to other players.",
+      step2: "Activate the marketplace",
+      step2Desc: "Set your fraction — % buyers pay based on their net gain from your library.",
+      step3: "Receive via PIX",
+      step3Desc: "100% of the spot price goes straight to you, instantly.",
+      chiefsNote: "Each buyer's price is personalized — the more games they already own, the less they pay.",
+      chiefsCta: "Become a chief",
     },
     dashboard: {
       pendingAlert: (n: number) =>
@@ -512,6 +522,16 @@ export const translations = {
       loginBtn: "Entrar com Steam",
       loginSubtext: "Autenticação segura via Steam OpenID 2.0 · sem senha",
       disclaimer: "As contribuições são registros contábeis. Compras reais são feitas diretamente na Steam. Não há movimentação financeira real neste app.",
+      chiefsHeading: "Tem uma biblioteca Steam grande?",
+      chiefsSubtitle: "Transforme seus jogos em renda passiva.",
+      step1: "Crie uma família",
+      step1Desc: "Conecte sua conta Steam e abra sua família para outros jogadores.",
+      step2: "Ative o marketplace",
+      step2Desc: "Defina sua fração — % que os compradores pagam com base no ganho líquido da sua biblioteca.",
+      step3: "Receba via PIX",
+      step3Desc: "100% do valor do spot vai direto para você, na hora.",
+      chiefsNote: "O preço de cada comprador é personalizado — quanto mais jogos ele já tem, menos paga.",
+      chiefsCta: "Quero ser chefe",
     },
     dashboard: {
       pendingAlert: (n: number) =>
