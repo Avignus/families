@@ -108,6 +108,15 @@
   background-size: 40px 40px;
 }
 
+/* Fade-in for infinite scroll new items */
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fade-in-up {
+  animation: fade-in-up 0.3s ease both;
+}
+
 /* Animated gradient for funded state */
 @keyframes funded-pulse {
   0%, 100% { opacity: 1; }
@@ -156,3 +165,15 @@
 .logo-glow-1 { animation: logo-glow     3s ease-in-out infinite; }
 .logo-glow-2 { animation: logo-glow-alt 3s ease-in-out infinite 0.5s; }
 .logo-glow-3 { animation: logo-glow     3s ease-in-out infinite 1s; }
+
+/* Game mosaic marquee */
+@keyframes marquee-left {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+@keyframes marquee-right {
+  from { transform: translateX(-50%); }
+  to   { transform: translateX(0); }
+}
+.mosaic-row-left  { animation: marquee-left  35s linear infinite; }
+.mosaic-row-right { animation: marquee-right 35s linear infinite; }

@@ -1,6 +1,26 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
+
+function useInfiniteScroll(total: number, pageSize: number, resetKey: unknown) {
+  const [count, setCount] = useState(pageSize);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => { setCount(pageSize); }, [resetKey, pageSize]);
+
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting && count < total) setCount((c) => Math.min(c + pageSize, total)); },
+      { rootMargin: "120px" }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [count, total, pageSize]);
+
+  return { count, sentinelRef };
+}
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -114,7 +134,6 @@ function WishesTab({
   const { t } = useLanguage();
   const [filterUserId, setFilterUserId] = useState<string | null>(null);
   const [filterIntersections, setFilterIntersections] = useState(false);
-  const [showAll, setShowAll] = useState(false);
   const [search, setSearch] = useState("");
   const PAGE = 60;
 
@@ -158,7 +177,9 @@ function WishesTab({
     return result;
   }, [allEntries, filterUserId, filterIntersections, search]);
 
-  const visible = showAll ? filtered : filtered.slice(0, PAGE);
+  const resetKey = `${filterUserId}-${filterIntersections}-${search}`;
+  const { count, sentinelRef: wishSentinelRef } = useInfiniteScroll(filtered.length, PAGE, resetKey);
+  const visible = filtered.slice(0, count);
   const membersWithWishlist = members.filter((m) => m.steamWishlist !== null);
   const privateMembers = members.filter((m) => m.steamWishlist === null);
   const intersectionCount = allEntries.filter((e) => e.wantedBy.length >= 2).length;
@@ -175,7 +196,6 @@ function WishesTab({
   function setFilter(userId: string | null, intersections: boolean) {
     setFilterUserId(userId);
     setFilterIntersections(intersections);
-    setShowAll(false);
   }
 
   return (
@@ -187,7 +207,7 @@ function WishesTab({
           placeholder={t.steamLibrary.searchPlaceholder}
           className="pl-8 h-8 text-sm"
           value={search}
-          onChange={(e) => { setSearch(e.target.value); setShowAll(false); }}
+          onChange={(e) => setSearch(e.target.value)}
         />
       </div>
 
@@ -251,17 +271,18 @@ function WishesTab({
       {/* Grid */}
       {visible.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {visible.map((entry) => (
-            <WishEntry
-              key={entry.appId}
-              entry={entry}
-              currentUserId={currentUserId}
-              memberColors={memberColors}
-              memberMap={memberMap}
-              sharedItem={sharedWishlistMap.get(entry.appId) ?? null}
-              familyId={familyId}
-              onRefresh={onRefresh}
-            />
+          {visible.map((entry, i) => (
+            <div key={entry.appId} className="fade-in-up" style={{ animationDelay: `${Math.max(0, i - (count - PAGE)) * 30}ms` }}>
+              <WishEntry
+                entry={entry}
+                currentUserId={currentUserId}
+                memberColors={memberColors}
+                memberMap={memberMap}
+                sharedItem={sharedWishlistMap.get(entry.appId) ?? null}
+                familyId={familyId}
+                onRefresh={onRefresh}
+              />
+            </div>
           ))}
         </div>
       ) : (
@@ -271,14 +292,7 @@ function WishesTab({
         </div>
       )}
 
-      {filtered.length > PAGE && !showAll && (
-        <button
-          onClick={() => setShowAll(true)}
-          className="w-full py-2 text-xs text-muted-foreground hover:text-foreground transition-colors border border-border/40 rounded-lg hover:border-border"
-        >
-          {t.steamLibrary.showMoreWishes(filtered.length - PAGE)}
-        </button>
-      )}
+      <div ref={wishSentinelRef} className="h-1" />
     </div>
   );
 }
@@ -485,7 +499,6 @@ function LibraryTab({
 }) {
   const { t } = useLanguage();
   const [filterUserId, setFilterUserId] = useState<string | null>(null);
-  const [showAll, setShowAll] = useState(false);
   const [search, setSearch] = useState("");
   const PAGE = 60;
 
@@ -516,7 +529,9 @@ function LibraryTab({
     if (search.trim()) result = result.filter((g) => g.name.toLowerCase().includes(search.toLowerCase()));
     return result;
   }, [games, filterUserId, search]);
-  const visible = showAll ? filtered : filtered.slice(0, PAGE);
+  const libResetKey = `${filterUserId}-${search}`;
+  const { count: libCount, sentinelRef: libSentinelRef } = useInfiniteScroll(filtered.length, PAGE, libResetKey);
+  const visible = filtered.slice(0, libCount);
 
   const privateMembers = members.filter((m) => m.ownedGames === null);
   const membersWithLibrary = members.filter((m) => m.ownedGames !== null);
@@ -539,7 +554,7 @@ function LibraryTab({
           placeholder={t.steamLibrary.searchPlaceholder}
           className="pl-8 h-8 text-sm"
           value={search}
-          onChange={(e) => { setSearch(e.target.value); setShowAll(false); }}
+          onChange={(e) => setSearch(e.target.value)}
         />
       </div>
 
@@ -587,25 +602,19 @@ function LibraryTab({
 
       {/* Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2.5">
-        {visible.map((game) => (
-          <LibraryGameCard
-            key={game.appId}
-            game={game}
-            currentUserId={currentUserId}
-            memberColors={memberColors}
-            memberMap={memberMap}
-          />
+        {visible.map((game, i) => (
+          <div key={game.appId} className="fade-in-up" style={{ animationDelay: `${Math.max(0, i - (libCount - PAGE)) * 20}ms` }}>
+            <LibraryGameCard
+              game={game}
+              currentUserId={currentUserId}
+              memberColors={memberColors}
+              memberMap={memberMap}
+            />
+          </div>
         ))}
       </div>
 
-      {filtered.length > PAGE && !showAll && (
-        <button
-          onClick={() => setShowAll(true)}
-          className="w-full py-2 text-xs text-muted-foreground hover:text-foreground transition-colors border border-border/40 rounded-lg hover:border-border"
-        >
-          {t.steamLibrary.showMoreGames(filtered.length - PAGE)}
-        </button>
-      )}
+      <div ref={libSentinelRef} className="h-1" />
 
       {filtered.length === 0 && (
         <p className="text-center py-8 text-sm text-muted-foreground">{t.steamLibrary.noWishesFound}</p>
