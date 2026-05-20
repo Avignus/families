@@ -17,7 +17,7 @@ const securityHeaders = [
       "default-src 'self'",
       "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
       "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' data: blob: https://avatars.steamstatic.com https://cdn.akamai.steamstatic.com https://store.steampowered.com https://cdn.cloudflare.steamstatic.com",
+      "img-src 'self' data: blob: https://avatars.steamstatic.com https://cdn.akamai.steamstatic.com https://store.steampowered.com https://cdn.cloudflare.steamstatic.com https://*.public.blob.vercel-storage.com",
       "font-src 'self'",
       "connect-src 'self' https://steamcommunity.com https://api.steampowered.com",
       "frame-ancestors 'none'",
@@ -33,6 +33,7 @@ const nextConfig = {
       { protocol: "https", hostname: "avatars.steamstatic.com" },
       { protocol: "https", hostname: "cdn.akamai.steamstatic.com" },
       { protocol: "https", hostname: "store.steampowered.com" },
+      { protocol: "https", hostname: "*.public.blob.vercel-storage.com" },
     ],
   },
   experimental: {
