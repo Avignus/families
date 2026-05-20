@@ -100,6 +100,17 @@ export async function createPixPayment(params: {
   externalReference: string;
   notificationUrl: string;
 }): Promise<PixPaymentResult> {
+  if (process.env.NODE_ENV !== "production" && process.env.MOCK_PIX === "1") {
+    return {
+      paymentId: `mock-pix-${Date.now()}`,
+      qrCode: "00020126580014BR.GOV.BCB.PIX0136mock-pix-qr-code-for-dev-testing52040000530398654071.005802BR5925Dev Mock PIX Payment6009SAO PAULO62070503***63041D3D",
+      qrCodeBase64: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+      ticketUrl: "",
+      status: "pending",
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+    };
+  }
+
   const customerId = await getOrCreateCustomer(params.payerSteamId, params.payerName);
   const value = params.amountCents / 100;
   const dueDate = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split("T")[0];

@@ -146,7 +146,7 @@ export async function getOwnedGames(steamId: string): Promise<OwnedGame[] | null
 
     const data = await res.json();
     // response.games absent → game list is private (profile set to Friends-only or Private)
-    if (!data.response?.games) return null;
+    if (!data.response?.games) return cached ? (cached.payload as unknown as OwnedGame[]) : null;
 
     const games: OwnedGame[] = data.response.games.map(
       (g: { appid: number; name: string; playtime_forever?: number }) => ({

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { SteamLibraryPanel } from "@/components/family/steam-library-panel";
 import { getMemberColor } from "@/lib/utils";
 
@@ -22,6 +23,7 @@ type Props = {
 };
 
 export function CatalogSteamPanel({ familyId, members, wishlistItems }: Props) {
+  const queryClient = useQueryClient();
   const memberColors = useMemo(
     () => new Map(members.map((m, i) => [m.id, getMemberColor(i)])),
     [members]
@@ -45,7 +47,7 @@ export function CatalogSteamPanel({ familyId, members, wishlistItems }: Props) {
       currentUserId=""
       memberColors={memberColors}
       sharedWishlistItems={sharedWishlistItems}
-      onRefresh={() => {}}
+      onRefresh={() => queryClient.invalidateQueries({ queryKey: ["steam-library", familyId] })}
     />
   );
 }

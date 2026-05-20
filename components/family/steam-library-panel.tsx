@@ -679,7 +679,6 @@ export function SteamLibraryPanel({ familyId, currentUserId, memberColors, share
     try {
       const res = await fetch("/api/me/steam/sync-wishlist", { method: "POST" });
       if (res.ok) {
-        await queryClient.invalidateQueries({ queryKey: ["steam-library", familyId] });
         toast.success("Wishlist sincronizada");
       } else {
         const data = await res.json();
@@ -693,6 +692,7 @@ export function SteamLibraryPanel({ familyId, currentUserId, memberColors, share
     } catch {
       toast.error("Erro ao sincronizar wishlist.");
     } finally {
+      await queryClient.invalidateQueries({ queryKey: ["steam-library", familyId] });
       setSyncing(false);
     }
   }

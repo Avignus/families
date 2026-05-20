@@ -24,22 +24,29 @@ export async function calculateSpotPrice(
     select: { spotFraction: true, spotMinPriceCents: true },
   });
 
-  // Active member userIds, excluding the buyer
-  const memberUserIds = await prisma.familyMembership
+  // Active members, excluding the buyer — we need steamIds because SteamUserCache is keyed by steamId
+  const memberUsers = await prisma.familyMembership
     .findMany({
       where: { familyId, status: "active", userId: { not: buyerUserId } },
-      select: { userId: true },
-    })
-    .then((rows) => rows.map((r) => r.userId));
+      include: { user: { select: { steamId: true } } },
+    });
+  const memberSteamIds = memberUsers.map((m) => m.user.steamId);
 
-  // Library caches for family members and buyer (parallel)
+  // Buyer's steamId
+  const buyerUser = await prisma.user.findUnique({
+    where: { id: buyerUserId },
+    select: { steamId: true },
+  });
+  const buyerSteamId = buyerUser?.steamId ?? buyerUserId;
+
+  // Library caches — keyed by steamId in the DB
   const [memberCaches, buyerCaches] = await Promise.all([
     prisma.steamUserCache.findMany({
-      where: { type: "library", userId: { in: memberUserIds } },
+      where: { type: "library", userId: { in: memberSteamIds } },
       select: { payload: true },
     }),
     prisma.steamUserCache.findMany({
-      where: { type: "library", userId: buyerUserId },
+      where: { type: "library", userId: buyerSteamId },
       select: { payload: true },
     }),
   ]);
