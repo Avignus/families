@@ -1,4 +1,5 @@
 import { prisma } from "./prisma";
+import { getAppDetails } from "./steam";
 
 export type SpotPriceResult = {
   spotPriceCents: number;
@@ -81,11 +82,24 @@ export async function calculateSpotPrice(
   });
 
   const priceMap = new Map<number, number>();
+  const cachedIds = new Set<number>();
   for (const cache of priceCaches) {
+    cachedIds.add(cache.steamAppId);
     const p = cache.payload as { priceCents?: number; isFree?: boolean };
     if (!p.isFree && p.priceCents && p.priceCents > 0) {
       priceMap.set(cache.steamAppId, p.priceCents);
     }
+  }
+
+  // Fetch prices for uncached games (on-demand, capped to avoid slow responses)
+  const uncachedIds = allRelevantIds.filter((id) => !cachedIds.has(id)).slice(0, 30);
+  if (uncachedIds.length > 0) {
+    await Promise.allSettled(uncachedIds.map(async (appId) => {
+      const details = await getAppDetails(appId);
+      if (details && !details.isFree && details.priceCents > 0) {
+        priceMap.set(appId, details.priceCents);
+      }
+    }));
   }
 
   let familyValueCents = 0;

@@ -44,14 +44,15 @@ export async function GET(req: NextRequest) {
   const log: string[] = [];
 
   // ── Phase 0: backfill prices for active family members' libraries ────────
-  const activeMemberUserIds = await prisma.familyMembership.findMany({
+  // SteamUserCache is keyed by steamId, not User.id — resolve steamIds first
+  const activeMemberSteamIds = await prisma.familyMembership.findMany({
     where: { status: "active" },
-    select: { userId: true },
-  }).then((rows) => rows.map((r) => r.userId));
+    include: { user: { select: { steamId: true } } },
+  }).then((rows) => rows.map((r) => r.user.steamId));
 
-  if (activeMemberUserIds.length > 0) {
+  if (activeMemberSteamIds.length > 0) {
     const libraryCaches = await prisma.steamUserCache.findMany({
-      where: { type: "library", userId: { in: activeMemberUserIds } },
+      where: { type: "library", userId: { in: activeMemberSteamIds } },
       select: { payload: true },
     });
 
