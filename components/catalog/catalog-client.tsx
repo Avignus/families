@@ -502,6 +502,11 @@ function FamilyCard({
               {family.memberCount}
               {family.maxMembers ? `/${family.maxMembers}` : ""} membros
             </span>
+            {family.spotsLeft !== null && family.spotsLeft > 0 && (
+              <span className="text-primary font-medium">
+                · {family.spotsLeft} {family.spotsLeft === 1 ? "spot" : "spots"} disponível
+              </span>
+            )}
           </div>
           {family.spotPricingEnabled ? (
             <span className="flex items-center gap-1 text-primary font-semibold text-xs">
@@ -519,7 +524,12 @@ function FamilyCard({
         </div>
 
         <div className="mt-auto relative z-10">
-          {status ? (
+          {myStatus === "active" ? (
+            <span className="flex items-center gap-1.5 text-xs font-semibold text-emerald-400">
+              <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
+              Você faz parte desta família
+            </span>
+          ) : status ? (
             <span className={`text-xs font-semibold ${status.color}`}>{status.text}</span>
           ) : !family.isPublic ? (
             <div className="flex items-center gap-1 text-xs text-muted-foreground">
