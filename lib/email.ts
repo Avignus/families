@@ -75,16 +75,16 @@ function buildHtml(title: string, body: string, url: string, cta = "Ver detalhes
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#0f172a;padding:40px 20px">
     <tr><td align="center">
       <table width="100%" style="max-width:520px;background:#1e293b;border-radius:12px;padding:32px;border:1px solid #334155">
-        <tr><td style="padding-bottom:24px;border-bottom:1px solid #334155">
-          <span style="font-size:20px;font-weight:700;color:#f8fafc">🎮 Families</span>
+        <tr><td style="padding-bottom:20px;border-bottom:1px solid #1e3a5f">
+          <span style="font-size:22px;font-weight:800;letter-spacing:-0.5px;color:#a78bfa">families</span>
         </td></tr>
         <tr><td style="padding-top:24px">
-          <h1 style="margin:0 0 12px;font-size:18px;font-weight:600;color:#f8fafc">${title}</h1>
-          <p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#94a3b8">${body}</p>
-          <a href="${url}" style="display:inline-block;padding:10px 20px;background:#6366f1;color:#fff;border-radius:8px;text-decoration:none;font-size:14px;font-weight:500">${cta}</a>
+          <h1 style="margin:0 0 10px;font-size:18px;font-weight:700;color:#f1f5f9">${title}</h1>
+          <p style="margin:0 0 28px;font-size:14px;line-height:1.7;color:#94a3b8">${body}</p>
+          <a href="${url}" style="display:inline-block;padding:11px 24px;background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#fff;border-radius:8px;text-decoration:none;font-size:14px;font-weight:600;letter-spacing:0.01em">${cta}</a>
         </td></tr>
-        <tr><td style="padding-top:24px;border-top:1px solid #334155;margin-top:24px">
-          <p style="margin:0;font-size:12px;color:#475569">Você recebeu este email por ter uma conta no Families. Para parar de receber, remova seu email nas configurações.</p>
+        <tr><td style="padding-top:24px;border-top:1px solid #1e293b;margin-top:24px">
+          <p style="margin:0;font-size:11px;color:#475569;line-height:1.6">Você recebeu este email por ter uma conta no Families.<br>Para parar de receber, remova seu email nas <a href="${process.env.APP_BASE_URL ?? ""}/settings" style="color:#6d28d9;text-decoration:none">configurações</a>.</p>
         </td></tr>
       </table>
     </td></tr>
