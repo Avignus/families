@@ -3,6 +3,8 @@ import { z } from "zod";
 import { requireSession, isApiError, ok, err, parseBody } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { validatePixKey } from "@/lib/pix-key";
+import { sendEmailVerification } from "@/lib/email";
+import crypto from "crypto";
 
 const UpdateSchema = z.object({
   pixKey: z.string().max(100).nullable().optional(),
@@ -38,20 +40,31 @@ export async function PATCH(req: NextRequest) {
   if (body.email !== undefined) {
     if (body.email) {
       const existing = await prisma.user.findFirst({
-        where: { email: body.email },
+        where: { email: body.email, id: { not: user.id } },
         select: { id: true },
       });
-      if (existing && existing.id !== user.id) {
-        return err("EMAIL_IN_USE", "Este email já está cadastrado em outra conta", 409);
-      }
-      data.email = body.email;
+      if (existing) return err("EMAIL_IN_USE", "Este email já está cadastrado em outra conta", 409);
+
+      const token = crypto.randomBytes(32).toString("hex");
+      const expiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
+      data.emailPending = body.email;
+      data.emailVerifyToken = token;
+      data.emailVerifyExpiry = expiry;
+
+      const dbUser = await prisma.user.findUnique({ where: { id: user.id }, select: { personaName: true } });
+      const BASE_URL = process.env.APP_BASE_URL ?? process.env.NEXTAUTH_URL ?? "http://localhost:3000";
+      const verifyUrl = `${BASE_URL}/api/auth/verify-email?token=${token}`;
+      sendEmailVerification({ to: body.email, personaName: dbUser?.personaName ?? "usuário", verifyUrl }).catch(() => {});
     } else {
       data.email = null;
+      data.emailPending = null;
+      data.emailVerifyToken = null;
+      data.emailVerifyExpiry = null;
     }
   }
 
   const updated = await prisma.user.update({ where: { id: user.id }, data });
-  return ok({ pixKey: updated.pixKey, email: updated.email });
+  return ok({ pixKey: updated.pixKey, email: updated.email, emailPending: updated.emailPending });
 }
 
 export async function GET() {
@@ -94,6 +107,7 @@ export async function GET() {
     profileUrl: dbUser.profileUrl,
     pixKey: dbUser.pixKey,
     email: dbUser.email,
+    emailPending: dbUser.emailPending,
     reputationScore: dbUser.reputationScore,
     creditsCents: dbUser.creditsCents,
     families: dbUser.memberships.map((m) => ({

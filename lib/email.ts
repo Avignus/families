@@ -46,7 +46,28 @@ export async function sendNotificationEmail(params: {
   });
 }
 
-function buildHtml(title: string, body: string, url: string): string {
+export async function sendEmailVerification(params: {
+  to: string;
+  personaName: string;
+  verifyUrl: string;
+}): Promise<void> {
+  const resend = getResend();
+  if (!resend) return;
+
+  await resend.emails.send({
+    from: FROM,
+    to: params.to,
+    subject: "Confirme seu email — Families",
+    html: buildHtml(
+      "Confirme seu endereço de email",
+      `Olá, ${params.personaName}! Clique no botão abaixo para confirmar que este email pertence a você. O link expira em 24 horas.`,
+      params.verifyUrl,
+      "Confirmar email",
+    ),
+  });
+}
+
+function buildHtml(title: string, body: string, url: string, cta = "Ver detalhes"): string {
   return `<!DOCTYPE html>
 <html lang="pt-BR">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
@@ -60,7 +81,7 @@ function buildHtml(title: string, body: string, url: string): string {
         <tr><td style="padding-top:24px">
           <h1 style="margin:0 0 12px;font-size:18px;font-weight:600;color:#f8fafc">${title}</h1>
           <p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#94a3b8">${body}</p>
-          <a href="${url}" style="display:inline-block;padding:10px 20px;background:#6366f1;color:#fff;border-radius:8px;text-decoration:none;font-size:14px;font-weight:500">Ver detalhes</a>
+          <a href="${url}" style="display:inline-block;padding:10px 20px;background:#6366f1;color:#fff;border-radius:8px;text-decoration:none;font-size:14px;font-weight:500">${cta}</a>
         </td></tr>
         <tr><td style="padding-top:24px;border-top:1px solid #334155;margin-top:24px">
           <p style="margin:0;font-size:12px;color:#475569">Você recebeu este email por ter uma conta no Families. Para parar de receber, remova seu email nas configurações.</p>

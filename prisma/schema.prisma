@@ -15,8 +15,11 @@ model User {
   avatarMedium String   @default("")
   avatarFull   String   @default("")
   profileUrl   String?
-  pixKey           String?  @unique
-  email            String?  @unique
+  pixKey             String?  @unique
+  email              String?  @unique
+  emailPending       String?
+  emailVerifyToken   String?  @unique
+  emailVerifyExpiry  DateTime?
   reputationScore        Int      @default(0)
   creditsCents           Int      @default(0)
   chiefSpotEarningsCents Int      @default(0)

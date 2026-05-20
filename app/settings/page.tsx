@@ -24,6 +24,7 @@ export default function SettingsPage() {
   const sessionUser = session?.user as { personaName?: string; avatarMedium?: string; image?: string } | undefined;
   const [pixKey, setPixKey] = useState("");
   const [email, setEmail] = useState("");
+  const [emailPending, setEmailPending] = useState<string | null>(null);
   const [reputationScore, setReputationScore] = useState<number | null>(null);
   const [creditsCents, setCreditsCents] = useState<number | null>(null);
   const [saved, setSaved] = useState(false);
@@ -44,6 +45,15 @@ export default function SettingsPage() {
 
   const emailValid = !email.trim() || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const result = params.get("emailVerified");
+    if (result === "ok") { toast.success("Email confirmado com sucesso!"); router.replace("/settings"); }
+    else if (result === "expired") { toast.error("Link expirado. Solicite um novo email de confirmação."); router.replace("/settings"); }
+    else if (result === "conflict") { toast.error("Este email já foi confirmado por outra conta."); router.replace("/settings"); }
+    else if (result === "invalid") { toast.error("Link de confirmação inválido."); router.replace("/settings"); }
+  }, []);
+
   const deferredKey = useDeferredValue(pixKey);
   const validation = deferredKey.trim() ? validatePixKey(deferredKey.trim()) : null;
 
@@ -53,6 +63,7 @@ export default function SettingsPage() {
       .then((d) => {
         setPixKey(d.data?.pixKey ?? "");
         setEmail(d.data?.email ?? "");
+        setEmailPending(d.data?.emailPending ?? null);
         setReputationScore(d.data?.reputationScore ?? 0);
         setCreditsCents(d.data?.creditsCents ?? 0);
         setInitialLoading(false);
@@ -180,8 +191,15 @@ export default function SettingsPage() {
       toast.error(data.error?.message ?? t.settings.emailSaveError);
       return;
     }
-    setEmailSaved(true);
-    toast.success(email.trim() ? t.settings.emailSaved : t.settings.emailRemoved);
+    if (email.trim()) {
+      setEmailPending(email.trim());
+      setEmail("");
+      toast.success("Email de confirmação enviado. Verifique sua caixa de entrada.");
+    } else {
+      setEmailPending(null);
+      setEmailSaved(true);
+      toast.success(t.settings.emailRemoved);
+    }
   }
 
   return (
@@ -396,46 +414,80 @@ export default function SettingsPage() {
               Carregando...
             </div>
           ) : (
-            <form onSubmit={handleSaveEmail} className="space-y-4">
-              <div className="space-y-2">
-                <label htmlFor="email" className="text-sm font-medium">{t.settings.email}</label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder={t.settings.emailPlaceholder}
-                  value={email}
-                  onChange={(e) => { setEmail(e.target.value); setEmailSaved(false); }}
-                  className={
-                    email.trim() && !emailValid
-                      ? "border-destructive/60 focus-visible:ring-destructive/30"
-                      : ""
-                  }
-                />
-                {email.trim() && !emailValid && (
-                  <div className="flex items-center gap-1.5 text-xs text-destructive">
-                    <XCircle className="h-3.5 w-3.5" /> {t.settings.emailInvalid}
+            <div className="space-y-4">
+              {/* Pending confirmation banner */}
+              {emailPending && (
+                <div className="flex items-start gap-2.5 rounded-lg border border-amber-500/30 bg-amber-500/8 px-3 py-2.5">
+                  <Loader2 className="h-4 w-4 text-amber-400 mt-0.5 shrink-0 animate-spin" />
+                  <div className="space-y-0.5">
+                    <p className="text-sm font-medium text-amber-300">Aguardando confirmação</p>
+                    <p className="text-xs text-amber-400/80">
+                      Enviamos um link para <span className="font-medium">{emailPending}</span>. Verifique sua caixa de entrada.
+                    </p>
                   </div>
-                )}
-                {!email.trim() && (
-                  <p className="text-xs text-muted-foreground">
-                    {t.settings.emailOptional}
-                  </p>
-                )}
-              </div>
+                </div>
+              )}
 
-              <div className="flex items-center gap-3">
-                <Button type="submit" disabled={emailLoading || !emailValid}>
-                  {emailLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                  {t.settings.save}
-                </Button>
-                {emailSaved && (
-                  <span className="flex items-center gap-1.5 text-sm text-emerald-500">
-                    <CheckCircle2 className="h-4 w-4" />
-                    {t.settings.saved}
-                  </span>
-                )}
-              </div>
-            </form>
+              {/* Verified email display */}
+              {email && !emailPending && (
+                <div className="flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/8 px-3 py-2.5">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+                  <span className="text-sm text-emerald-300 flex-1">{email}</span>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      await fetch("/api/me", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: null }) });
+                      setEmail(""); setEmailPending(null);
+                      toast.success(t.settings.emailRemoved);
+                    }}
+                    className="text-muted-foreground hover:text-destructive transition-colors"
+                    title="Remover email"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              )}
+
+              {/* Input form — shown when no verified email and not pending */}
+              {!email && (
+                <form onSubmit={handleSaveEmail} className="space-y-4">
+                  <div className="space-y-2">
+                    <label htmlFor="email" className="text-sm font-medium">{t.settings.email}</label>
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder={t.settings.emailPlaceholder}
+                      value={email}
+                      onChange={(e) => { setEmail(e.target.value); setEmailSaved(false); }}
+                      className={email.trim() && !emailValid ? "border-destructive/60 focus-visible:ring-destructive/30" : ""}
+                    />
+                    {email.trim() && !emailValid && (
+                      <div className="flex items-center gap-1.5 text-xs text-destructive">
+                        <XCircle className="h-3.5 w-3.5" /> {t.settings.emailInvalid}
+                      </div>
+                    )}
+                    {!email.trim() && (
+                      <p className="text-xs text-muted-foreground">{t.settings.emailOptional}</p>
+                    )}
+                  </div>
+                  <Button type="submit" disabled={emailLoading || !emailValid || !email.trim()}>
+                    {emailLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                    Enviar confirmação
+                  </Button>
+                </form>
+              )}
+
+              {/* Change email link when pending */}
+              {emailPending && (
+                <button
+                  type="button"
+                  className="text-xs text-muted-foreground hover:text-foreground underline"
+                  onClick={() => { setEmailPending(null); }}
+                >
+                  Usar outro email
+                </button>
+              )}
+            </div>
           )}
         </CardContent>
       </Card>
