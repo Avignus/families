@@ -1,32 +1,94 @@
 import { prisma } from "@/lib/prisma";
 
-export type ReputationTier = "bronze" | "prata" | "ouro" | "elite";
+export type ReputationTier = "bronze" | "prata" | "ouro" | "elite" | "lendario";
 
-export function getTier(score: number): ReputationTier {
-  if (score >= 86) return "elite";
-  if (score >= 61) return "ouro";
-  if (score >= 31) return "prata";
+// Minimum XP required to reach each tier
+export const TIER_XP: Record<ReputationTier, number> = {
+  bronze:   0,
+  prata:    600,
+  ouro:     2500,
+  elite:    8000,
+  lendario: 25000,
+};
+
+export const TIER_ORDER: ReputationTier[] = ["bronze", "prata", "ouro", "elite", "lendario"];
+
+export function getTier(xp: number): ReputationTier {
+  if (xp >= 25000) return "lendario";
+  if (xp >= 8000)  return "elite";
+  if (xp >= 2500)  return "ouro";
+  if (xp >= 600)   return "prata";
   return "bronze";
 }
 
+export function getXpProgress(xp: number): {
+  tier: ReputationTier;
+  xpInTier: number;
+  tierSize: number;
+  pct: number;
+  nextTier: ReputationTier | null;
+  xpToNext: number | null;
+} {
+  const tier = getTier(xp);
+  const idx = TIER_ORDER.indexOf(tier);
+  const nextTier = idx < TIER_ORDER.length - 1 ? TIER_ORDER[idx + 1] : null;
+  const tierMin = TIER_XP[tier];
+  const tierMax = nextTier ? TIER_XP[nextTier] : null;
+  const xpInTier = xp - tierMin;
+  const tierSize = tierMax ? tierMax - tierMin : Math.max(xpInTier, 1);
+  const pct = tierMax ? Math.min(100, Math.round((xpInTier / (tierMax - tierMin)) * 100)) : 100;
+  const xpToNext = tierMax ? tierMax - xp : null;
+
+  return { tier, xpInTier, tierSize, pct, nextTier, xpToNext };
+}
+
 export const TIER_LABELS: Record<ReputationTier, string> = {
-  bronze: "Bronze",
-  prata: "Prata",
-  ouro: "Ouro",
-  elite: "Elite",
+  bronze:   "Bronze",
+  prata:    "Prata",
+  ouro:     "Ouro",
+  elite:    "Elite",
+  lendario: "Lendário",
 };
 
 export const TIER_COLORS: Record<ReputationTier, string> = {
-  bronze: "hsl(25 60% 55%)",
-  prata: "hsl(220 15% 65%)",
-  ouro: "hsl(45 90% 55%)",
-  elite: "hsl(258 82% 66%)",
+  bronze:   "hsl(25 60% 55%)",
+  prata:    "hsl(220 15% 65%)",
+  ouro:     "hsl(45 90% 55%)",
+  elite:    "hsl(258 82% 66%)",
+  lendario: "hsl(345 85% 58%)",
 };
 
+export const TIER_DESCRIPTIONS: Record<ReputationTier, string> = {
+  bronze:   "Você está começando sua jornada. Faça pledges em itens da wishlist e pague rapidamente para acumular XP e subir de elo.",
+  prata:    "Você já contribuiu em pledges e ajudou a financiar jogos para membros da família. Sua confiança está crescendo na comunidade.",
+  ouro:     "Você é um colaborador ativo e consistente. Suas contribuições ajudaram a realizar compras para vários membros, demonstrando comprometimento real.",
+  elite:    "Você é referência de engajamento na plataforma. Seu histórico de pledges rápidos, contribuições pioneiras e jogos financiados o coloca entre os melhores.",
+  lendario: "Você alcançou o elo máximo. Sua contribuição extraordinária financiou dezenas de jogos e moldou a experiência da comunidade de uma forma que poucos conseguem.",
+};
+
+// XP sources:
+//   - Base:     R$1 paid = 1 XP
+//   - Prestige: game price multiplier (cheap → expensive = 1.0× → 2.2×)
+//   - Speed:    paid within 2h = +8 XP, 24h = +4, 72h = +1
+//   - Pioneer:  first pledge on an item = +5 XP
+//   - Funding:  each game successfully funded = +20 XP (once per game)
 export async function computeAndSaveReputation(userId: string): Promise<number> {
   const pledges = await prisma.pledge.findMany({
     where: { pledgerUserId: userId, status: "active" },
-    include: { wishlistItem: { select: { status: true } } },
+    include: {
+      wishlistItem: {
+        select: {
+          status: true,
+          targetPriceCents: true,
+          pledges: {
+            where: { status: "active" },
+            orderBy: { createdAt: "asc" },
+            take: 1,
+            select: { pledgerUserId: true },
+          },
+        },
+      },
+    },
   });
 
   if (pledges.length === 0) {
@@ -34,40 +96,39 @@ export async function computeAndSaveReputation(userId: string): Promise<number> 
     return 0;
   }
 
-  const paid = pledges.filter((p) => p.paidAt);
-  const total = pledges.length;
+  let xp = 0;
+  const fundedItemsSeen = new Set<string>();
 
-  // 1. Payment rate — up to 40 pts
-  const paymentRate = paid.length / total;
-  const rateScore = Math.round(paymentRate * 40);
+  for (const pledge of pledges) {
+    if (!pledge.paidAt) continue;
 
-  // 2. Volume paid — up to 30 pts (R$10 = 1pt, capped at 30)
-  const totalPaidCents = paid.reduce((s, p) => s + p.amountCents, 0);
-  const volumeScore = Math.min(30, Math.floor(totalPaidCents / 1000));
+    const priceCents = pledge.wishlistItem.targetPriceCents;
 
-  // 3. Payment speed — up to 20 pts
-  const speedScores: number[] = paid.map((p) => {
-    const hours = (p.paidAt!.getTime() - p.createdAt.getTime()) / 3_600_000;
-    if (hours <= 2) return 20;
-    if (hours <= 24) return 15;
-    if (hours <= 72) return 10;
-    if (hours <= 168) return 5;
-    return 0;
-  });
-  const speedScore = speedScores.length > 0
-    ? Math.round(speedScores.reduce((s, v) => s + v, 0) / speedScores.length)
-    : 0;
+    const baseXp = Math.floor(pledge.amountCents / 100);
 
-  // 4. Games funded (contributed to funded or purchased items) — up to 10 pts
-  const fundedGames = new Set(
-    pledges
-      .filter((p) => p.paidAt && ["funded", "purchased"].includes(p.wishlistItem.status))
-      .map((p) => p.wishlistItemId)
-  ).size;
-  const fundedScore = Math.min(10, fundedGames * 2);
+    let prestige = 1.0;
+    if (priceCents >= 20000)     prestige = 2.2;
+    else if (priceCents >= 10000) prestige = 1.7;
+    else if (priceCents >= 5000)  prestige = 1.3;
 
-  const score = Math.min(100, rateScore + volumeScore + speedScore + fundedScore);
+    const hours = (pledge.paidAt.getTime() - pledge.createdAt.getTime()) / 3_600_000;
+    const speedBonus = hours <= 2 ? 8 : hours <= 24 ? 4 : hours <= 72 ? 1 : 0;
 
-  await prisma.user.update({ where: { id: userId }, data: { reputationScore: score } });
-  return score;
+    const isPioneer = pledge.wishlistItem.pledges[0]?.pledgerUserId === userId;
+    const pioneerBonus = isPioneer ? 5 : 0;
+
+    let fundingBonus = 0;
+    if (
+      ["funded", "purchased"].includes(pledge.wishlistItem.status) &&
+      !fundedItemsSeen.has(pledge.wishlistItemId)
+    ) {
+      fundedItemsSeen.add(pledge.wishlistItemId);
+      fundingBonus = 20;
+    }
+
+    xp += Math.round(baseXp * prestige) + speedBonus + pioneerBonus + fundingBonus;
+  }
+
+  await prisma.user.update({ where: { id: userId }, data: { reputationScore: xp } });
+  return xp;
 }

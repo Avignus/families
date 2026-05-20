@@ -10,8 +10,8 @@ import { PixPaymentModal } from "@/components/wishlist/pix-payment-modal";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { ReputationBadge } from "@/components/reputation-badge";
-import { getTier, TIER_LABELS } from "@/lib/reputation";
+import { getXpProgress, TIER_LABELS, TIER_COLORS, TIER_DESCRIPTIONS } from "@/lib/reputation";
+import { UserTierIcon } from "@/components/user-tier-icon";
 import { formatCurrency } from "@/lib/utils";
 import { validatePixKey } from "@/lib/pix-key";
 import { toast } from "sonner";
@@ -236,13 +236,61 @@ export default function SettingsPage() {
               {t.settings.reputationDesc}
             </CardDescription>
           </CardHeader>
-          <CardContent className="flex items-center gap-3">
-            <ReputationBadge score={reputationScore} showScore size="md" />
-            <div className="text-sm text-muted-foreground">
-              {reputationScore === 0
-                ? t.settings.reputationEmpty
-                : t.settings.tier(TIER_LABELS[getTier(reputationScore)])}
-            </div>
+          <CardContent>
+            {(() => {
+              const { tier, pct, nextTier, xpToNext } = getXpProgress(reputationScore);
+              const color = TIER_COLORS[tier];
+              return (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-4">
+                    <div
+                      className="rounded-2xl p-3 shrink-0"
+                      style={{ backgroundColor: `${color}12`, border: `1px solid ${color}30` }}
+                    >
+                      <UserTierIcon tier={tier} size={64} />
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-0.5">
+                        Seu elo
+                      </p>
+                      <p className="text-3xl font-bold leading-none" style={{ color }}>
+                        {TIER_LABELS[tier]}
+                      </p>
+                      <p className="text-sm text-muted-foreground font-mono tabular-nums mt-1">
+                        {reputationScore.toLocaleString("pt-BR")} XP
+                      </p>
+                      {nextTier ? (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          +{xpToNext?.toLocaleString("pt-BR")} XP para {TIER_LABELS[nextTier]}
+                        </p>
+                      ) : (
+                        <p className="text-xs font-semibold mt-1" style={{ color }}>
+                          Nível máximo atingido
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  {nextTier && (
+                    <div className="space-y-1">
+                      <div className="relative h-2 w-full overflow-hidden rounded-full bg-secondary">
+                        <div
+                          className="h-full rounded-full transition-all"
+                          style={{ width: `${pct}%`, backgroundColor: color }}
+                        />
+                      </div>
+                      <div className="flex justify-between text-[10px] text-muted-foreground">
+                        <span>{TIER_LABELS[tier]}</span>
+                        <span>{pct}%</span>
+                        <span>{TIER_LABELS[nextTier]}</span>
+                      </div>
+                    </div>
+                  )}
+                  <p className="text-xs text-muted-foreground leading-relaxed border-t border-border/40 pt-3">
+                    {TIER_DESCRIPTIONS[tier]}
+                  </p>
+                </div>
+              );
+            })()}
           </CardContent>
         </Card>
       )}

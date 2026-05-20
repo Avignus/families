@@ -13,6 +13,7 @@ import {
   DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useNotifications } from "@/components/notifications/notification-provider";
+import { ReputationBadge } from "@/components/reputation-badge";
 import { FamiliesLogo } from "./logo";
 import { formatRelativeTime, formatCurrency } from "@/lib/utils";
 import { getNotificationContent } from "@/lib/notifications/templates";
@@ -43,6 +44,7 @@ export function Navbar() {
   const [freshName, setFreshName] = useState<string | null>(null);
   const [freshAvatar, setFreshAvatar] = useState<string | null>(null);
   const [creditsCents, setCreditsCents] = useState<number | null>(null);
+  const [reputationScore, setReputationScore] = useState<number | null>(null);
   const [myFamilyId, setMyFamilyId] = useState<string | null>(null);
 
   const sessionUser = session?.user as {
@@ -54,6 +56,7 @@ export function Navbar() {
       .then((r) => r.json())
       .then((d) => {
         if (d.data?.creditsCents != null) setCreditsCents(d.data.creditsCents);
+        if (d.data?.reputationScore != null) setReputationScore(d.data.reputationScore);
         if (d.data?.avatarMedium) setFreshAvatar(d.data.avatarMedium);
         if (d.data?.personaName && !d.data.personaName.startsWith("Steam user")) setFreshName(d.data.personaName);
         if (d.data?.families?.length > 0) setMyFamilyId(d.data.families[0].id);
@@ -210,7 +213,7 @@ export function Navbar() {
           <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="flex items-center gap-2 px-2 hover:bg-primary/10 hover:text-primary transition-colors">
-                <Avatar className="h-7 w-7 ring-1 ring-border">
+                <Avatar className="h-7 w-7 shrink-0">
                   <AvatarImage src={user.avatarMedium || user.image || ""} alt={user.personaName || user.name || ""} />
                   <AvatarFallback className="text-xs bg-primary/20 text-primary">
                     {(user.personaName ?? user.name ?? "?")[0].toUpperCase()}
@@ -243,6 +246,11 @@ export function Navbar() {
                       <Wallet className="h-3 w-3" />
                       {formatCurrency(creditsCents, "BRL")} {t.nav.credits}
                     </span>
+                  )}
+                  {reputationScore != null && (
+                    <div className="mt-1">
+                      <ReputationBadge score={reputationScore} showScore />
+                    </div>
                   )}
                 </div>
               </DropdownMenuLabel>
