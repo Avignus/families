@@ -98,7 +98,7 @@ export function WishlistItemCard({ item, familyId, currentUserId, memberColors, 
   const isOwner = item.ownerUserId === currentUserId;
   const remaining = item.targetPriceCents - item.totalPledgedCents;
   const gameName = item.steamData?.name ?? `App #${item.steamAppId}`;
-  const isFunded = item.status === "funded";
+  const isFunded = item.status === "funded" || item.percentFunded >= 100;
 
   const paidPledges = item.pledges.filter((p) => p.paidAt !== null);
   const pendingPledges = item.pledges.filter((p) => p.paidAt === null);

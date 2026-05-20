@@ -28,7 +28,7 @@ type Props = {
 
 export function CatalogWishlistItem({ item }: Props) {
   const { t } = useLanguage();
-  const isFunded = item.status === "funded";
+  const isFunded = item.status === "funded" || (item.targetPriceCents > 0 && item.pledgedCents >= item.targetPriceCents);
   const isPurchased = item.status === "purchased";
   const gameName = item.steam?.name ?? `App #${item.steamAppId}`;
 
