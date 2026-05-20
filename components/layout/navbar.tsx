@@ -135,7 +135,7 @@ export function Navbar() {
           <LanguageToggle />
 
           {/* Notification bell */}
-          <DropdownMenu>
+          <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="relative hover:bg-primary/10 hover:text-primary transition-colors">
                 <Bell className="h-[18px] w-[18px]" />
@@ -207,7 +207,7 @@ export function Navbar() {
           </DropdownMenu>
 
           {/* User menu */}
-          <DropdownMenu>
+          <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="flex items-center gap-2 px-2 hover:bg-primary/10 hover:text-primary transition-colors">
                 <Avatar className="h-7 w-7 ring-1 ring-border">
