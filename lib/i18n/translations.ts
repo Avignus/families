@@ -5,6 +5,7 @@ export const translations = {
     dateLocale: "en-US",
     nav: {
       catalog: "Catalog",
+      yourFamily: "Your family",
       notifications: "Notifications",
       settings: "Settings",
       signOut: "Sign out",
@@ -487,6 +488,7 @@ export const translations = {
     dateLocale: "pt-BR",
     nav: {
       catalog: "Catálogo",
+      yourFamily: "Sua família",
       notifications: "Notificações",
       settings: "Configurações",
       signOut: "Sair",

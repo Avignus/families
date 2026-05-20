@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import { Bell, LogOut, Settings, Globe, Wallet } from "lucide-react";
+import { Bell, LogOut, Settings, Globe, Wallet, UsersRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -39,9 +39,11 @@ export function Navbar() {
   const { t } = useLanguage();
   const pathname = usePathname();
   const isCatalog = pathname?.startsWith("/catalog");
+  const isFamily = pathname?.startsWith("/families");
   const [freshName, setFreshName] = useState<string | null>(null);
   const [freshAvatar, setFreshAvatar] = useState<string | null>(null);
   const [creditsCents, setCreditsCents] = useState<number | null>(null);
+  const [myFamilyId, setMyFamilyId] = useState<string | null>(null);
 
   const sessionUser = session?.user as {
     id?: string; personaName?: string; avatarMedium?: string; name?: string; image?: string;
@@ -54,6 +56,7 @@ export function Navbar() {
         if (d.data?.creditsCents != null) setCreditsCents(d.data.creditsCents);
         if (d.data?.avatarMedium) setFreshAvatar(d.data.avatarMedium);
         if (d.data?.personaName && !d.data.personaName.startsWith("Steam user")) setFreshName(d.data.personaName);
+        if (d.data?.families?.length > 0) setMyFamilyId(d.data.families[0].id);
       })
       .catch(() => {});
   }, []);
@@ -95,9 +98,24 @@ export function Navbar() {
     >
       <div className="container flex h-14 items-center justify-between">
         <div className="flex items-center gap-6">
-          <Link href="/dashboard">
+          <Link href={myFamilyId ? `/families/${myFamilyId}` : "/dashboard"}>
             <FamiliesLogo />
           </Link>
+          {myFamilyId && (
+            <Link
+              href={`/families/${myFamilyId}`}
+              className="hidden md:flex items-center gap-1.5 text-sm transition-colors"
+              style={isFamily ? {
+                color: "hsl(258 82% 68%)",
+                fontWeight: 600,
+              } : undefined}
+            >
+              <UsersRound className="h-4 w-4" style={isFamily ? { color: "hsl(258 82% 68%)" } : undefined} />
+              <span className={isFamily ? "" : "text-muted-foreground hover:text-foreground"}>
+                {t.nav.yourFamily}
+              </span>
+            </Link>
+          )}
           <Link
             href="/catalog"
             className="hidden md:flex items-center gap-1.5 text-sm transition-colors"
