@@ -16,6 +16,8 @@ import { SteamLibraryPanel } from "@/components/family/steam-library-panel";
 import { MemberActions } from "@/components/family/member-actions";
 import { Plus, ChevronDown, ChevronUp, Settings, Copy, LogIn, Gamepad2, Check, X, Camera, AlertTriangle, Library, Share2, Wallet, ShoppingCart } from "lucide-react";
 import { FamilyTierBadge } from "@/components/family-tier-badge";
+import { ReputationBadge } from "@/components/reputation-badge";
+import { getTier, TIER_COLORS } from "@/lib/reputation";
 import { MonthlyBudgetForm } from "@/components/family/monthly-budget-form";
 import { FamilyCoverArt } from "@/components/family-cover-art";
 import { getMemberColor, formatCurrency } from "@/lib/utils";
@@ -29,6 +31,7 @@ type Member = {
   avatarUrl: string;
   avatarMedium: string;
   steamId: string;
+  reputationScore?: number;
 };
 
 type WishlistItem = {
@@ -57,6 +60,7 @@ type WishlistItem = {
 type PendingMember = {
   id: string;
   user: Member;
+  wishlistMatches: number[] | null; // appIds they own that are on the wishlist; null = no cache
 };
 
 type FamilyData = {
@@ -77,6 +81,7 @@ type FamilyData = {
 export function FamilyPageClient({
   familyId,
   gameStats,
+  mosaicAppIds,
   totalPendingRequests,
   creditsCents,
   monthlyBudgetCents,
@@ -84,6 +89,7 @@ export function FamilyPageClient({
 }: {
   familyId: string;
   gameStats: { total: number; own: number; viaFamilies: number } | null;
+  mosaicAppIds: number[];
   totalPendingRequests: number;
   creditsCents: number;
   monthlyBudgetCents: number;
@@ -234,20 +240,19 @@ export function FamilyPageClient({
 
   if (!family) return null;
 
-  // Settlement summary
-  const settlement: Record<string, Record<string, number>> = {};
+  const memberMap = new Map(family.memberships.map((m) => [m.user.id, m.user]));
+
+  // Contributions feed: one entry per pledge on open/funded items
+  const contributions: Array<{ pledger: Member; gameName: string; amountCents: number; currency: string }> = [];
   for (const item of family.wishlistItems) {
-    if (!item.ownerUserId) continue;
+    if (item.status !== "open" && item.status !== "funded") continue;
+    const gameName = item.steamData?.name ?? `App #${item.steamAppId}`;
     for (const pledge of item.pledges) {
-      if (item.status === "open" || item.status === "funded") {
-        if (!settlement[pledge.pledgerUserId]) settlement[pledge.pledgerUserId] = {};
-        settlement[pledge.pledgerUserId][item.ownerUserId] =
-          (settlement[pledge.pledgerUserId][item.ownerUserId] ?? 0) + pledge.amountCents;
-      }
+      const pledger = memberMap.get(pledge.pledgerUserId);
+      if (!pledger) continue;
+      contributions.push({ pledger, gameName, amountCents: pledge.amountCents, currency: item.currency });
     }
   }
-
-  const memberMap = new Map(family.memberships.map((m) => [m.user.id, m.user]));
 
   return (
     <div className="container py-8 space-y-6">
@@ -325,11 +330,13 @@ export function FamilyPageClient({
             <div className="flex flex-wrap gap-4">
               {sortedMemberships.map(({ user }) => {
                 const color = memberColors.get(user.id)!;
+                const xp = user.reputationScore ?? 0;
+                const borderColor = xp > 0 ? TIER_COLORS[getTier(xp)] : color;
                 const canRemove = family.isChief && user.id !== family.chiefId;
                 return (
                   <div key={user.id} className="flex flex-col items-center gap-1.5 group/member">
                     <div className="relative">
-                      <Avatar className="h-12 w-12" style={{ boxShadow: `0 0 0 2px ${color}` }}>
+                      <Avatar className="h-12 w-12" style={{ boxShadow: `0 0 0 2px ${borderColor}` }}>
                         <AvatarImage src={user.avatarMedium} alt={user.personaName} />
                         <AvatarFallback style={{ backgroundColor: color }}>
                           {user.personaName[0]}
@@ -357,6 +364,9 @@ export function FamilyPageClient({
                         {formatCurrency(localCredits, "BRL")}
                       </span>
                     )}
+                    {(user.reputationScore ?? 0) > 0 && (
+                      <ReputationBadge score={user.reputationScore!} />
+                    )}
                   </div>
                 );
               })}
@@ -376,21 +386,72 @@ export function FamilyPageClient({
 
           <Separator />
 
-          {/* Pending join request banner (chief only) */}
-          {family.isChief && totalPendingRequests > 0 && (
-            <div className="flex items-center gap-3 p-4 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400">
-              <AlertTriangle className="h-5 w-5 shrink-0" />
-              <span dangerouslySetInnerHTML={{ __html: t.dashboard.pendingAlert(totalPendingRequests).replace(String(totalPendingRequests), `<strong>${totalPendingRequests}</strong>`) }} />
+          {/* Pending join requests — rich cards (chief only) */}
+          {family.isChief && family.pendingMemberships.length > 0 && (
+            <div className="space-y-2">
+              {family.pendingMemberships.map((pending) => (
+                <PendingRequestCard
+                  key={pending.id}
+                  membershipId={pending.id}
+                  familyId={familyId}
+                  user={pending.user}
+                  wishlistMatches={pending.wishlistMatches}
+                  wishlistItems={family.wishlistItems}
+                  onAction={() => refetch()}
+                />
+              ))}
             </div>
           )}
 
-          {/* Total accessible games stat card */}
+          {/* Total accessible games stat card — clickable mosaic */}
           {gameStats && (
-            <Card className="border-primary/20 overflow-hidden">
+            <Card
+              className="border-primary/20 overflow-hidden cursor-pointer group"
+              onClick={() => {
+                setSteamExpanded(true);
+                setTimeout(() => {
+                  document.getElementById("steam-library-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                }, 50);
+              }}
+            >
               <CardContent className="p-0">
-                <div className="flex flex-col sm:flex-row items-stretch">
-                  <div className="flex items-center gap-4 px-6 py-5 flex-1"
-                    style={{ background: "linear-gradient(135deg, hsl(258 82% 60% / 0.12), hsl(258 82% 60% / 0.04))" }}>
+                <div className="relative flex flex-col sm:flex-row items-stretch min-h-[88px]">
+                  {/* Mosaic background — two rows scrolling in opposite directions */}
+                  {mosaicAppIds.length > 0 && (() => {
+                    const mid = Math.ceil(mosaicAppIds.length / 2);
+                    const row1 = mosaicAppIds.slice(0, mid);
+                    const row2 = mosaicAppIds.slice(mid);
+                    const imgClass = "h-full w-[120px] shrink-0 object-cover opacity-25 group-hover:opacity-35 transition-opacity duration-300";
+                    return (
+                      <div className="absolute inset-0 overflow-hidden flex flex-col" aria-hidden>
+                        {/* Row 1 wrapper — takes half the card height */}
+                        <div className="flex-1 overflow-hidden">
+                          <div className="flex h-full mosaic-row-left" style={{ width: "max-content" }}>
+                            {[...row1, ...row1].map((appId, i) => (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img key={i} src={`https://cdn.akamai.steamstatic.com/steam/apps/${appId}/capsule_sm_120.jpg`} alt="" className={imgClass} loading="lazy" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+                            ))}
+                          </div>
+                        </div>
+                        {/* Row 2 wrapper — takes half the card height */}
+                        <div className="flex-1 overflow-hidden">
+                          <div className="flex h-full mosaic-row-right" style={{ width: "max-content" }}>
+                            {[...row2, ...row2].map((appId, i) => (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img key={i} src={`https://cdn.akamai.steamstatic.com/steam/apps/${appId}/capsule_sm_120.jpg`} alt="" className={imgClass} loading="lazy" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+                            ))}
+                          </div>
+                        </div>
+                        {/* Gradient overlay */}
+                        <div className="absolute inset-0" style={{
+                          background: "linear-gradient(to right, hsl(var(--card)) 0%, hsl(var(--card) / 0.45) 25%, hsl(var(--card) / 0.45) 75%, hsl(var(--card)) 100%)",
+                        }} />
+                      </div>
+                    );
+                  })()}
+
+                  {/* Left: count + label */}
+                  <div className="relative flex items-center gap-4 px-6 py-5 flex-1">
                     <div className="h-11 w-11 rounded-xl flex items-center justify-center shrink-0"
                       style={{ background: "hsl(258 82% 60% / 0.18)", border: "1px solid hsl(258 82% 60% / 0.3)" }}>
                       <Library className="h-5 w-5" style={{ color: "hsl(258 82% 66%)" }} />
@@ -402,7 +463,9 @@ export function FamilyPageClient({
                       <p className="text-sm text-muted-foreground mt-0.5">{t.dashboard.totalGames}</p>
                     </div>
                   </div>
-                  <div className="flex sm:flex-col justify-around sm:justify-center gap-0 sm:min-w-[180px] border-t sm:border-t-0 sm:border-l border-border/60 px-6 py-4 sm:py-5 bg-card/40">
+
+                  {/* Right: yours / via families */}
+                  <div className="relative flex sm:flex-col justify-around sm:justify-center gap-0 sm:min-w-[180px] border-t sm:border-t-0 sm:border-l border-border/60 px-6 py-4 sm:py-5">
                     <div className="flex items-center gap-2">
                       <Gamepad2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                       <span className="text-sm font-semibold">{gameStats.own.toLocaleString(t.dateLocale)}</span>
@@ -536,43 +599,35 @@ export function FamilyPageClient({
             )}
           </div>
 
-          {/* Settlement table */}
-          {Object.keys(settlement).length > 0 && (
+          {/* Contributions feed */}
+          {contributions.length > 0 && (
             <>
               <Separator />
               <div>
                 <h3 className="font-semibold mb-3">{t.family.contributionSummary}</h3>
                 <div className="space-y-1 text-sm">
-                  {Object.entries(settlement).map(([pledgerId, owed]) =>
-                    Object.entries(owed).map(([ownerId, cents]) => {
-                      const pledger = memberMap.get(pledgerId);
-                      const owner = memberMap.get(ownerId);
-                      if (!pledger || !owner) return null;
-                      return (
-                        <div key={`${pledgerId}-${ownerId}`} className="flex justify-between text-muted-foreground">
-                          <span>
-                            <span style={{ color: memberColors.get(pledgerId) }}>{pledger.personaName}</span>
-                            {" "}{t.family.owes}{" "}
-                            <span style={{ color: memberColors.get(ownerId) }}>{owner.personaName}</span>
-                          </span>
-                          <span className="font-medium text-foreground">
-                            {formatCurrency(cents, family.currency)}
-                          </span>
-                        </div>
-                      );
-                    })
-                  )}
+                  {contributions.map(({ pledger, gameName, amountCents, currency }, i) => (
+                    <div key={i} className="flex items-center justify-between gap-2 text-muted-foreground">
+                      <span className="min-w-0 truncate">
+                        <span className="font-medium" style={{ color: memberColors.get(pledger.id) }}>
+                          {pledger.personaName}
+                        </span>
+                        {" · "}
+                        <span className="truncate">{gameName}</span>
+                      </span>
+                      <span className="font-medium text-foreground shrink-0">
+                        {formatCurrency(amountCents, currency)}
+                      </span>
+                    </div>
+                  ))}
                 </div>
-                <p className="text-xs text-muted-foreground mt-2">
-                  {t.family.appDisclaimer}
-                </p>
               </div>
             </>
           )}
 
           {/* Steam — games & unified wishlist */}
           <Separator />
-          <div>
+          <div id="steam-library-section">
             <button
               onClick={() => setSteamExpanded((v) => !v)}
               className="flex items-center gap-2 text-sm font-semibold w-full text-left"
@@ -604,6 +659,108 @@ export function FamilyPageClient({
         familyId={familyId}
         existingAppIds={new Set(family.wishlistItems.map((i) => i.steamAppId))}
       />
+    </div>
+  );
+}
+
+function PendingRequestCard({
+  membershipId, familyId, user, wishlistMatches, wishlistItems, onAction,
+}: {
+  membershipId: string;
+  familyId: string;
+  user: Member;
+  wishlistMatches: number[] | null;
+  wishlistItems: WishlistItem[];
+  onAction: () => void;
+}) {
+  const [loading, setLoading] = useState<"approve" | "reject" | null>(null);
+  const queryClient = useQueryClient();
+  const xp = user.reputationScore ?? 0;
+  const borderColor = xp > 0 ? TIER_COLORS[getTier(xp)] : "hsl(45 90% 55%)";
+
+  const act = async (action: "approve" | "reject") => {
+    setLoading(action);
+    try {
+      await fetch(`/api/families/${familyId}/join-requests/${membershipId}/${action}`, { method: "POST" });
+      if (action === "approve") {
+        await queryClient.invalidateQueries({ queryKey: ["steam-library", familyId] });
+      }
+      onAction();
+    } finally {
+      setLoading(null);
+    }
+  };
+
+  const matchedItems = wishlistMatches
+    ? wishlistItems.filter((item) => wishlistMatches.includes(item.steamAppId))
+    : [];
+
+  return (
+    <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 rounded-lg bg-amber-500/8 border border-amber-500/25">
+      <div className="flex items-center gap-3 flex-1 min-w-0">
+        <Avatar className="h-10 w-10 shrink-0" style={{ boxShadow: `0 0 0 2px ${borderColor}` }}>
+          <AvatarImage src={user.avatarMedium} alt={user.personaName} />
+          <AvatarFallback style={{ backgroundColor: "hsl(45 90% 30%)" }}>
+            {user.personaName[0]}
+          </AvatarFallback>
+        </Avatar>
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-sm font-semibold truncate">{user.personaName}</span>
+            {xp > 0 && <ReputationBadge score={xp} />}
+          </div>
+          {wishlistMatches === null ? null : matchedItems.length === 0 ? (
+            <p className="text-xs text-muted-foreground mt-0.5">Não possui jogos da wishlist</p>
+          ) : (
+            <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+              <span className="text-xs text-amber-400/80 shrink-0">
+                Possui {matchedItems.length} {matchedItems.length === 1 ? "jogo" : "jogos"} da wishlist:
+              </span>
+              <div className="flex items-center gap-1 flex-wrap">
+                {matchedItems.slice(0, 5).map((item) => (
+                  <span
+                    key={item.id}
+                    title={item.steamData?.name ?? `App ${item.steamAppId}`}
+                  >
+                    {item.steamData?.headerImage ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={`https://cdn.cloudflare.steamstatic.com/steam/apps/${item.steamAppId}/capsule_sm_120.jpg`}
+                        alt={item.steamData.name}
+                        className="h-6 rounded-sm object-cover"
+                        style={{ width: 40 }}
+                      />
+                    ) : (
+                      <span className="text-xs text-muted-foreground">{item.steamData?.name ?? item.steamAppId}</span>
+                    )}
+                  </span>
+                ))}
+                {matchedItems.length > 5 && (
+                  <span className="text-xs text-muted-foreground">+{matchedItems.length - 5}</span>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
+        <button
+          onClick={() => act("approve")}
+          disabled={!!loading}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold bg-emerald-500/15 hover:bg-emerald-500/30 text-emerald-400 border border-emerald-500/25 transition-colors disabled:opacity-50"
+        >
+          <Check className="h-3.5 w-3.5" />
+          Aprovar
+        </button>
+        <button
+          onClick={() => act("reject")}
+          disabled={!!loading}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold bg-destructive/10 hover:bg-destructive/25 text-destructive border border-destructive/20 transition-colors disabled:opacity-50"
+        >
+          <X className="h-3.5 w-3.5" />
+          Recusar
+        </button>
+      </div>
     </div>
   );
 }

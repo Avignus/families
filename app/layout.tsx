@@ -17,9 +17,20 @@ const spaceGrotesk = Space_Grotesk({
   display: "swap",
 });
 
+const appUrl = process.env.NEXT_PUBLIC_APP_URL
+  ?? (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
+
 export const metadata: Metadata = {
+  metadataBase: new URL(appUrl),
   title: "Families — Steam Gift Pooling",
   description: "Una-se com amigos para financiar jogos na lista de desejos da Steam",
+  openGraph: {
+    images: [{ url: "/images/thumb-sharing-image.png", width: 1200, height: 630 }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    images: ["/images/thumb-sharing-image.png"],
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

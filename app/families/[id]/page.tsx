@@ -2,8 +2,35 @@ import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { FamilyPageClient } from "@/components/family/family-page-client";
+import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
+  const family = await prisma.family.findUnique({
+    where: { id: params.id },
+    select: { name: true, description: true },
+  });
+
+  const title = family ? `${family.name} — Families` : "Families — Steam Gift Pooling";
+  const description = family?.description ?? "Una-se com amigos para financiar jogos na lista de desejos da Steam";
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      images: [{ url: "/images/thumb-sharing-image.png", width: 1200, height: 630 }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: ["/images/thumb-sharing-image.png"],
+    },
+  };
+}
 
 export default async function FamilyPage({ params }: { params: { id: string } }) {
   const session = await getSession();
@@ -40,6 +67,12 @@ export default async function FamilyPage({ params }: { params: { id: string } })
   const ownGames = ownGameIds.size;
   const viaFamilies = totalAccessible - ownGames;
 
+  // Sample up to 40 appIds for the mosaic background on the stats card
+  const allAccessibleArr = Array.from(allAccessibleIds);
+  const mosaicAppIds = allAccessibleArr.length <= 40
+    ? allAccessibleArr
+    : Array.from({ length: 40 }, (_, i) => allAccessibleArr[Math.floor(i * allAccessibleArr.length / 40)]);
+
   // Pending join requests (only relevant if user is chief of this family)
   const pendingCount = await prisma.familyMembership.count({
     where: { familyId, family: { chiefId: userId }, status: "pending" },
@@ -58,6 +91,7 @@ export default async function FamilyPage({ params }: { params: { id: string } })
     <FamilyPageClient
       familyId={familyId}
       gameStats={totalAccessible > 0 ? { total: totalAccessible, own: ownGames, viaFamilies } : null}
+      mosaicAppIds={mosaicAppIds}
       totalPendingRequests={pendingCount}
       creditsCents={dbUser?.creditsCents ?? 0}
       monthlyBudgetCents={userMembership?.monthlyBudgetCents ?? 0}

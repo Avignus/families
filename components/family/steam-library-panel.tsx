@@ -359,7 +359,7 @@ function WishEntry({
             src={headerImage(entry.appId)}
             alt={entry.name}
             className="w-full h-full object-cover transition-all duration-300 group-hover:brightness-110 group-hover:saturate-[1.1]"
-            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+            onError={(e) => { e.currentTarget.parentElement!.style.display = "none"; }}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-card via-card/30 to-transparent" />
 
@@ -643,7 +643,7 @@ function LibraryGameCard({
           src={headerImage(game.appId)}
           alt={game.name}
           className="w-full h-full object-cover transition-all duration-300 group-hover:brightness-110"
-          onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+          onError={(e) => { e.currentTarget.parentElement!.style.display = "none"; }}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-card/90 via-card/20 to-transparent" />
         {sharedBy && (

@@ -413,10 +413,8 @@ export const translations = {
       addGame: "Add Game",
       noGames: "No games in the list yet. Add the first one!",
       votes: "Votes",
-      contributionSummary: "Contribution Summary",
-      owes: "owes",
-      appDisclaimer:
-        "This app only records who owes what. Actual payment is arranged between members.",
+      contributionSummary: "Contributions",
+      contributedAmount: (name: string, amount: string, game: string) => `${name} pledged ${amount} for ${game}`,
       steamGames: "Family Steam Games",
       notMemberTitle: "You are not a member of this family",
       notMemberDesc:
@@ -896,10 +894,8 @@ export const translations = {
       addGame: "Adicionar Jogo",
       noGames: "Nenhum jogo na lista ainda. Adicione o primeiro!",
       votes: "Votações",
-      contributionSummary: "Resumo de Contribuições",
-      owes: "deve",
-      appDisclaimer:
-        "Este app registra apenas quem deve o quê. O pagamento real é combinado entre os membros.",
+      contributionSummary: "Contribuições",
+      contributedAmount: (name: string, amount: string, game: string) => `${name} contribuiu ${amount} em ${game}`,
       steamGames: "Jogos Steam da Família",
       notMemberTitle: "Você não é membro desta família",
       notMemberDesc:

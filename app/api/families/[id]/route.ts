@@ -30,7 +30,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
       memberships: {
         where: { status: { in: ["active", "pending"] } },
         include: {
-          user: { select: { id: true, personaName: true, avatarUrl: true, avatarMedium: true, steamId: true } },
+          user: { select: { id: true, personaName: true, avatarUrl: true, avatarMedium: true, steamId: true, reputationScore: true } },
         },
       },
       wishlistItems: {
@@ -141,7 +141,24 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     // Split memberships for the client
     memberships: family.memberships.filter((m) => m.status === "active"),
     pendingMemberships: family.chiefId === user.id
-      ? family.memberships.filter((m) => m.status === "pending")
+      ? await (async () => {
+          const wishlistAppIds = new Set(family.wishlistItems.map((i) => i.steamAppId));
+          return Promise.all(
+            family.memberships
+              .filter((m) => m.status === "pending")
+              .map(async (m) => {
+                const cache = await prisma.steamUserCache.findUnique({
+                  where: { userId_type: { userId: m.user.steamId, type: "library" } },
+                });
+                const wishlistMatches: number[] | null = cache
+                  ? (cache.payload as Array<{ appId: number }>)
+                      .map((g) => g.appId)
+                      .filter((id) => wishlistAppIds.has(id))
+                  : null;
+                return { ...m, wishlistMatches };
+              })
+          );
+        })()
       : [],
   });
 }
