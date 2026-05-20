@@ -5,6 +5,7 @@ import { Gift, Users, Zap, ShieldCheck, Library, SlidersHorizontal, Banknote } f
 import Link from "next/link";
 import { getServerTranslations } from "@/lib/i18n/server";
 import { prisma } from "@/lib/prisma";
+import { LandingLanguageToggle } from "@/components/layout/landing-language-toggle";
 
 export default async function LandingPage() {
   const session = await getSession();
@@ -47,6 +48,11 @@ export default async function LandingPage() {
         className="absolute bottom-[-10%] right-[20%] w-[400px] h-[400px] rounded-full opacity-[0.05]"
         style={{ background: "radial-gradient(circle, hsl(186 90% 48%), transparent 70%)" }}
       />
+
+      {/* Language toggle — top right */}
+      <div className="relative z-20 w-full flex justify-end px-6 pt-4">
+        <LandingLanguageToggle />
+      </div>
 
       {/* Hero — fills viewport */}
       <div className="relative z-10 min-h-[calc(100vh-3.5rem)] max-w-2xl w-full mx-auto px-6 py-16 flex flex-col items-center justify-center gap-10">
