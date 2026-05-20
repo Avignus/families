@@ -12,7 +12,8 @@ export default withAuth({
 export const config = {
   matcher: [
     "/dashboard/:path*",
-    "/families/:path*",
+    "/families/:id/admin/:path*",
+    "/families/:id/votes/:path*",
     "/settings/:path*",
     "/notifications/:path*",
   ],
