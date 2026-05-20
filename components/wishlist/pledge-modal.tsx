@@ -156,7 +156,8 @@ export function PledgeModal({
                   step={mode === "percent" ? "1" : "0.01"}
                   max={mode === "percent" ? "100" : (remaining / 100).toFixed(2)}
                   value={inputStr}
-                  onChange={(e) => setInputStr(e.target.value)}
+                  onChange={(e) => setInputStr(e.target.value.replace(/[^0-9.]/g, ""))}
+                  onKeyDown={(e) => { if (e.key === "-" || e.key === "e" || e.key === "+") e.preventDefault(); }}
                   placeholder={mode === "percent" ? "0" : "0,00"}
                   required
                   className="text-lg pr-10"
