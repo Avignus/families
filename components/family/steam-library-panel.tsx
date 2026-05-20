@@ -67,6 +67,10 @@ type Tab = "wishes" | "library";
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function headerImage(appId: number) {
+  return `https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/${appId}/header.jpg`;
+}
+
+function headerImageFallback(appId: number) {
   return `https://cdn.cloudflare.steamstatic.com/steam/apps/${appId}/header.jpg`;
 }
 
@@ -359,7 +363,15 @@ function WishEntry({
             src={headerImage(entry.appId)}
             alt={entry.name}
             className="w-full h-full object-cover transition-all duration-300 group-hover:brightness-110 group-hover:saturate-[1.1]"
-            onError={(e) => { e.currentTarget.parentElement!.style.display = "none"; }}
+            onError={(e) => {
+              const el = e.currentTarget;
+              if (!el.dataset.fallback) {
+                el.dataset.fallback = "1";
+                el.src = headerImageFallback(entry.appId);
+              } else {
+                el.parentElement!.style.display = "none";
+              }
+            }}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-card via-card/30 to-transparent" />
 
@@ -643,7 +655,15 @@ function LibraryGameCard({
           src={headerImage(game.appId)}
           alt={game.name}
           className="w-full h-full object-cover transition-all duration-300 group-hover:brightness-110"
-          onError={(e) => { e.currentTarget.parentElement!.style.display = "none"; }}
+          onError={(e) => {
+            const el = e.currentTarget;
+            if (!el.dataset.fallback) {
+              el.dataset.fallback = "1";
+              el.src = headerImageFallback(game.appId);
+            } else {
+              el.parentElement!.style.display = "none";
+            }
+          }}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-card/90 via-card/20 to-transparent" />
         {sharedBy && (
