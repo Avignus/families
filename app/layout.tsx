@@ -26,11 +26,11 @@ export const metadata: Metadata = {
   title: "Families — Steam Gift Pooling",
   description: "Una-se com amigos para financiar jogos na lista de desejos da Steam",
   openGraph: {
-    images: [{ url: "/images/thumb-sharing-image.png", width: 1200, height: 630 }],
+    images: [{ url: "/images/thumb-sharing-image.jpg", width: 1200, height: 630 }],
   },
   twitter: {
     card: "summary_large_image",
-    images: ["/images/thumb-sharing-image.png"],
+    images: ["/images/thumb-sharing-image.jpg"],
   },
 };
 
