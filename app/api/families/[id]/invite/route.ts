@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { randomBytes } from "crypto";
 
 function generateToken(): string {
-  return randomBytes(9).toString("base64url"); // 12 chars, URL-safe
+  return randomBytes(32).toString("base64url"); // 43 chars, 256-bit entropy (ISO A.10.2.1)
 }
 
 // POST → generate (or regenerate) invite token

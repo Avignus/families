@@ -8,7 +8,9 @@ export const dynamic = "force-dynamic";
 function isAuthorized(req: NextRequest) {
   const secret = process.env.CRON_SECRET;
   if (!secret) return false;
-  return req.headers.get("authorization") === `Bearer ${secret}`;
+  if (req.headers.get("authorization") !== `Bearer ${secret}`) return false;
+  if (process.env.NODE_ENV === "production" && !req.headers.get("x-vercel-cron")) return false;
+  return true;
 }
 
 const MIN_PERCENT = 20;   // only notify when item is at least 20% funded

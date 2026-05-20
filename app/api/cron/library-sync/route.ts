@@ -12,7 +12,9 @@ type OwnedGame = { appId: number; name: string; playtimeMinutes: number };
 function isAuthorized(req: NextRequest) {
   const secret = process.env.CRON_SECRET;
   if (!secret) return false;
-  return req.headers.get("authorization") === `Bearer ${secret}`;
+  if (req.headers.get("authorization") !== `Bearer ${secret}`) return false;
+  if (process.env.NODE_ENV === "production" && !req.headers.get("x-vercel-cron")) return false;
+  return true;
 }
 
 async function fetchLibraryFromSteam(steamId: string): Promise<OwnedGame[] | null> {

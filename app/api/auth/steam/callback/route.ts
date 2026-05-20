@@ -9,7 +9,8 @@ const STEAM_OPENID_URL = "https://steamcommunity.com/openid/login";
 const BASE_URL = process.env.NEXTAUTH_URL ?? "http://localhost:3000";
 
 function extractSteamId(claimedId: string): string | null {
-  const match = claimedId.match(/^https?:\/\/steamcommunity\.com\/openid\/id\/(\d+)$/);
+  // Require HTTPS and exactly 17-digit SteamID (ISO A.14.2.5)
+  const match = claimedId.match(/^https:\/\/steamcommunity\.com\/openid\/id\/(\d{17})$/);
   return match ? match[1] : null;
 }
 
@@ -19,6 +20,19 @@ export async function GET(req: NextRequest) {
 
   if (mode !== "id_res") {
     return NextResponse.redirect(`${BASE_URL}/?error=steam_cancelled`);
+  }
+
+  // Validate OpenID namespace to reject non-standard responses (ISO A.9.4.2)
+  const ns = params.get("openid.ns");
+  if (ns !== "http://specs.openid.net/auth/2.0") {
+    return NextResponse.redirect(`${BASE_URL}/?error=steam_invalid`);
+  }
+
+  // Validate return_to matches our expected callback to prevent open-redirect abuse
+  const returnTo = params.get("openid.return_to") ?? "";
+  const expectedReturnTo = `${BASE_URL}/api/auth/steam/callback`;
+  if (!returnTo.startsWith(expectedReturnTo)) {
+    return NextResponse.redirect(`${BASE_URL}/?error=steam_invalid`);
   }
 
   // Verify the OpenID response by sending it back to Steam with mode=check_authentication

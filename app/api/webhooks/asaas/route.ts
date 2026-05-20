@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { timingSafeEqual } from "crypto";
 import { prisma } from "@/lib/prisma";
 import { normalizeAsaasStatus, sendPixDisbursement, refundPayment } from "@/lib/asaas";
 import { createNotification } from "@/lib/notifications/service";
@@ -14,10 +15,19 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null);
   if (!body) return NextResponse.json({ ok: false }, { status: 400 });
 
-  // Verify webhook origin via authToken configured in Asaas webhook settings
+  // Verify webhook origin — timing-safe comparison prevents secret enumeration (ISO A.10.2.1)
   const token = req.headers.get("asaas-access-token") ?? "";
   const expectedToken = process.env.ASAAS_WEBHOOK_SECRET ?? "";
-  if (!expectedToken || token !== expectedToken) {
+  if (!expectedToken) {
+    return NextResponse.json({ ok: false }, { status: 401 });
+  }
+  let tokenValid = false;
+  try {
+    const a = Buffer.from(token);
+    const b = Buffer.from(expectedToken);
+    tokenValid = a.length === b.length && timingSafeEqual(a, b);
+  } catch { tokenValid = false; }
+  if (!tokenValid) {
     return NextResponse.json({ ok: false }, { status: 401 });
   }
 
@@ -38,7 +48,7 @@ export async function POST(req: NextRequest) {
         user: { select: { id: true, personaName: true } },
       },
     });
-    if (membership) await handleMembershipPayment(membership, status);
+    if (membership) await handleMembershipPayment(membership, status, paymentId);
     return NextResponse.json({ ok: true });
   }
 
@@ -51,7 +61,7 @@ export async function POST(req: NextRequest) {
         user: { select: { id: true, personaName: true } },
       },
     });
-    if (membership) await handleSpotPayment(membership, status);
+    if (membership) await handleSpotPayment(membership, status, paymentId);
     return NextResponse.json({ ok: true });
   }
 
@@ -111,7 +121,7 @@ type MembershipWithFamily = {
   user: { id: string; personaName: string };
 };
 
-async function handleMembershipPayment(membership: MembershipWithFamily, status: string) {
+async function handleMembershipPayment(membership: MembershipWithFamily, status: string, paymentId: string) {
   await prisma.familyMembership.update({
     where: { id: membership.id },
     data: { mpStatus: status },
@@ -162,10 +172,13 @@ async function handleMembershipPayment(membership: MembershipWithFamily, status:
     }
 
     await prisma.$transaction(async (tx) => {
-      await tx.familyMembership.update({
-        where: { id: membership.id },
+      // Atomic idempotency guard: only activates if not yet activated (ISO A.14.2.5)
+      const activated = await tx.familyMembership.updateMany({
+        where: { id: membership.id, feePaidAt: null },
         data: { status: "active", feePaidAt: new Date(), joinedAt: new Date() },
       });
+      if (activated.count === 0) return; // Already processed by a prior webhook delivery
+
       await createNotification(tx, {
         recipientUserId: membership.family.chiefId,
         type: "JOIN_FEE_PAID",
@@ -182,6 +195,13 @@ async function handleMembershipPayment(membership: MembershipWithFamily, status:
         payload: { familyId: membership.family.id, familyName: membership.family.name },
       });
     });
+
+    // Re-read to check if activation actually happened (guard against early return above)
+    const activated = await prisma.familyMembership.findUnique({
+      where: { id: membership.id },
+      select: { feePaidAt: true },
+    });
+    if (!activated?.feePaidAt) return;
 
     // Disburse entry fee to chief
     const chief = await prisma.user.findUnique({
@@ -207,7 +227,7 @@ async function handleMembershipPayment(membership: MembershipWithFamily, status:
 
 const SPOT_COMMISSION_RATE = 0.12; // platform keeps 12%, chief receives 88%
 
-async function handleSpotPayment(membership: MembershipWithFamily, status: string) {
+async function handleSpotPayment(membership: MembershipWithFamily, status: string, _paymentId: string) {
   await prisma.familyMembership.update({
     where: { id: membership.id },
     data: { mpStatus: status },
@@ -251,10 +271,13 @@ async function handleSpotPayment(membership: MembershipWithFamily, status: strin
     }
 
     await prisma.$transaction(async (tx) => {
-      await tx.familyMembership.update({
-        where: { id: membership.id },
+      // Atomic idempotency guard (ISO A.14.2.5)
+      const activated = await tx.familyMembership.updateMany({
+        where: { id: membership.id, feePaidAt: null },
         data: { status: "active", feePaidAt: new Date(), joinedAt: new Date() },
       });
+      if (activated.count === 0) return;
+
       await createNotification(tx, {
         recipientUserId: membership.family.chiefId,
         type: "JOIN_FEE_PAID",
@@ -271,6 +294,12 @@ async function handleSpotPayment(membership: MembershipWithFamily, status: strin
         payload: { familyId: membership.family.id, familyName: membership.family.name },
       });
     });
+
+    const activated = await prisma.familyMembership.findUnique({
+      where: { id: membership.id },
+      select: { feePaidAt: true },
+    });
+    if (!activated?.feePaidAt) return;
 
     // Credit 88% to chief's spot earnings balance (platform retains 12% commission)
     // Chief withdraws manually from the admin panel — allows batching to reduce transfer fees

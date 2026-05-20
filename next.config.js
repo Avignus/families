@@ -9,6 +9,22 @@ const securityHeaders = [
     key: "Strict-Transport-Security",
     value: "max-age=63072000; includeSubDomains; preload",
   },
+  {
+    // ISO A.14.2.1 — restricts resource origins; blocks clickjacking and third-party script injection.
+    // unsafe-inline/unsafe-eval are required by Next.js App Router hydration scripts.
+    key: "Content-Security-Policy",
+    value: [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data: blob: https://avatars.steamstatic.com https://cdn.akamai.steamstatic.com https://store.steampowered.com https://cdn.cloudflare.steamstatic.com",
+      "font-src 'self'",
+      "connect-src 'self' https://steamcommunity.com https://api.steampowered.com",
+      "frame-ancestors 'none'",
+      "form-action 'self' https://steamcommunity.com",
+      "base-uri 'self'",
+    ].join("; "),
+  },
 ];
 
 const nextConfig = {

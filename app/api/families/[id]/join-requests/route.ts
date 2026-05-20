@@ -59,7 +59,7 @@ async function handlePost(req: NextRequest, params: { id: string }) {
     return err("FAMILY_FULL", "This family has no available spots", 409);
   }
 
-  // Single-family rule: user cannot be active in another family simultaneously
+  // Single-family rule: user cannot be active in another family simultaneously (fast check)
   const otherActive = await prisma.familyMembership.findFirst({
     where: { userId: user.id, status: "active", familyId: { not: params.id } },
     select: { familyId: true },
@@ -67,6 +67,8 @@ async function handlePost(req: NextRequest, params: { id: string }) {
   if (otherActive) {
     return err("ALREADY_IN_FAMILY", "Você já faz parte de uma família. A Steam só permite uma família por conta.", 409);
   }
+  // Note: the single-family check is re-validated inside each $transaction block below
+  // to prevent race conditions from concurrent requests (ISO A.14.2.1)
 
   const existing = await prisma.familyMembership.findUnique({
     where: { userId_familyId: { userId: user.id, familyId: params.id } },
@@ -111,6 +113,13 @@ async function handlePost(req: NextRequest, params: { id: string }) {
         });
       } else {
         await prisma.$transaction(async (tx) => {
+          // Atomic re-check inside transaction to prevent race condition (ISO A.14.2.1)
+          const concurrentActive = await tx.familyMembership.findFirst({
+            where: { userId: user.id, status: "active", familyId: { not: params.id } },
+            select: { familyId: true },
+          });
+          if (concurrentActive) throw Object.assign(new Error("ALREADY_IN_FAMILY"), { code: 409 });
+
           await tx.familyMembership.create({
             data: { userId: user.id, familyId: params.id, status: "pending" },
           });
@@ -209,6 +218,13 @@ async function handlePost(req: NextRequest, params: { id: string }) {
       });
     } else {
       await prisma.$transaction(async (tx) => {
+        // Atomic re-check inside transaction to prevent race condition (ISO A.14.2.1)
+        const concurrentActive = await tx.familyMembership.findFirst({
+          where: { userId: user.id, status: "active", familyId: { not: params.id } },
+          select: { familyId: true },
+        });
+        if (concurrentActive) throw Object.assign(new Error("ALREADY_IN_FAMILY"), { code: 409 });
+
         await tx.familyMembership.create({
           data: { userId: user.id, familyId: params.id, status: "pending" },
         });
