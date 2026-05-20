@@ -34,7 +34,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
   const blob = await put(`family-covers/${params.id}.${ext}`, file, {
     access: "public",
-    addRandomSuffix: false,
+    addRandomSuffix: true,
   });
 
   await prisma.family.update({

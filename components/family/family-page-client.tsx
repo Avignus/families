@@ -122,6 +122,7 @@ export function FamilyPageClient({
   const [distributing, setDistributing] = useState(false);
   const [localCredits, setLocalCredits] = useState(creditsCents);
   const [autoDistribute, setAutoDistribute] = useState(autoDistributeEnabled);
+  const [localCoverUrl, setLocalCoverUrl] = useState<string | null | undefined>(undefined);
 
   const handleDistributeCredits = async () => {
     setDistributing(true);
@@ -254,9 +255,9 @@ export function FamilyPageClient({
         {/* Cover art banner */}
         <div className="relative h-44 group/banner">
           <div className="absolute inset-0">
-            {family.coverImageUrl ? (
+            {(localCoverUrl ?? family.coverImageUrl) ? (
               <img
-                src={family.coverImageUrl}
+                src={localCoverUrl ?? family.coverImageUrl!}
                 alt={family.name}
                 className="w-full h-full object-cover"
               />
@@ -281,6 +282,7 @@ export function FamilyPageClient({
                   const res = await fetch(`/api/families/${familyId}/cover`, { method: "POST", body: form });
                   const data = await res.json();
                   if (!res.ok) { toast.error(data.error?.message ?? t.family.imageError); return; }
+                  setLocalCoverUrl(data.data?.coverImageUrl ?? null);
                   toast.success(t.family.coverUpdated);
                   refetch();
                 }}
