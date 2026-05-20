@@ -2,6 +2,7 @@ import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { FamilyPageClient } from "@/components/family/family-page-client";
+import { FamilyGuestView } from "@/components/family/family-guest-view";
 import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
@@ -34,7 +35,14 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
 
 export default async function FamilyPage({ params }: { params: { id: string } }) {
   const session = await getSession();
-  if (!session?.user) redirect("/");
+
+  if (!session?.user) {
+    const family = await prisma.family.findUnique({
+      where: { id: params.id },
+      select: { name: true, description: true, coverImageUrl: true },
+    });
+    return <FamilyGuestView family={family} />;
+  }
 
   const userId = (session.user as { id?: string }).id ?? "";
   const currentSteamId = (session.user as { steamId?: string }).steamId ?? "";
