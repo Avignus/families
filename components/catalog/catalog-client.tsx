@@ -5,7 +5,7 @@ import { useState, useTransition } from "react";
 import { formatCurrency } from "@/lib/utils";
 import {
   Users, Lock, Unlock, Crown, Search, ChevronLeft, ChevronRight,
-  SlidersHorizontal, X, Gamepad2, CheckCircle2, PlusCircle, Zap,
+  SlidersHorizontal, X, Gamepad2, CheckCircle2, PlusCircle, Zap, HelpCircle,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -535,8 +535,16 @@ function FamilyCard({
           </div>
           {family.spotPricingEnabled ? (
             spotPrice !== null ? (
-              <span className="text-primary font-semibold text-xs">
-                {formatCurrency(spotPrice, family.currency)}
+              <span className="flex items-center gap-1">
+                <span className="text-primary font-semibold text-xs">
+                  {formatCurrency(spotPrice, family.currency)}
+                </span>
+                <span className="relative group">
+                  <HelpCircle className="h-3 w-3 text-muted-foreground/60 cursor-help" />
+                  <span className="absolute bottom-full right-0 mb-1.5 w-44 text-[10px] leading-snug text-center bg-popover border border-border rounded-md px-2 py-1.5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-md text-foreground">
+                    {t.catalog.spotPriceTooltip}
+                  </span>
+                </span>
               </span>
             ) : (
               <span className="flex items-center gap-1 text-primary font-semibold text-xs">

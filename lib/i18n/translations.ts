@@ -151,6 +151,7 @@ export const translations = {
       joinSpot: "See my price",
       buySpot: "Buy spot",
       paymentPending: "Payment pending",
+      spotPriceTooltip: "Price calculated based on your games",
     },
     catalogFamily: {
       backLink: "Catalog",
@@ -646,6 +647,7 @@ export const translations = {
       joinSpot: "Ver meu preço",
       buySpot: "Comprar spot",
       paymentPending: "Pagamento pendente",
+      spotPriceTooltip: "Preço calculado baseado nos seus jogos",
     },
     catalogFamily: {
       backLink: "Catálogo",
