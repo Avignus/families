@@ -217,7 +217,7 @@ export default async function CatalogPage({
     for (const appId of (familyWishlistAppIds.get(f.id) ?? [])) {
       for (const g of (appGenreMap.get(appId) ?? [])) counts.set(g, (counts.get(g) ?? 0) + 1);
     }
-    const top = [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([g]) => g);
+    const top = [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8).map(([g]) => g);
     familyTopGenresMap.set(f.id, top);
   }
 

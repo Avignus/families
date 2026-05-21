@@ -44,12 +44,13 @@ export type SteamPlayerSummary = {
 
 export async function getAppDetails(appId: number, country = DEFAULT_COUNTRY): Promise<SteamAppDetails | null> {
   // Check cache first
+  const GENRE_VERSION = 2; // bump when synthesis logic changes to force cache refresh
   const cached = await prisma.steamAppCache.findUnique({ where: { steamAppId: appId } });
   if (cached) {
     const age = Date.now() - cached.fetchedAt.getTime();
-    const hasGenres = (cached.payload as { genres?: unknown }).genres !== undefined;
-    // Re-fetch if TTL expired OR if entry predates the genres field
-    if (age < PRICE_CACHE_TTL_MS && hasGenres) {
+    const p = cached.payload as { genres?: unknown; _genreVersion?: number };
+    const genresCurrent = p.genres !== undefined && (p._genreVersion ?? 0) >= GENRE_VERSION;
+    if (age < PRICE_CACHE_TTL_MS && genresCurrent) {
       return cached.payload as unknown as SteamAppDetails;
     }
   }
@@ -99,7 +100,7 @@ export async function getAppDetails(appId: number, country = DEFAULT_COUNTRY): P
     const survivalKw = ["survival", "sobrevivência", "sobreviver", "survive", "scavenge"];
     if (survivalKw.some((kw) => desc.includes(kw))) genres.push("Sobrevivência");
 
-    const payload: SteamAppDetails = {
+    const payload: SteamAppDetails & { _genreVersion: number } = {
       appId,
       name: d.name,
       headerImage: d.header_image,
@@ -111,6 +112,7 @@ export async function getAppDetails(appId: number, country = DEFAULT_COUNTRY): P
       comingSoon: d.release_date?.coming_soon ?? false,
       releaseDate: d.release_date?.date ?? "",
       genres: [...new Set(genres)],
+      _genreVersion: GENRE_VERSION,
     };
 
     await prisma.steamAppCache.upsert({

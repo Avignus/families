@@ -40,6 +40,22 @@ const GENRE_COLORS: Record<string, string> = {
 const GENRE_DEFAULT_COLOR = "bg-muted/50 text-muted-foreground";
 const ALL_GENRES = Object.keys(GENRE_COLORS);
 
+// Higher = shown first on the card (specific/rare genres over generic ones)
+const GENRE_PRIORITY: Record<string, number> = {
+  "Terror":        10,
+  "Co-op":         9,
+  "Sobrevivência": 8,
+  "RPG":           7,
+  "Estratégia":    6,
+  "Simulação":     5,
+  "Esportes":      4,
+  "Corrida":       4,
+  "Aventura":      3,
+  "Casual":        2,
+  "Ação":          1,
+  "Indie":         0,
+};
+
 function genreColor(genre: string) {
   return GENRE_COLORS[genre] ?? GENRE_DEFAULT_COLOR;
 }
@@ -532,17 +548,20 @@ function FamilyCard({
           <Crown className="h-3 w-3 text-amber-400 flex-shrink-0" />
         </div>
 
-        {/* Genre badges */}
+        {/* Genre badges — specific genres first, generic last */}
         {family.topGenres.length > 0 && (
           <div className="flex flex-wrap gap-1">
-            {family.topGenres.slice(0, 3).map((genre) => (
-              <span
-                key={genre}
-                className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${genreColor(genre)}`}
-              >
-                {genre}
-              </span>
-            ))}
+            {[...family.topGenres]
+              .sort((a, b) => (GENRE_PRIORITY[b] ?? 0) - (GENRE_PRIORITY[a] ?? 0))
+              .slice(0, 5)
+              .map((genre) => (
+                <span
+                  key={genre}
+                  className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${genreColor(genre)}`}
+                >
+                  {genre}
+                </span>
+              ))}
           </div>
         )}
 
