@@ -34,6 +34,7 @@ type Family = {
   gameCovers: string[];
   myStatus: string | null;
   hasPendingPix: boolean;
+  spotPriceCents: number | null;
   libraryStats: LibraryStats | null;
   gameNames: string[];
   gameNamesLabel: "missing" | "library";
@@ -398,7 +399,7 @@ function FamilyCard({
   const { t } = useLanguage();
   const hasFee = family.entryFeeCents > 0;
   const stats = family.libraryStats;
-  const [spotPrice, setSpotPrice] = useState<number | null>(null);
+  const [spotPrice, setSpotPrice] = useState<number | null>(family.spotPriceCents);
   const [spotPriceLoading, setSpotPriceLoading] = useState(false);
 
   const handleButtonClick = async () => {

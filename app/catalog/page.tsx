@@ -202,6 +202,42 @@ export default async function CatalogPage({
     }
   }
 
+  // Pre-compute spot prices for logged-in users, reusing already-loaded library data.
+  // Uses only cached Steam prices (no API calls) — fast enough for the listing.
+  const familySpotPricesMap = new Map<string, number>();
+  if (currentSteamId) {
+    const spotFamilies = pagedFamilies.filter((f) => f.spotPricingEnabled);
+    if (spotFamilies.length > 0) {
+      const allPricingIds = new Set<number>();
+      for (const f of spotFamilies) {
+        const familyIds = familyAppIdsMap.get(f.id) ?? new Set<number>();
+        for (const id of familyIds) { if (!userAppIds.has(id)) allPricingIds.add(id); }
+        for (const id of userAppIds) { if (!familyIds.has(id)) allPricingIds.add(id); }
+      }
+      const priceCaches = allPricingIds.size > 0
+        ? await prisma.steamAppCache.findMany({
+            where: { steamAppId: { in: [...allPricingIds] } },
+            select: { steamAppId: true, payload: true },
+          })
+        : [];
+      const priceMap = new Map<number, number>();
+      for (const cache of priceCaches) {
+        const p = cache.payload as { priceCents?: number; isFree?: boolean };
+        if (!p.isFree && p.priceCents && p.priceCents > 0) priceMap.set(cache.steamAppId, p.priceCents);
+      }
+      for (const f of spotFamilies) {
+        const familyIds = familyAppIdsMap.get(f.id) ?? new Set<number>();
+        let familyValueCents = 0;
+        for (const id of familyIds) { if (!userAppIds.has(id)) familyValueCents += priceMap.get(id) ?? 0; }
+        let buyerContributionCents = 0;
+        for (const id of userAppIds) { if (!familyIds.has(id)) buyerContributionCents += priceMap.get(id) ?? 0; }
+        const netValueCents = Math.max(0, familyValueCents - buyerContributionCents);
+        const spotPriceCents = Math.max(f.spotMinPriceCents, Math.round(netValueCents * f.spotFraction));
+        familySpotPricesMap.set(f.id, spotPriceCents);
+      }
+    }
+  }
+
   // Determine which game names to surface per paginated family:
   // - Logged-in + has missing games → names of games they'd gain (up to 4)
   // - Otherwise → sample of library games for context (up to 4, hash-offset per family)
@@ -321,6 +357,7 @@ export default async function CatalogPage({
         gameCovers: covers,
         myStatus: myMembership?.status ?? null,
         hasPendingPix: !!(myMembership?.status === "pending" && myMembership.mpPaymentId && !myMembership.feePaidAt),
+        spotPriceCents: familySpotPricesMap.get(f.id) ?? null,
         familyScore: f.familyScore,
         libraryStats: familyLibraryStats.get(f.id) ?? null,
         gameNames: (gameNameAppIdsPerFamily.get(f.id)?.ids ?? [])
