@@ -1,7 +1,8 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { ChevronDown, ChevronUp, Lightbulb } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 
@@ -28,29 +29,68 @@ type Props = {
 };
 
 function RecommendationCard({ rec }: { rec: Recommendation }) {
+  const cardRef = useRef<HTMLAnchorElement>(null);
+  const [popoverRect, setPopoverRect] = useState<DOMRect | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const open = useCallback(() => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    const rect = cardRef.current?.getBoundingClientRect();
+    if (rect) setPopoverRect(rect);
+  }, []);
+
+  const close = useCallback(() => {
+    timerRef.current = setTimeout(() => setPopoverRect(null), 80);
+  }, []);
+
+  const cancelClose = useCallback(() => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+  }, []);
+
   const image = rec.steamData?.headerImage ?? `https://cdn.cloudflare.steamstatic.com/steam/apps/${rec.steamAppId}/header.jpg`;
   const name = rec.steamData?.name ?? rec.gameName;
   const storeUrl = `https://store.steampowered.com/app/${rec.steamAppId}`;
 
   return (
-    <a
-      href={storeUrl}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="flex-shrink-0 w-44 rounded-lg border border-border/40 bg-card/60 hover:border-border hover:bg-card/80 transition-colors group"
-    >
-      <img
-        src={image}
-        alt={name}
-        className="w-full h-[62px] object-cover rounded-t-lg group-hover:brightness-110 transition-[filter]"
-      />
-      <div className="px-2 py-2 space-y-1">
-        <p className="text-[11px] font-semibold leading-tight line-clamp-1">{name}</p>
-        <p className="text-[10px] text-muted-foreground leading-snug line-clamp-3 group-hover:line-clamp-none">
-          {rec.reason}
-        </p>
-      </div>
-    </a>
+    <>
+      <a
+        ref={cardRef}
+        href={storeUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex-shrink-0 w-44 rounded-lg border border-border/40 bg-card/60 hover:border-border hover:bg-card/80 transition-colors group"
+        onMouseEnter={open}
+        onMouseLeave={close}
+      >
+        <img
+          src={image}
+          alt={name}
+          className="w-full h-[62px] object-cover rounded-t-lg group-hover:brightness-110 transition-[filter]"
+        />
+        <div className="px-2 py-2 space-y-1">
+          <p className="text-[11px] font-semibold leading-tight line-clamp-1">{name}</p>
+          <p className="text-[10px] text-muted-foreground leading-snug line-clamp-3">{rec.reason}</p>
+        </div>
+      </a>
+
+      {popoverRect && typeof document !== "undefined" && createPortal(
+        <div
+          style={{
+            position: "fixed",
+            top: popoverRect.bottom - 1,
+            left: popoverRect.left,
+            width: popoverRect.width,
+            zIndex: 9999,
+          }}
+          className="bg-card border border-border border-t-primary/30 rounded-b-lg shadow-xl px-2 pb-2 pt-1.5"
+          onMouseEnter={cancelClose}
+          onMouseLeave={close}
+        >
+          <p className="text-[10px] text-muted-foreground leading-snug">{rec.reason}</p>
+        </div>,
+        document.body,
+      )}
+    </>
   );
 }
 
@@ -120,7 +160,7 @@ export function RecommendationsSection({ familyId, currentUserId }: Props) {
             {!isLoading && familyRecs.length > 0 && (
               <div>
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Para a família</p>
-                <div className="flex gap-3 overflow-x-auto pb-2 items-start">
+                <div className="flex gap-3 overflow-x-auto pb-2">
                   {familyRecs.map((rec) => (
                     <RecommendationCard key={rec.id} rec={rec} />
                   ))}
@@ -131,7 +171,7 @@ export function RecommendationsSection({ familyId, currentUserId }: Props) {
             {!isLoading && personalRecs.length > 0 && (
               <div>
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Para você</p>
-                <div className="flex gap-3 overflow-x-auto pb-2 items-start">
+                <div className="flex gap-3 overflow-x-auto pb-2">
                   {personalRecs.map((rec) => (
                     <RecommendationCard key={rec.id} rec={rec} />
                   ))}
