@@ -1,22 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isCronAuthorized } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { formatCurrency } from "@/lib/notifications/templates";
 import { createNotification } from "@/lib/notifications/service";
 
 export const dynamic = "force-dynamic";
 
-function isAuthorized(req: NextRequest) {
-  const secret = process.env.CRON_SECRET;
-  if (!secret) return false;
-  if (req.headers.get("authorization") !== `Bearer ${secret}`) return false;
-  if (process.env.NODE_ENV === "production" && !req.headers.get("x-vercel-cron")) return false;
-  return true;
-}
 
 const MIN_PLEDGE_CENTS = 100; // R$1 minimum per pledge
 
 export async function GET(req: NextRequest) {
-  if (!isAuthorized(req)) return NextResponse.json({ ok: false }, { status: 401 });
+  if (!isCronAuthorized(req, process.env.CRON_SECRET, true)) return NextResponse.json({ ok: false }, { status: 401 });
 
   const startOfMonth = new Date();
   startOfMonth.setDate(1);

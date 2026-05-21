@@ -25,7 +25,7 @@ export async function itadLookup(steamAppId: number): Promise<string | null> {
 export async function itadPriceHistory(itadId: string, country = "BR"): Promise<ItadPriceRecord[]> {
   if (!KEY) return [];
   try {
-    const res = await fetch(`${BASE}/games/history/v2?key=${KEY}&id=${encodeURIComponent(itadId)}&country=${country}`);
+    const res = await fetch(`${BASE}/games/history/v2?key=${KEY}&id=${encodeURIComponent(itadId)}&country=${encodeURIComponent(country)}`);
     if (!res.ok) return [];
     const data = await res.json();
     return Array.isArray(data) ? data : [];

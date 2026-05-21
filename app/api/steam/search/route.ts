@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
   const user = await requireSession();
   if (isApiError(user)) return user;
 
-  const q = req.nextUrl.searchParams.get("q")?.trim();
+  const q = req.nextUrl.searchParams.get("q")?.trim().slice(0, 100);
   if (!q || q.length < 2) return ok([]);
 
   // Try local catalog first

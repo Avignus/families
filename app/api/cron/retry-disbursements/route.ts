@@ -1,19 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isCronAuthorized } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { maybeDisburseFunds } from "@/lib/disbursement";
 
 export const dynamic = "force-dynamic";
 
-function isAuthorized(req: NextRequest) {
-  const secret = process.env.CRON_SECRET;
-  if (!secret) return false;
-  if (req.headers.get("authorization") !== `Bearer ${secret}`) return false;
-  if (process.env.NODE_ENV === "production" && !req.headers.get("x-vercel-cron")) return false;
-  return true;
-}
 
 export async function GET(req: NextRequest) {
-  if (!isAuthorized(req)) return NextResponse.json({ ok: false }, { status: 401 });
+  if (!isCronAuthorized(req, process.env.CRON_SECRET, true)) return NextResponse.json({ ok: false }, { status: 401 });
 
   // Find funded items with no disbursement where all pledges are paid
   const candidates = await prisma.wishlistItem.findMany({

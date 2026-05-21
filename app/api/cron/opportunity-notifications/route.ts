@@ -1,23 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isCronAuthorized } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { formatCurrency } from "@/lib/notifications/templates";
 
 export const dynamic = "force-dynamic";
 
 // Vercel Cron calls with Authorization: Bearer <CRON_SECRET>
-function isAuthorized(req: NextRequest) {
-  const secret = process.env.CRON_SECRET;
-  if (!secret) return false;
-  if (req.headers.get("authorization") !== `Bearer ${secret}`) return false;
-  if (process.env.NODE_ENV === "production" && !req.headers.get("x-vercel-cron")) return false;
-  return true;
-}
 
 const MIN_PERCENT = 20;   // only notify when item is at least 20% funded
 const COOLDOWN_DAYS = 3;  // don't re-notify the same user+item within 3 days
 
 export async function GET(req: NextRequest) {
-  if (!isAuthorized(req)) {
+  if (!isCronAuthorized(req, process.env.CRON_SECRET, true)) {
     return NextResponse.json({ ok: false }, { status: 401 });
   }
 

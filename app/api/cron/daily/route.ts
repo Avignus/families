@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isCronAuthorized } from "@/lib/api";
 import { getAppBaseUrl } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -11,16 +12,9 @@ const DAILY_ROUTES = [
   "/api/cron/expire-spots",
 ];
 
-function isAuthorized(req: NextRequest) {
-  const secret = process.env.CRON_SECRET;
-  if (!secret) return false;
-  if (req.headers.get("authorization") !== `Bearer ${secret}`) return false;
-  if (process.env.NODE_ENV === "production" && !req.headers.get("x-vercel-cron")) return false;
-  return true;
-}
 
 export async function GET(req: NextRequest) {
-  if (!isAuthorized(req)) return NextResponse.json({ ok: false }, { status: 401 });
+  if (!isCronAuthorized(req, process.env.CRON_SECRET, true)) return NextResponse.json({ ok: false }, { status: 401 });
 
   const baseUrl = getAppBaseUrl(req);
   const secret = process.env.CRON_SECRET!;

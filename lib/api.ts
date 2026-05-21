@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "./auth";
 import { ZodSchema } from "zod";
+import { timingSafeEqual } from "crypto";
 
 export type ApiUser = {
   id: string;
@@ -36,6 +37,28 @@ export async function requireSession(): Promise<ApiUser | NextResponse> {
 
 export function isApiError(v: unknown): v is NextResponse {
   return v instanceof NextResponse;
+}
+
+/**
+ * Timing-safe bearer token check for cron/admin routes.
+ * Prevents secret enumeration via response-time side channel.
+ * Pass requireVercelCron=true for endpoints that must only run via Vercel Cron scheduler.
+ */
+export function isCronAuthorized(req: NextRequest, secret: string | undefined, requireVercelCron = false): boolean {
+  if (!secret) return false;
+  const auth = req.headers.get("authorization") ?? "";
+  const expected = `Bearer ${secret}`;
+  let valid = false;
+  try {
+    const a = Buffer.from(auth.padEnd(expected.length, "\0"));
+    const b = Buffer.from(expected.padEnd(auth.length, "\0"));
+    valid = a.length === b.length && timingSafeEqual(a, b);
+  } catch {
+    return false;
+  }
+  if (!valid) return false;
+  if (requireVercelCron && process.env.NODE_ENV === "production" && !req.headers.get("x-vercel-cron")) return false;
+  return true;
 }
 
 export async function parseBody<T>(req: NextRequest, schema: ZodSchema<T>): Promise<T | NextResponse> {

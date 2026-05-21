@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
   const currentUserId = (session?.user as { id?: string })?.id ?? null;
 
   const { searchParams } = new URL(req.url);
-  const search = searchParams.get("q") ?? "";
+  const search = (searchParams.get("q") ?? "").slice(0, 100);
   const freeOnly = searchParams.get("free") === "1";
 
   const families = await prisma.family.findMany({

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isCronAuthorized } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { getAppDetails } from "@/lib/steam";
 import { creditWallet } from "@/lib/wallet";
@@ -21,16 +22,9 @@ function getSurplusFeeBps(): number {
   return isNaN(bps) || bps < 0 || bps > 10000 ? 1000 : bps;
 }
 
-function isAuthorized(req: NextRequest) {
-  const secret = process.env.CRON_SECRET;
-  if (!secret) return false;
-  if (req.headers.get("authorization") !== `Bearer ${secret}`) return false;
-  if (process.env.NODE_ENV === "production" && !req.headers.get("x-vercel-cron")) return false;
-  return true;
-}
 
 export async function GET(req: NextRequest) {
-  if (!isAuthorized(req)) return NextResponse.json({ ok: false }, { status: 401 });
+  if (!isCronAuthorized(req, process.env.CRON_SECRET, true)) return NextResponse.json({ ok: false }, { status: 401 });
 
   const items = await prisma.wishlistItem.findMany({
     where: { status: { in: ["open", "funded"] } },

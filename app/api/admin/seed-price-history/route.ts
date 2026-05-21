@@ -1,19 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { itadLookup, itadPriceHistory } from "@/lib/itad";
+import { isCronAuthorized } from "@/lib/api";
 
 export const dynamic = "force-dynamic";
 // Seeding many games can take a while
 export const maxDuration = 300;
 
-function isAuthorized(req: NextRequest) {
-  const secret = process.env.CRON_SECRET;
-  if (!secret) return false;
-  return req.headers.get("authorization") === `Bearer ${secret}`;
-}
-
 export async function GET(req: NextRequest) {
-  if (!isAuthorized(req)) return NextResponse.json({ ok: false }, { status: 401 });
+  if (!isCronAuthorized(req, process.env.CRON_SECRET)) return NextResponse.json({ ok: false }, { status: 401 });
 
   if (!process.env.ITAD_API_KEY) {
     return NextResponse.json({ ok: false, error: "ITAD_API_KEY not configured" }, { status: 503 });

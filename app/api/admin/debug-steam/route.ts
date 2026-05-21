@@ -1,16 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { isCronAuthorized } from "@/lib/api";
 
 export const dynamic = "force-dynamic";
 
-function isAuthorized(req: NextRequest) {
-  const secret = process.env.RESET_TEMP_SECRET;
-  if (!secret) return false;
-  return req.headers.get("authorization") === `Bearer ${secret}`;
-}
-
 export async function GET(req: NextRequest) {
-  if (!isAuthorized(req)) return NextResponse.json({ ok: false }, { status: 401 });
+  if (!isCronAuthorized(req, process.env.RESET_TEMP_SECRET)) return NextResponse.json({ ok: false }, { status: 401 });
 
   const steamId = req.nextUrl.searchParams.get("steamId") ?? "76561198045962425";
 

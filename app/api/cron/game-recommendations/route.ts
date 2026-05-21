@@ -1,19 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { recommendGamesForUser, recommendGamesForFamily } from "@/lib/gemini";
+import { isCronAuthorized } from "@/lib/api";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
 function isAuthorized(req: NextRequest) {
   if (process.env.NODE_ENV !== "production") return true;
-  const auth = req.headers.get("authorization") ?? "";
-  // Vercel cron: requires x-vercel-cron header
-  const cronSecret = process.env.CRON_SECRET;
-  if (cronSecret && auth === `Bearer ${cronSecret}` && req.headers.get("x-vercel-cron")) return true;
-  // Manual trigger: BOT_API_SECRET (doesn't require x-vercel-cron)
-  const botSecret = process.env.BOT_API_SECRET;
-  if (botSecret && auth === `Bearer ${botSecret}`) return true;
+  if (isCronAuthorized(req, process.env.CRON_SECRET, true)) return true;
+  if (isCronAuthorized(req, process.env.BOT_API_SECRET)) return true;
   return false;
 }
 

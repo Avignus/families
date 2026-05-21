@@ -8,7 +8,8 @@ export async function GET(req: NextRequest) {
 
   const params = req.nextUrl.searchParams;
   const unreadOnly = params.get("unread") === "true";
-  const cursor = params.get("cursor");
+  const rawCursor = params.get("cursor");
+  const cursor = rawCursor && /^[0-9a-f-]{36}$/.test(rawCursor) ? rawCursor : null;
   const limit = 20;
 
   const notifications = await prisma.notification.findMany({
