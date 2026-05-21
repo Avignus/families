@@ -44,7 +44,7 @@ export type SteamPlayerSummary = {
 
 export async function getAppDetails(appId: number, country = DEFAULT_COUNTRY): Promise<SteamAppDetails | null> {
   // Check cache first
-  const GENRE_VERSION = 2; // bump when synthesis logic changes to force cache refresh
+  const GENRE_VERSION = 3; // bump when synthesis logic changes to force cache refresh
   const cached = await prisma.steamAppCache.findUnique({ where: { steamAppId: appId } });
   if (cached) {
     const age = Date.now() - cached.fetchedAt.getTime();
@@ -92,8 +92,15 @@ export async function getAppDetails(appId: number, country = DEFAULT_COUNTRY): P
 
     // 3. Synthesize Terror from short_description keywords (horror is a tag, not a Steam genre)
     const desc = (d.short_description ?? "").toLowerCase();
-    const horrorKw = ["horror", "terror", "ghost", "haunted", "paranormal",
-                      "zombie", "zombi", "undead", "assombr", "supernatural", "psychological horror"];
+    const horrorKw = [
+      // English
+      "horror", "ghost", "haunted", "paranormal", "supernatural",
+      "zombie", "zombi", "undead", "slasher",
+      "psychological horror", "psychological thriller", "thriller",
+      // Portuguese
+      "terror", "assombr", "fantasma", "sobrenatural",
+      "terror psicológico", "suspense", "assustador", "perturbador", "medo",
+    ];
     if (horrorKw.some((kw) => desc.includes(kw))) genres.push("Terror");
 
     // 4. Synthesize Sobrevivência (survival is also a tag, not a Steam genre)
