@@ -28,26 +28,32 @@ type Props = {
   currentUserId: string;
 };
 
-// 3 lines × (10px font × 1.375 leading-snug) = 41.25px → clip offset
-const CLAMP_LINES_HEIGHT = 41;
+type PopoverState = {
+  rect: DOMRect;
+  visibleHeight: number; // clientHeight of the clamped <p>
+  overflowHeight: number; // scrollHeight - clientHeight = hidden portion
+} | null;
 
 function RecommendationCard({ rec }: { rec: Recommendation }) {
   const cardRef = useRef<HTMLAnchorElement>(null);
   const reasonRef = useRef<HTMLParagraphElement>(null);
-  const [popoverRect, setPopoverRect] = useState<DOMRect | null>(null);
+  const [popover, setPopover] = useState<PopoverState>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const open = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
-    // Only show if text is actually truncated
     const el = reasonRef.current;
     if (!el || el.scrollHeight <= el.clientHeight + 1) return;
     const rect = cardRef.current?.getBoundingClientRect();
-    if (rect) setPopoverRect(rect);
+    if (rect) setPopover({
+      rect,
+      visibleHeight: el.clientHeight,
+      overflowHeight: el.scrollHeight - el.clientHeight,
+    });
   }, []);
 
   const close = useCallback(() => {
-    timerRef.current = setTimeout(() => setPopoverRect(null), 80);
+    timerRef.current = setTimeout(() => setPopover(null), 80);
   }, []);
 
   const cancelClose = useCallback(() => {
@@ -82,23 +88,29 @@ function RecommendationCard({ rec }: { rec: Recommendation }) {
         </div>
       </a>
 
-      {popoverRect && typeof document !== "undefined" && createPortal(
+      {popover && typeof document !== "undefined" && createPortal(
         <div
           style={{
             position: "fixed",
-            top: popoverRect.bottom,
-            left: popoverRect.left,
-            width: popoverRect.width,
-            zIndex: 9999,
+            top: popover.rect.bottom,
+            left: popover.rect.left,
+            width: popover.rect.width,
+            // Fixed height = only the hidden overflow + 8px bottom padding
+            height: popover.overflowHeight + 8,
             overflow: "hidden",
+            zIndex: 9999,
           }}
-          className="bg-card border-x border-b border-border rounded-b-lg shadow-xl px-2 pb-2"
+          className="bg-card border-x border-b border-border rounded-b-lg shadow-xl px-2"
           onMouseEnter={cancelClose}
           onMouseLeave={close}
         >
-          {/* Negative margin skips the already-visible lines, showing only the overflow */}
+          {/*
+            Shift the full text UP by visibleHeight so the already-shown
+            lines sit above the container's top edge and get clipped.
+            Only the overflow portion remains inside the container.
+          */}
           <p
-            style={{ marginTop: `-${CLAMP_LINES_HEIGHT}px` }}
+            style={{ marginTop: `-${popover.visibleHeight}px` }}
             className="text-[10px] text-muted-foreground leading-snug"
           >
             {rec.reason}
