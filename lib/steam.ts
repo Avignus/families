@@ -47,7 +47,9 @@ export async function getAppDetails(appId: number, country = DEFAULT_COUNTRY): P
   const cached = await prisma.steamAppCache.findUnique({ where: { steamAppId: appId } });
   if (cached) {
     const age = Date.now() - cached.fetchedAt.getTime();
-    if (age < PRICE_CACHE_TTL_MS) {
+    const hasGenres = (cached.payload as { genres?: unknown }).genres !== undefined;
+    // Re-fetch if TTL expired OR if entry predates the genres field
+    if (age < PRICE_CACHE_TTL_MS && hasGenres) {
       return cached.payload as unknown as SteamAppDetails;
     }
   }
