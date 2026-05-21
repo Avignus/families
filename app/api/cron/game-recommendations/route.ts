@@ -3,6 +3,30 @@ import { prisma } from "@/lib/prisma";
 import { recommendGamesForUser, recommendGamesForFamily } from "@/lib/gemini";
 import { isCronAuthorized } from "@/lib/api";
 
+// Validates AI-generated steamAppId against our local catalog.
+// Gemini occasionally hallucinates wrong appIds — this cross-checks the name.
+async function resolveAppId(aiName: string, aiAppId: number): Promise<number> {
+  const normalize = (s: string) => s.toLowerCase().replace(/[®™©:]/g, "").trim();
+  const normAi = normalize(aiName);
+
+  // 1. If the catalog has an entry for the suggested appId, check name match
+  const byId = await prisma.steamAppCatalog.findFirst({ where: { appId: aiAppId } });
+  if (byId && normalize(byId.name).includes(normAi.split(" ")[0])) return aiAppId;
+
+  // 2. Search by name — if exactly one result, it's unambiguous
+  const firstWord = normAi.split(" ")[0];
+  const byName = await prisma.steamAppCatalog.findMany({
+    where: { name: { contains: firstWord, mode: "insensitive" } },
+    take: 5,
+    orderBy: { appId: "asc" },
+  });
+  const exact = byName.find((r) => normalize(r.name) === normAi);
+  if (exact) return exact.appId;
+  if (byName.length === 1) return byName[0].appId;
+
+  return aiAppId; // fall back to AI suggestion
+}
+
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
@@ -47,14 +71,14 @@ export async function GET(req: NextRequest) {
       const recommendations = await recommendGamesForUser(library);
       if (recommendations.length === 0) continue;
 
-      const data = recommendations.map((rec, i) => ({
+      const data = await Promise.all(recommendations.map(async (rec, i) => ({
         userId: user.id,
         type: "individual",
-        steamAppId: rec.steamAppId,
+        steamAppId: await resolveAppId(rec.name, rec.steamAppId),
         gameName: rec.name,
         reason: rec.reason,
         rank: i + 1,
-      }));
+      })));
 
       await prisma.$transaction([
         prisma.gameRecommendation.deleteMany({ where: { userId: user.id, type: "individual" } }),
@@ -96,14 +120,14 @@ export async function GET(req: NextRequest) {
       const recommendations = await recommendGamesForFamily(wishlistNames);
       if (recommendations.length === 0) continue;
 
-      const data = recommendations.map((rec, i) => ({
+      const data = await Promise.all(recommendations.map(async (rec, i) => ({
         familyId: family.id,
         type: "family",
-        steamAppId: rec.steamAppId,
+        steamAppId: await resolveAppId(rec.name, rec.steamAppId),
         gameName: rec.name,
         reason: rec.reason,
         rank: i + 1,
-      }));
+      })));
 
       await prisma.$transaction([
         prisma.gameRecommendation.deleteMany({ where: { familyId: family.id, type: "family" } }),

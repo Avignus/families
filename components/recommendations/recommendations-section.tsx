@@ -28,7 +28,7 @@ type Props = {
 };
 
 function RecommendationCard({ rec }: { rec: Recommendation }) {
-  const image = rec.steamData?.headerImage ?? `https://cdn.cloudflare.steamstatic.com/steam/apps/${rec.steamAppId}/header.jpg`;
+  const image = rec.steamData?.headerImage ?? null;
   const name = rec.steamData?.name ?? rec.gameName;
   const storeUrl = `https://store.steampowered.com/app/${rec.steamAppId}`;
 
@@ -39,11 +39,17 @@ function RecommendationCard({ rec }: { rec: Recommendation }) {
       rel="noopener noreferrer"
       className="flex-shrink-0 w-44 rounded-lg overflow-hidden border border-border/40 bg-card/60 hover:border-border transition-colors group"
     >
-      <img
-        src={image}
-        alt={name}
-        className="w-full h-[62px] object-cover group-hover:brightness-110 transition-[filter]"
-      />
+      {image ? (
+        <img
+          src={image}
+          alt={name}
+          className="w-full h-[62px] object-cover group-hover:brightness-110 transition-[filter]"
+        />
+      ) : (
+        <div className="w-full h-[62px] bg-secondary flex items-center justify-center">
+          <Lightbulb className="h-5 w-5 text-muted-foreground/40" />
+        </div>
+      )}
       <div className="px-2 py-2 space-y-1">
         <p className="text-[11px] font-semibold leading-tight line-clamp-1">{name}</p>
         <p className="text-[10px] text-muted-foreground leading-snug line-clamp-3">{rec.reason}</p>
