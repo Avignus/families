@@ -18,18 +18,24 @@ import { FamilyTierBadge } from "@/components/family-tier-badge";
 
 type LibraryStats = { totalGames: number; ownedGames: number; missingGames: number };
 
-// Steam genre names in Portuguese (matches Steam API with l=portuguese)
+// Genre taxonomy:
+// - Official Steam genres (Ação, Aventura, RPG, etc.) come from d.genres[]
+// - Co-op synthesized from Steam category IDs 9/38/24
+// - Terror synthesized from short_description keywords (not a Steam genre)
+// - Sobrevivência synthesized from short_description keywords (not a Steam genre)
 const GENRE_COLORS: Record<string, string> = {
-  "Ação":       "bg-orange-500/15 text-orange-400",
-  "Aventura":   "bg-amber-500/15 text-amber-400",
-  "RPG":        "bg-purple-500/15 text-purple-400",
-  "Estratégia": "bg-blue-500/15 text-blue-400",
-  "Simulação":  "bg-teal-500/15 text-teal-400",
-  "Terror":     "bg-red-700/20 text-red-400",
-  "Esportes":   "bg-emerald-500/15 text-emerald-400",
-  "Indie":      "bg-yellow-500/15 text-yellow-400",
-  "Corrida":    "bg-sky-500/15 text-sky-400",
-  "Casual":     "bg-pink-500/15 text-pink-400",
+  "Ação":          "bg-orange-500/15 text-orange-400",
+  "Aventura":      "bg-amber-500/15 text-amber-400",
+  "RPG":           "bg-purple-500/15 text-purple-400",
+  "Estratégia":    "bg-blue-500/15 text-blue-400",
+  "Simulação":     "bg-teal-500/15 text-teal-400",
+  "Terror":        "bg-red-700/20 text-red-400",
+  "Sobrevivência": "bg-lime-600/15 text-lime-400",
+  "Co-op":         "bg-emerald-500/15 text-emerald-400",
+  "Indie":         "bg-yellow-500/15 text-yellow-400",
+  "Casual":        "bg-pink-500/15 text-pink-400",
+  "Esportes":      "bg-green-600/15 text-green-400",
+  "Corrida":       "bg-sky-500/15 text-sky-400",
 };
 const GENRE_DEFAULT_COLOR = "bg-muted/50 text-muted-foreground";
 const ALL_GENRES = Object.keys(GENRE_COLORS);

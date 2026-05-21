@@ -67,6 +67,38 @@ export async function getAppDetails(appId: number, country = DEFAULT_COUNTRY): P
     }
 
     const d = appData.data;
+
+    // --- Genre computation ---
+    // 1. Normalize official Steam genres (may arrive in English or Portuguese depending on game)
+    const GENRE_NORM: Record<string, string> = {
+      "Action": "Ação", "Adventure": "Aventura", "Strategy": "Estratégia",
+      "Simulation": "Simulação", "Sports": "Esportes", "Racing": "Corrida",
+      "Free to Play": "Gratuito", "Grátis para Jogar": "Gratuito",
+      "Massively Multiplayer": "MMO", "Multijogador Massivo Online (MMO)": "MMO",
+      // filter noise
+      "Early Access": "", "Acesso Antecipado": "",
+    };
+    const steamGenres = (d.genres as Array<{ description: string }> | undefined) ?? [];
+    const genres: string[] = steamGenres
+      .map((g) => GENRE_NORM[g.description] ?? g.description)
+      .filter(Boolean);
+
+    // 2. Extract Co-op from Steam categories (IDs: 9=Co-op, 38=Online Co-op, 24=Local Co-op)
+    const categoryIds = new Set<number>(
+      (d.categories as Array<{ id: number }> | undefined)?.map((c) => c.id) ?? []
+    );
+    if ([9, 38, 24].some((id) => categoryIds.has(id))) genres.push("Co-op");
+
+    // 3. Synthesize Terror from short_description keywords (horror is a tag, not a Steam genre)
+    const desc = (d.short_description ?? "").toLowerCase();
+    const horrorKw = ["horror", "terror", "ghost", "haunted", "paranormal",
+                      "zombie", "zombi", "undead", "assombr", "supernatural", "psychological horror"];
+    if (horrorKw.some((kw) => desc.includes(kw))) genres.push("Terror");
+
+    // 4. Synthesize Sobrevivência (survival is also a tag, not a Steam genre)
+    const survivalKw = ["survival", "sobrevivência", "sobreviver", "survive", "scavenge"];
+    if (survivalKw.some((kw) => desc.includes(kw))) genres.push("Sobrevivência");
+
     const payload: SteamAppDetails = {
       appId,
       name: d.name,
@@ -78,7 +110,7 @@ export async function getAppDetails(appId: number, country = DEFAULT_COUNTRY): P
       isFree: d.is_free ?? false,
       comingSoon: d.release_date?.coming_soon ?? false,
       releaseDate: d.release_date?.date ?? "",
-      genres: (d.genres as Array<{ description: string }> | undefined)?.map((g) => g.description) ?? [],
+      genres: [...new Set(genres)],
     };
 
     await prisma.steamAppCache.upsert({

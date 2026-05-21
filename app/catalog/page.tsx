@@ -189,6 +189,23 @@ export default async function CatalogPage({
     const genres = (c.payload as { genres?: string[] }).genres;
     if (genres?.length) appGenreMap.set(c.steamAppId, genres);
   }
+
+  // Bootstrap: for games whose cache predates genre support, refresh up to 20 now
+  // so the filter works on first page load (price-sync cron keeps the rest warm).
+  const noGenreIds = allWishlistAppIds.filter((id) => !appGenreMap.has(id)).slice(0, 20);
+  if (noGenreIds.length > 0) {
+    const BATCH = 5;
+    for (let i = 0; i < noGenreIds.length; i += BATCH) {
+      const batch = noGenreIds.slice(i, i + BATCH);
+      const results = await Promise.allSettled(batch.map((id) => getAppDetails(id)));
+      for (const r of results) {
+        if (r.status === "fulfilled" && r.value?.genres?.length) {
+          appGenreMap.set(r.value.appId, r.value.genres);
+        }
+      }
+    }
+  }
+
   const familyWishlistAppIds = new Map<string, number[]>();
   for (const r of allWishlistRows) {
     const arr = familyWishlistAppIds.get(r.familyId) ?? [];
