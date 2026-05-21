@@ -318,11 +318,13 @@ async function handleSpotPayment(membership: MembershipWithFamily, status: strin
     }
 
     if (membership.family.autoApprove) {
+      const spotExpiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
+
       await prisma.$transaction(async (tx) => {
         // Atomic idempotency guard (ISO A.14.2.5)
         const activated = await tx.familyMembership.updateMany({
           where: { id: membership.id, feePaidAt: null },
-          data: { status: "active", feePaidAt: new Date(), joinedAt: new Date() },
+          data: { status: "active", feePaidAt: new Date(), joinedAt: new Date(), spotExpiresAt },
         });
         if (activated.count === 0) return;
 

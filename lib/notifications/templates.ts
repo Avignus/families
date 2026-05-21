@@ -169,6 +169,16 @@ const templates: Record<Locale, Templates> = {
       body: (p) => `${p.personaName} pagou ${p.amountFormatted} para entrar em "${p.familyName}". Aprove ou recuse a solicitação.`,
       link: (p) => `/families/${p.familyId}`,
     },
+    SPOT_EXPIRING_SOON: {
+      title: () => "Seu spot expira em breve",
+      body: (p) => `Seu acesso ao spot da família "${p.familyName}" expira em ${p.daysLeft} dias. Renove para não perder o acesso.`,
+      link: (p) => `/families/${p.familyId}`,
+    },
+    SPOT_EXPIRED: {
+      title: () => "Spot expirado",
+      body: (p) => `Seu período de 1 ano no spot da família "${p.familyName}" encerrou. Seu acesso foi removido.`,
+      link: () => `/catalog`,
+    },
   },
   en: {
     JOIN_REQUEST: {
@@ -325,6 +335,16 @@ const templates: Record<Locale, Templates> = {
       title: () => "Payment received — awaiting approval",
       body: (p) => `${p.personaName} paid ${p.amountFormatted} to join "${p.familyName}". Please approve or reject.`,
       link: (p) => `/families/${p.familyId}`,
+    },
+    SPOT_EXPIRING_SOON: {
+      title: () => "Your spot is expiring soon",
+      body: (p) => `Your access to the "${p.familyName}" spot expires in ${p.daysLeft} days. Renew to keep your access.`,
+      link: (p) => `/families/${p.familyId}`,
+    },
+    SPOT_EXPIRED: {
+      title: () => "Spot expired",
+      body: (p) => `Your 1-year spot in family "${p.familyName}" has ended. Your access has been removed.`,
+      link: () => `/catalog`,
     },
   },
 };

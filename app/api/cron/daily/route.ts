@@ -8,6 +8,7 @@ const DAILY_ROUTES = [
   "/api/cron/retry-disbursements",
   "/api/cron/refund-stuck-pledges",
   "/api/cron/opportunity-notifications",
+  "/api/cron/expire-spots",
 ];
 
 function isAuthorized(req: NextRequest) {

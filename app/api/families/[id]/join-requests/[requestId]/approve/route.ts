@@ -38,10 +38,13 @@ export async function POST(
     return err("ALREADY_IN_FAMILY", "Este usuário já faz parte de outra família e não pode ser aprovado.", 409);
   }
 
+  const isSpot = family.spotPricingEnabled && !!membership.feePaidAt;
+  const spotExpiresAt = isSpot ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000) : undefined;
+
   await prisma.$transaction(async (tx) => {
     await tx.familyMembership.update({
       where: { id: params.requestId },
-      data: { status: "active", joinedAt: new Date() },
+      data: { status: "active", joinedAt: new Date(), ...(spotExpiresAt ? { spotExpiresAt } : {}) },
     });
     await createNotification(tx, {
       recipientUserId: membership.userId,

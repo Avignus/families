@@ -2,8 +2,8 @@
 
 import { useLanguage } from "@/lib/i18n/context";
 
-const LAST_UPDATED_PT = "14 de maio de 2026";
-const LAST_UPDATED_EN = "May 14, 2026";
+const LAST_UPDATED_PT = "21 de maio de 2026";
+const LAST_UPDATED_EN = "May 21, 2026";
 
 export default function TermsPage() {
   const { lang } = useLanguage();
@@ -99,15 +99,83 @@ function TermsEN() {
         <p>Violations may result in immediate account suspension without refund.</p>
       </Section>
 
-      <Section title="8. Limitation of liability">
+      <Section title="8. Spot Marketplace — lease, Steam configuration, and liability">
+        <p>
+          The Spot Marketplace is an optional feature that allows family chiefs to offer paid
+          temporary access ("spots") to their Steam Family groups, and for buyers to purchase
+          such access through the platform.
+        </p>
+        <ul className="list-disc pl-5 space-y-1 mt-2">
+          <li>
+            <strong>Duration:</strong> Each spot lease has a fixed term of{" "}
+            <strong>12 months (365 days)</strong> from the date of payment confirmation. At the
+            end of this period, the membership is automatically revoked and the buyer must
+            purchase a new spot to regain access.
+          </li>
+          <li>
+            <strong>Non-refundable:</strong> Spot payments are non-refundable once the
+            membership is activated, except in the event of the family being dissolved by the
+            chief before the lease term ends — in which case the proportional remaining value
+            (excluding service fees) will be reviewed on a case-by-case basis at the
+            platform's sole discretion.
+          </li>
+          <li>
+            <strong>Steam configuration is the chief's exclusive responsibility:</strong> The
+            platform facilitates the connection between buyers and family chiefs, but does{" "}
+            <strong>not</strong> control, manage, or have access to any Steam account settings.
+            All Steam Family group configurations — including adding members, setting member
+            roles (adult or child/supervised account), adjusting parental controls, and
+            removing members — are performed entirely by the family chief, outside this
+            platform, directly in Valve's Steam application.
+          </li>
+          <li>
+            <strong>Child/supervised account profile:</strong> A family chief may, at any
+            time, change a member's role within Steam to a supervised ("child") profile,
+            which may restrict access to certain features or content. This action is taken
+            entirely at the chief's discretion and is beyond the platform's control or
+            influence. <strong>The platform expressly disclaims any liability</strong> for
+            losses, limitations, or damages arising from a chief assigning any member role
+            within Steam — including assignment of a child/supervised profile — whether done
+            in good faith or out of malice.
+          </li>
+          <li>
+            <strong>Member removal by the chief:</strong> A family chief may remove any member
+            from the Steam Family group at any time, regardless of the spot lease status on
+            this platform. The platform is not responsible for any early removal performed by
+            the chief on the Steam side. Buyers assume this risk when purchasing a spot. In
+            the event of early removal, the platform may, at its sole discretion, mediate
+            disputes but does not guarantee any outcome or compensation.
+          </li>
+          <li>
+            <strong>Steam policy changes:</strong> Valve Corporation may change Steam Family
+            Sharing rules, features, or availability at any time without notice to this
+            platform. The platform is not responsible for any impact such changes may have on
+            active spot leases.
+          </li>
+          <li>
+            <strong>Acknowledgement:</strong> By purchasing a spot, the buyer expressly
+            acknowledges and accepts all of the above risks and waives any claims against the
+            platform arising from Steam-side actions taken by the chief or by Valve
+            Corporation.
+          </li>
+        </ul>
+      </Section>
+
+      <Section title="9. Limitation of liability">
         <ul className="list-disc pl-5 space-y-1">
           <li>The platform is provided "as is", without guarantees of continuous availability.</li>
           <li>We are not responsible for unavailability of Steam, Asaas, or other third-party services.</li>
           <li>Our total liability for any damages is limited to the fees paid by the user in the last 12 months.</li>
+          <li>
+            The platform acts solely as a marketplace intermediary. Any disputes regarding
+            the actual Steam Family group configuration must be resolved between the chief
+            and the buyer directly. The platform may assist in mediation at its discretion
+            but assumes no liability for the outcome.
+          </li>
         </ul>
       </Section>
 
-      <Section title="9. Account termination">
+      <Section title="11. Account termination">
         <p>
           You may request account deletion at any time in{" "}
           <a href="/settings" className="text-primary underline">Settings → Delete account</a>.
@@ -116,7 +184,7 @@ function TermsEN() {
         </p>
       </Section>
 
-      <Section title="10. Governing law">
+      <Section title="12. Governing law">
         <p>
           These terms are governed by the laws of the Federative Republic of Brazil. For dispute
           resolution, the Central Court of the District of Belo Horizonte, Minas Gerais, is
@@ -124,7 +192,7 @@ function TermsEN() {
         </p>
       </Section>
 
-      <Section title="11. Contact">
+      <Section title="13. Contact">
         <p>
           For questions about these terms, contact us at{" "}
           <a href="mailto:contato@families.app" className="text-primary underline">contato@families.app</a>.
@@ -212,15 +280,83 @@ function TermsPT() {
         <p>Violações podem resultar em suspensão imediata da conta sem direito a reembolso.</p>
       </Section>
 
-      <Section title="8. Limitação de responsabilidade">
+      <Section title="8. Spot Marketplace — locação, configuração na Steam e responsabilidade">
+        <p>
+          O Spot Marketplace é uma funcionalidade opcional que permite que chiefs ofereçam acesso
+          temporário pago ("spots") ao seu grupo de Família Steam, e que compradores adquiram
+          esse acesso pela plataforma.
+        </p>
+        <ul className="list-disc pl-5 space-y-1 mt-2">
+          <li>
+            <strong>Duração:</strong> Cada locação de spot tem prazo fixo de{" "}
+            <strong>12 meses (365 dias)</strong> a partir da confirmação do pagamento. Ao final
+            desse período, a participação é automaticamente revogada e o comprador deve adquirir
+            um novo spot para recuperar o acesso.
+          </li>
+          <li>
+            <strong>Não reembolsável:</strong> Pagamentos de spot não são reembolsáveis após a
+            ativação da participação, exceto em caso de encerramento da família pelo chief antes
+            do término do prazo — situação em que o valor proporcional restante (excluídas as
+            taxas de serviço) poderá ser avaliado a critério exclusivo da plataforma.
+          </li>
+          <li>
+            <strong>Configuração na Steam é responsabilidade exclusiva do chief:</strong> A
+            plataforma facilita a conexão entre compradores e chiefs, mas{" "}
+            <strong>não</strong> controla, gerencia nem tem acesso a quaisquer configurações de
+            conta na Steam. Toda a configuração do grupo Família Steam — incluindo adição de
+            membros, definição de perfil (adulto ou criança/conta supervisionada), controles
+            parentais e remoção de membros — é realizada exclusivamente pelo chief, fora desta
+            plataforma, diretamente no aplicativo da Steam da Valve.
+          </li>
+          <li>
+            <strong>Perfil de criança/conta supervisionada:</strong> O chief pode, a qualquer
+            momento, alterar o papel de um membro dentro da Steam para um perfil supervisionado
+            ("criança"), o que pode restringir o acesso a determinadas funcionalidades ou
+            conteúdos. Essa ação é tomada inteiramente a critério do chief e está além do
+            controle ou influência da plataforma.{" "}
+            <strong>A plataforma se isenta expressamente de qualquer responsabilidade</strong>{" "}
+            por perdas, limitações ou danos decorrentes da atribuição de qualquer perfil pelo
+            chief dentro da Steam — incluindo a designação de perfil de criança/conta
+            supervisionada — seja por boa-fé ou por má-fé.
+          </li>
+          <li>
+            <strong>Remoção antecipada pelo chief:</strong> O chief pode remover qualquer membro
+            do grupo Família Steam a qualquer momento, independentemente do status do spot nesta
+            plataforma. A plataforma não se responsabiliza por remoções antecipadas realizadas
+            pelo chief no lado da Steam. O comprador assume esse risco ao adquirir um spot. Em
+            caso de remoção antecipada, a plataforma poderá, a seu exclusivo critério, mediar
+            disputas entre as partes, sem garantia de qualquer resultado ou compensação.
+          </li>
+          <li>
+            <strong>Mudanças de política da Steam:</strong> A Valve Corporation pode alterar as
+            regras, funcionalidades ou disponibilidade do Steam Family Sharing a qualquer
+            momento, sem aviso prévio à plataforma. A plataforma não se responsabiliza por
+            impactos que tais mudanças possam causar em spots ativos.
+          </li>
+          <li>
+            <strong>Declaração de ciência:</strong> Ao adquirir um spot, o comprador
+            expressamente reconhece e aceita todos os riscos acima descritos e renuncia a
+            quaisquer reivindicações contra a plataforma decorrentes de ações realizadas pelo
+            chief ou pela Valve Corporation no âmbito da Steam.
+          </li>
+        </ul>
+      </Section>
+
+      <Section title="9. Limitação de responsabilidade">
         <ul className="list-disc pl-5 space-y-1">
           <li>A plataforma é fornecida "como está", sem garantias de disponibilidade contínua.</li>
           <li>Não nos responsabilizamos por indisponibilidades da Steam, Asaas ou outros serviços terceiros.</li>
           <li>Nossa responsabilidade total por eventuais danos está limitada ao valor das taxas pagas pelo usuário nos últimos 12 meses.</li>
+          <li>
+            A plataforma atua exclusivamente como intermediária de marketplace. Disputas relativas
+            à configuração real do grupo Família Steam devem ser resolvidas diretamente entre o
+            chief e o comprador. A plataforma pode auxiliar na mediação a seu critério, mas não
+            assume responsabilidade pelo resultado.
+          </li>
         </ul>
       </Section>
 
-      <Section title="9. Encerramento de conta">
+      <Section title="10. Encerramento de conta">
         <p>
           Você pode solicitar a exclusão da sua conta a qualquer momento em{" "}
           <a href="/settings" className="text-primary underline">Configurações → Excluir conta</a>.
@@ -229,7 +365,7 @@ function TermsPT() {
         </p>
       </Section>
 
-      <Section title="10. Lei aplicável">
+      <Section title="11. Lei aplicável">
         <p>
           Estes termos são regidos pelas leis da República Federativa do Brasil. Para resolução de
           disputas, fica eleito o Foro Central da Comarca de Belo Horizonte, Minas Gerais,
@@ -237,7 +373,7 @@ function TermsPT() {
         </p>
       </Section>
 
-      <Section title="11. Contato">
+      <Section title="12. Contato">
         <p>
           Para questões sobre estes termos, entre em contato pelo e-mail{" "}
           <a href="mailto:contato@families.app" className="text-primary underline">contato@families.app</a>.

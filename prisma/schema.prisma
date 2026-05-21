@@ -85,6 +85,9 @@ model FamilyMembership {
   feeChargedCents   Int?     // total charged (entry fee + service fee)
   feeRefundedAt     DateTime?
 
+  // Spot marketplace lease duration
+  spotExpiresAt DateTime? // 1 year from activation; null = not a spot lease
+
   // Auto-distribution
   monthlyBudgetCents    Int       @default(0)
   autoDistributeEnabled Boolean   @default(false)
@@ -95,6 +98,7 @@ model FamilyMembership {
 
   @@unique([userId, familyId])
   @@index([familyId, status])
+  @@index([spotExpiresAt])
 }
 
 model WishlistItem {
@@ -327,4 +331,6 @@ enum NotificationType {
   CREDITS_ADDED
   MEMBER_BOUGHT_GAME
   JOIN_PAYMENT_AWAITING_APPROVAL
+  SPOT_EXPIRING_SOON
+  SPOT_EXPIRED
 }
