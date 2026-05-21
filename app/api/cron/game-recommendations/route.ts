@@ -3,28 +3,46 @@ import { prisma } from "@/lib/prisma";
 import { recommendGamesForUser, recommendGamesForFamily } from "@/lib/gemini";
 import { isCronAuthorized } from "@/lib/api";
 
-// Validates AI-generated steamAppId against our local catalog.
-// Gemini occasionally hallucinates wrong appIds — this cross-checks the name.
+// Validates AI-generated steamAppId by checking name against catalog + Steam search API.
+// Gemini frequently returns wrong appIds — we resolve the real one from the game name.
 async function resolveAppId(aiName: string, aiAppId: number): Promise<number> {
-  const normalize = (s: string) => s.toLowerCase().replace(/[®™©:]/g, "").trim();
-  const normAi = normalize(aiName);
+  const normalize = (s: string) =>
+    s.toLowerCase().replace(/[®™©]/g, "").replace(/\s+/g, " ").trim();
+  const normTarget = normalize(aiName);
+  // Strip subtitle (after ":") and special chars for search
+  const searchTerm = aiName.replace(/[®™©]/g, "").split(":")[0].trim();
 
-  // 1. If the catalog has an entry for the suggested appId, check name match
-  const byId = await prisma.steamAppCatalog.findFirst({ where: { appId: aiAppId } });
-  if (byId && normalize(byId.name).includes(normAi.split(" ")[0])) return aiAppId;
+  // 1. Try local catalog: exact name match across progressively shorter terms
+  for (const term of [searchTerm, searchTerm.split(" ").slice(0, 3).join(" ")]) {
+    const rows = await prisma.steamAppCatalog.findMany({
+      where: { name: { contains: term, mode: "insensitive" } },
+      take: 10,
+    });
+    const exact = rows.find((r) => normalize(r.name) === normTarget);
+    if (exact) return exact.appId;
+    // All significant words present → good enough
+    const words = normTarget.split(" ").filter((w) => w.length > 3);
+    const close = rows.find((r) => words.every((w) => normalize(r.name).includes(w)));
+    if (close) return close.appId;
+  }
 
-  // 2. Search by name — if exactly one result, it's unambiguous
-  const firstWord = normAi.split(" ")[0];
-  const byName = await prisma.steamAppCatalog.findMany({
-    where: { name: { contains: firstWord, mode: "insensitive" } },
-    take: 5,
-    orderBy: { appId: "asc" },
-  });
-  const exact = byName.find((r) => normalize(r.name) === normAi);
-  if (exact) return exact.appId;
-  if (byName.length === 1) return byName[0].appId;
+  // 2. Steam storefront search API — authoritative source for appIds
+  try {
+    const url = `https://store.steampowered.com/api/storesearch/?term=${encodeURIComponent(searchTerm)}&l=english&cc=BR`;
+    const res = await fetch(url, { signal: AbortSignal.timeout(6000) });
+    if (res.ok) {
+      const data = await res.json();
+      const items: Array<{ id: number; name: string }> = data?.items ?? [];
+      const exact = items.find((i) => normalize(i.name) === normTarget);
+      if (exact) return exact.id;
+      // First result is Steam's best match — use it if name is related
+      if (items[0] && normalize(items[0].name).includes(searchTerm.split(" ")[0].toLowerCase())) {
+        return items[0].id;
+      }
+    }
+  } catch { /* non-fatal */ }
 
-  return aiAppId; // fall back to AI suggestion
+  return aiAppId;
 }
 
 export const dynamic = "force-dynamic";
