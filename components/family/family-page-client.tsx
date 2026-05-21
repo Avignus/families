@@ -47,7 +47,7 @@ type WishlistItem = {
   percentFunded: number;
   priceAlert: "low" | "high" | null;
   priceAvgCents: number | null;
-  steamData: { appId: number; name: string; headerImage: string; priceCents: number; currency: string; isFree: boolean; comingSoon?: boolean; releaseDate?: string } | null;
+  steamData: { appId: number; name: string; headerImage: string; priceCents: number; currency: string; isFree: boolean; comingSoon?: boolean; releaseDate?: string; genres?: string[] } | null;
   pledges: Array<{
     id: string;
     pledgerUserId: string;

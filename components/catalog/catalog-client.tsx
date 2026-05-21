@@ -18,6 +18,26 @@ import { FamilyTierBadge } from "@/components/family-tier-badge";
 
 type LibraryStats = { totalGames: number; ownedGames: number; missingGames: number };
 
+// Steam genre names in Portuguese (matches Steam API with l=portuguese)
+const GENRE_COLORS: Record<string, string> = {
+  "Ação":       "bg-orange-500/15 text-orange-400",
+  "Aventura":   "bg-amber-500/15 text-amber-400",
+  "RPG":        "bg-purple-500/15 text-purple-400",
+  "Estratégia": "bg-blue-500/15 text-blue-400",
+  "Simulação":  "bg-teal-500/15 text-teal-400",
+  "Terror":     "bg-red-700/20 text-red-400",
+  "Esportes":   "bg-emerald-500/15 text-emerald-400",
+  "Indie":      "bg-yellow-500/15 text-yellow-400",
+  "Corrida":    "bg-sky-500/15 text-sky-400",
+  "Casual":     "bg-pink-500/15 text-pink-400",
+};
+const GENRE_DEFAULT_COLOR = "bg-muted/50 text-muted-foreground";
+const ALL_GENRES = Object.keys(GENRE_COLORS);
+
+function genreColor(genre: string) {
+  return GENRE_COLORS[genre] ?? GENRE_DEFAULT_COLOR;
+}
+
 type Family = {
   id: string;
   name: string;
@@ -39,6 +59,7 @@ type Family = {
   gameNames: string[];
   gameNamesLabel: "missing" | "library";
   familyScore: number;
+  topGenres: string[];
 };
 
 type PixData = {
@@ -67,9 +88,10 @@ type Props = {
   pageSize: number;
   query: string;
   filters: Filters;
+  selectedGenres: string[];
 };
 
-export function CatalogClient({ families, isLoggedIn, total, page, pageSize, query, filters }: Props) {
+export function CatalogClient({ families, isLoggedIn, total, page, pageSize, query, filters, selectedGenres }: Props) {
   const { t } = useLanguage();
   const router = useRouter();
   const pathname = usePathname();
@@ -91,6 +113,7 @@ export function CatalogClient({ families, isLoggedIn, total, page, pageSize, que
   const [maxOwned, setMaxOwned] = useState(filters.maxOwned);
   const [minMissing, setMinMissing] = useState(filters.minMissing);
   const [maxMissing, setMaxMissing] = useState(filters.maxMissing);
+  const [genres, setGenres] = useState<string[]>(selectedGenres);
 
   const totalPages = Math.ceil(total / pageSize);
 
@@ -99,9 +122,10 @@ export function CatalogClient({ families, isLoggedIn, total, page, pageSize, que
     minGames || maxGames,
     minOwned || maxOwned,
     minMissing || maxMissing,
+    genres.length > 0,
   ].filter(Boolean).length;
 
-  const navigate = (q: string, p: number, overrides?: Partial<Filters>) => {
+  const navigate = (q: string, p: number, overrides?: Partial<Filters>, overrideGenres?: string[]) => {
     const f: Filters = { minPrice, maxPrice, minGames, maxGames, minOwned, maxOwned, minMissing, maxMissing, ...overrides };
     const params = new URLSearchParams();
     if (q) params.set("q", q);
@@ -109,7 +133,14 @@ export function CatalogClient({ families, isLoggedIn, total, page, pageSize, que
     (Object.entries(f) as [keyof Filters, string][]).forEach(([k, v]) => {
       if (v) params.set(k, v);
     });
+    for (const g of (overrideGenres ?? genres)) params.append("genre", g);
     startTransition(() => router.push(`${pathname}?${params.toString()}`));
+  };
+
+  const toggleGenre = (genre: string) => {
+    const next = genres.includes(genre) ? genres.filter((g) => g !== genre) : [...genres, genre];
+    setGenres(next);
+    navigate(search, 1, undefined, next);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -122,7 +153,8 @@ export function CatalogClient({ families, isLoggedIn, total, page, pageSize, que
     setMinGames(""); setMaxGames("");
     setMinOwned(""); setMaxOwned("");
     setMinMissing(""); setMaxMissing("");
-    navigate(search, 1, { minPrice: "", maxPrice: "", minGames: "", maxGames: "", minOwned: "", maxOwned: "", minMissing: "", maxMissing: "" });
+    setGenres([]);
+    navigate(search, 1, { minPrice: "", maxPrice: "", minGames: "", maxGames: "", minOwned: "", maxOwned: "", minMissing: "", maxMissing: "" }, []);
   };
 
   const handleJoin = async (family: Family) => {
@@ -322,6 +354,30 @@ export function CatalogClient({ families, isLoggedIn, total, page, pageSize, que
                 </div>
               </div>
 
+              {/* Genre filter */}
+              <div className="space-y-2 pt-1 border-t border-border/40">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Gêneros</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {ALL_GENRES.map((genre) => {
+                    const active = genres.includes(genre);
+                    return (
+                      <button
+                        key={genre}
+                        type="button"
+                        onClick={() => toggleGenre(genre)}
+                        className={`text-[11px] px-2.5 py-1 rounded-full font-medium transition-all border ${
+                          active
+                            ? `${genreColor(genre)} border-current opacity-100`
+                            : "bg-muted/30 text-muted-foreground border-transparent hover:border-border/60"
+                        }`}
+                      >
+                        {genre}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
               <div className="flex justify-end">
                 <Button type="submit" size="sm" disabled={isPending}>
                   {t.catalog.applyFilters}
@@ -469,6 +525,20 @@ function FamilyCard({
           <span className="truncate max-w-[100px]">{family.chief.personaName}</span>
           <Crown className="h-3 w-3 text-amber-400 flex-shrink-0" />
         </div>
+
+        {/* Genre badges */}
+        {family.topGenres.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {family.topGenres.slice(0, 3).map((genre) => (
+              <span
+                key={genre}
+                className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${genreColor(genre)}`}
+              >
+                {genre}
+              </span>
+            ))}
+          </div>
+        )}
 
         {/* Library stats */}
         {stats !== null && (

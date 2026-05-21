@@ -20,6 +20,7 @@ export type SteamAppDetails = {
   isFree: boolean;
   comingSoon: boolean;
   releaseDate: string;
+  genres?: string[];
 };
 
 export async function getPlayerSummaries(steamIds: string[]): Promise<SteamPlayerSummary[]> {
@@ -75,6 +76,7 @@ export async function getAppDetails(appId: number, country = DEFAULT_COUNTRY): P
       isFree: d.is_free ?? false,
       comingSoon: d.release_date?.coming_soon ?? false,
       releaseDate: d.release_date?.date ?? "",
+      genres: (d.genres as Array<{ description: string }> | undefined)?.map((g) => g.description) ?? [],
     };
 
     await prisma.steamAppCache.upsert({

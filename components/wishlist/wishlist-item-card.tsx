@@ -34,6 +34,7 @@ type SteamData = {
   isFree: boolean;
   comingSoon?: boolean;
   releaseDate?: string;
+  genres?: string[];
 };
 
 type Props = {
@@ -273,6 +274,15 @@ export function WishlistItemCard({ item, familyId, currentUserId, memberColors, 
           <h3 className="font-semibold text-sm leading-tight truncate" style={{ fontFamily: "var(--font-space-grotesk)" }}>
             {gameName}
           </h3>
+          {(item.steamData?.genres?.length ?? 0) > 0 && (
+            <div className="flex flex-wrap gap-1 mt-1">
+              {item.steamData!.genres!.slice(0, 2).map((genre) => (
+                <span key={genre} className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted/50 text-muted-foreground">
+                  {genre}
+                </span>
+              ))}
+            </div>
+          )}
           <div className="flex items-center justify-between mt-0.5">
             <p className="text-xs text-muted-foreground">
               {item.steamData?.isFree

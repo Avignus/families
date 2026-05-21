@@ -23,6 +23,7 @@ export default async function CatalogPage({
     maxOwned?: string;
     minMissing?: string;
     maxMissing?: string;
+    genre?: string | string[];
   };
 }) {
   const session = await getSession();
@@ -31,6 +32,9 @@ export default async function CatalogPage({
 
   const q = searchParams.q?.trim() ?? "";
   const page = Math.max(1, parseInt(searchParams.page ?? "1"));
+  const genreFilter = searchParams.genre
+    ? Array.isArray(searchParams.genre) ? searchParams.genre : [searchParams.genre]
+    : [];
 
   const minPriceCents = searchParams.minPrice ? Math.round(parseFloat(searchParams.minPrice) * 100) : null;
   const maxPriceCents = searchParams.maxPrice ? Math.round(parseFloat(searchParams.maxPrice) * 100) : null;
@@ -164,9 +168,52 @@ export default async function CatalogPage({
       })
     : allFamilies;
 
-  const total = filteredFamilies.length;
+  // --- Genre computation & filtering ---
+  // Read genres from SteamAppCache (no extra API calls — populated when cover images are fetched).
+  // Falls back gracefully for families whose wishlist games aren't cached yet.
+  const familyTopGenresMap = new Map<string, string[]>();
+
+  const allWishlistRows = await prisma.wishlistItem.findMany({
+    where: { familyId: { in: filteredFamilies.map((f) => f.id) }, status: { not: "cancelled" } },
+    select: { familyId: true, steamAppId: true },
+  });
+  const allWishlistAppIds = [...new Set(allWishlistRows.map((r) => r.steamAppId))];
+  const genreCacheRows = allWishlistAppIds.length > 0
+    ? await prisma.steamAppCache.findMany({
+        where: { steamAppId: { in: allWishlistAppIds } },
+        select: { steamAppId: true, payload: true },
+      })
+    : [];
+  const appGenreMap = new Map<number, string[]>();
+  for (const c of genreCacheRows) {
+    const genres = (c.payload as { genres?: string[] }).genres;
+    if (genres?.length) appGenreMap.set(c.steamAppId, genres);
+  }
+  const familyWishlistAppIds = new Map<string, number[]>();
+  for (const r of allWishlistRows) {
+    const arr = familyWishlistAppIds.get(r.familyId) ?? [];
+    arr.push(r.steamAppId);
+    familyWishlistAppIds.set(r.familyId, arr);
+  }
+  for (const f of filteredFamilies) {
+    const counts = new Map<string, number>();
+    for (const appId of (familyWishlistAppIds.get(f.id) ?? [])) {
+      for (const g of (appGenreMap.get(appId) ?? [])) counts.set(g, (counts.get(g) ?? 0) + 1);
+    }
+    const top = [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([g]) => g);
+    familyTopGenresMap.set(f.id, top);
+  }
+
+  const genreFilteredFamilies = genreFilter.length > 0
+    ? filteredFamilies.filter((f) => {
+        const familyGenres = familyTopGenresMap.get(f.id) ?? [];
+        return genreFilter.some((g) => familyGenres.includes(g));
+      })
+    : filteredFamilies;
+
+  const total = genreFilteredFamilies.length;
   const skip = (page - 1) * PAGE_SIZE;
-  const pagedFamilies = filteredFamilies.slice(skip, skip + PAGE_SIZE);
+  const pagedFamilies = genreFilteredFamilies.slice(skip, skip + PAGE_SIZE);
 
   // For paginated families whose library data wasn't loaded above (anonymous user,
   // no game filters), load it now so covers can use owned games too.
@@ -364,6 +411,7 @@ export default async function CatalogPage({
           .map((id) => nameMap.get(id))
           .filter(Boolean) as string[],
         gameNamesLabel: gameNameAppIdsPerFamily.get(f.id)?.label ?? "library",
+        topGenres: familyTopGenresMap.get(f.id) ?? [],
       };
     })
   );
@@ -388,6 +436,7 @@ export default async function CatalogPage({
       pageSize={PAGE_SIZE}
       query={q}
       filters={filters}
+      selectedGenres={genreFilter}
     />
   );
 }
