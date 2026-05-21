@@ -7,11 +7,14 @@ export const maxDuration = 300;
 
 function isAuthorized(req: NextRequest) {
   if (process.env.NODE_ENV !== "production") return true;
-  const secret = process.env.CRON_SECRET;
-  if (!secret) return false;
-  if (req.headers.get("authorization") !== `Bearer ${secret}`) return false;
-  if (!req.headers.get("x-vercel-cron")) return false;
-  return true;
+  const auth = req.headers.get("authorization") ?? "";
+  // Vercel cron: requires x-vercel-cron header
+  const cronSecret = process.env.CRON_SECRET;
+  if (cronSecret && auth === `Bearer ${cronSecret}` && req.headers.get("x-vercel-cron")) return true;
+  // Manual trigger: BOT_API_SECRET (doesn't require x-vercel-cron)
+  const botSecret = process.env.BOT_API_SECRET;
+  if (botSecret && auth === `Bearer ${botSecret}`) return true;
+  return false;
 }
 
 type OwnedGame = { appId: number; name: string; playtimeMinutes: number };
