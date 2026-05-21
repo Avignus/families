@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { ChevronDown, ChevronUp, Lightbulb } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
@@ -29,9 +29,11 @@ type Props = {
 };
 
 type PopoverState = {
-  rect: DOMRect;
-  visibleHeight: number; // clientHeight of the clamped <p>
-  overflowHeight: number; // scrollHeight - clientHeight = hidden portion
+  cardRect: DOMRect;
+  // top of popup = bottom of the visible <p> text (not card bottom)
+  reasonBottom: number;
+  visibleHeight: number;
+  overflowHeight: number;
 } | null;
 
 function RecommendationCard({ rec }: { rec: Recommendation }) {
@@ -44,9 +46,11 @@ function RecommendationCard({ rec }: { rec: Recommendation }) {
     if (timerRef.current) clearTimeout(timerRef.current);
     const el = reasonRef.current;
     if (!el || el.scrollHeight <= el.clientHeight + 1) return;
-    const rect = cardRef.current?.getBoundingClientRect();
-    if (rect) setPopover({
-      rect,
+    const cardRect = cardRef.current?.getBoundingClientRect();
+    const reasonRect = el.getBoundingClientRect();
+    if (cardRect) setPopover({
+      cardRect,
+      reasonBottom: reasonRect.bottom,
       visibleHeight: el.clientHeight,
       overflowHeight: el.scrollHeight - el.clientHeight,
     });
@@ -56,9 +60,22 @@ function RecommendationCard({ rec }: { rec: Recommendation }) {
     timerRef.current = setTimeout(() => setPopover(null), 80);
   }, []);
 
+  // Close immediately on scroll so the popup doesn't drift across the screen
+  const closeImmediate = useCallback(() => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    setPopover(null);
+  }, []);
+
   const cancelClose = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
   }, []);
+
+  // Close immediately when the page scrolls (popup is fixed but content moves)
+  useEffect(() => {
+    if (!popover) return;
+    window.addEventListener("scroll", closeImmediate, { passive: true, capture: true });
+    return () => window.removeEventListener("scroll", closeImmediate, { capture: true });
+  }, [popover, closeImmediate]);
 
   const image = rec.steamData?.headerImage ?? `https://cdn.cloudflare.steamstatic.com/steam/apps/${rec.steamAppId}/header.jpg`;
   const name = rec.steamData?.name ?? rec.gameName;
@@ -79,6 +96,7 @@ function RecommendationCard({ rec }: { rec: Recommendation }) {
         }`}
         onMouseEnter={open}
         onMouseLeave={close}
+        onScroll={closeImmediate}
       >
         <img
           src={image}
@@ -103,9 +121,11 @@ function RecommendationCard({ rec }: { rec: Recommendation }) {
         <div
           style={{
             position: "fixed",
-            top: popover.rect.bottom,
-            left: popover.rect.left,
-            width: popover.rect.width,
+            // Anchor to the bottom of the visible <p>, not the card bottom
+            // — eliminates the gap caused by the card's bottom padding
+            top: popover.reasonBottom,
+            left: popover.cardRect.left,
+            width: popover.cardRect.width,
             height: popover.overflowHeight + 8,
             overflow: "hidden",
             zIndex: 9999,
