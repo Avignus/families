@@ -37,16 +37,18 @@ function RecommendationCard({ rec }: { rec: Recommendation }) {
       href={storeUrl}
       target="_blank"
       rel="noopener noreferrer"
-      className="flex-shrink-0 w-44 rounded-lg overflow-hidden border border-border/40 bg-card/60 hover:border-border transition-colors group"
+      className="flex-shrink-0 w-44 rounded-lg border border-border/40 bg-card/60 hover:border-border hover:bg-card/80 transition-colors group"
     >
       <img
         src={image}
         alt={name}
-        className="w-full h-[62px] object-cover group-hover:brightness-110 transition-[filter]"
+        className="w-full h-[62px] object-cover rounded-t-lg group-hover:brightness-110 transition-[filter]"
       />
       <div className="px-2 py-2 space-y-1">
         <p className="text-[11px] font-semibold leading-tight line-clamp-1">{name}</p>
-        <p className="text-[10px] text-muted-foreground leading-snug line-clamp-3">{rec.reason}</p>
+        <p className="text-[10px] text-muted-foreground leading-snug line-clamp-3 group-hover:line-clamp-none">
+          {rec.reason}
+        </p>
       </div>
     </a>
   );
@@ -118,7 +120,7 @@ export function RecommendationsSection({ familyId, currentUserId }: Props) {
             {!isLoading && familyRecs.length > 0 && (
               <div>
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Para a família</p>
-                <div className="flex gap-3 overflow-x-auto pb-1">
+                <div className="flex gap-3 overflow-x-auto pb-2 items-start">
                   {familyRecs.map((rec) => (
                     <RecommendationCard key={rec.id} rec={rec} />
                   ))}
@@ -129,7 +131,7 @@ export function RecommendationsSection({ familyId, currentUserId }: Props) {
             {!isLoading && personalRecs.length > 0 && (
               <div>
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Para você</p>
-                <div className="flex gap-3 overflow-x-auto pb-1">
+                <div className="flex gap-3 overflow-x-auto pb-2 items-start">
                   {personalRecs.map((rec) => (
                     <RecommendationCard key={rec.id} rec={rec} />
                   ))}
