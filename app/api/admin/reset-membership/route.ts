@@ -9,6 +9,19 @@ function isAuthorized(req: NextRequest) {
   return req.headers.get("authorization") === `Bearer ${secret}`;
 }
 
+export async function GET(req: NextRequest) {
+  if (!isAuthorized(req)) return NextResponse.json({ ok: false }, { status: 401 });
+
+  const personaName = req.nextUrl.searchParams.get("personaName");
+  if (!personaName) return NextResponse.json({ error: "personaName required" }, { status: 400 });
+
+  const user = await prisma.user.findFirst({
+    where: { personaName: { contains: personaName, mode: "insensitive" } },
+    select: { id: true, personaName: true },
+  });
+  return NextResponse.json({ user });
+}
+
 export async function DELETE(req: NextRequest) {
   if (!isAuthorized(req)) return NextResponse.json({ ok: false }, { status: 401 });
 
