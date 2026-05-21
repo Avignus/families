@@ -73,10 +73,25 @@ const templates: Record<Locale, Templates> = {
       body: (p) => `"${p.gameName}" está 100% financiado! Cadastre sua chave PIX nas configurações para receber ${formatCurrency(Number(p.amountCents), String(p.currency))}.`,
       link: () => `/settings`,
     },
+    PIX_KEY_REMINDER: {
+      title: () => "Lembrete: cadastre sua chave PIX",
+      body: (p) => `Você ainda tem ${p.daysRemaining} ${Number(p.daysRemaining) === 1 ? "dia" : "dias"} para cadastrar sua chave PIX e receber ${formatCurrency(Number(p.amountCents), String(p.currency))} por "${p.gameName}".`,
+      link: () => `/settings`,
+    },
+    PIX_KEY_FINAL_WARNING: {
+      title: () => "Último dia — chave PIX",
+      body: (p) => `Amanhã as contribuições para "${p.gameName}" serão estornadas se você não cadastrar sua chave PIX. Cadastre agora para receber ${formatCurrency(Number(p.amountCents), String(p.currency))}.`,
+      link: () => `/settings`,
+    },
     JOIN_FEE_PAID: {
       title: () => "Taxa de entrada paga!",
       body: (p) => `${p.personaName} pagou a taxa e entrou na família "${p.familyName}".`,
       link: (p) => `/families/${p.familyId}`,
+    },
+    ENTRY_FEE_HELD: {
+      title: () => "Taxa de entrada na sua carteira",
+      body: (p) => `${p.memberName} pagou a taxa de entrada de ${formatCurrency(Number(p.amountCents), String(p.currency))} em "${p.familyName}". O valor está na sua carteira — cadastre sua chave PIX em Configurações para sacar.`,
+      link: () => `/settings`,
     },
     OPPORTUNITY: {
       title: () => "Oportunidade na sua família!",
@@ -210,10 +225,25 @@ const templates: Record<Locale, Templates> = {
       body: (p) => `"${p.gameName}" is fully funded! Register your PIX key in settings to receive ${formatCurrency(Number(p.amountCents), String(p.currency))}.`,
       link: () => `/settings`,
     },
+    PIX_KEY_REMINDER: {
+      title: () => "Reminder: register your PIX key",
+      body: (p) => `You have ${p.daysRemaining} ${Number(p.daysRemaining) === 1 ? "day" : "days"} left to register your PIX key and receive ${formatCurrency(Number(p.amountCents), String(p.currency))} for "${p.gameName}".`,
+      link: () => `/settings`,
+    },
+    PIX_KEY_FINAL_WARNING: {
+      title: () => "Last day — PIX key required",
+      body: (p) => `Tomorrow, contributions for "${p.gameName}" will be refunded if you don't register your PIX key. Register now to receive ${formatCurrency(Number(p.amountCents), String(p.currency))}.`,
+      link: () => `/settings`,
+    },
     JOIN_FEE_PAID: {
       title: () => "Entry fee paid!",
       body: (p) => `${p.personaName} paid the entry fee and joined family "${p.familyName}".`,
       link: (p) => `/families/${p.familyId}`,
+    },
+    ENTRY_FEE_HELD: {
+      title: () => "Entry fee held in your wallet",
+      body: (p) => `${p.memberName} paid the ${formatCurrency(Number(p.amountCents), String(p.currency))} entry fee for "${p.familyName}". It's in your wallet — register your PIX key in Settings to withdraw.`,
+      link: () => `/settings`,
     },
     OPPORTUNITY: {
       title: () => "Opportunity in your family!",

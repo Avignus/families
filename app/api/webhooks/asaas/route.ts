@@ -203,17 +203,37 @@ async function handleMembershipPayment(membership: MembershipWithFamily, status:
     });
     if (!activated?.feePaidAt) return;
 
-    // Disburse entry fee to chief
+    // Disburse entry fee to chief — or hold in wallet if chief has no PIX key
     const chief = await prisma.user.findUnique({
       where: { id: membership.family.chiefId },
       select: { pixKey: true },
     });
-    if (chief?.pixKey && membership.family.entryFeeCents > 0) {
-      await sendPixDisbursement({
-        amountCents: membership.family.entryFeeCents,
-        pixKey: chief.pixKey,
-        description: `Families — Taxa de entrada em ${membership.family.name}`,
-      }).catch((err) => console.error("Entry fee disbursement error:", err));
+    if (membership.family.entryFeeCents > 0) {
+      if (chief?.pixKey) {
+        await sendPixDisbursement({
+          amountCents: membership.family.entryFeeCents,
+          pixKey: chief.pixKey,
+          description: `Families — Taxa de entrada em ${membership.family.name}`,
+        }).catch((err) => console.error("Entry fee disbursement error:", err));
+      } else {
+        await prisma.$transaction(async (tx) => {
+          await tx.user.update({
+            where: { id: membership.family.chiefId },
+            data: { chiefSpotEarningsCents: { increment: membership.family.entryFeeCents } },
+          });
+          await createNotification(tx, {
+            recipientUserId: membership.family.chiefId,
+            type: "ENTRY_FEE_HELD",
+            payload: {
+              familyId: membership.family.id,
+              familyName: membership.family.name,
+              amountCents: membership.family.entryFeeCents,
+              currency: membership.family.currency,
+              memberName: membership.user.personaName,
+            },
+          });
+        });
+      }
     }
   }
 

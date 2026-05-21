@@ -8,6 +8,7 @@ import { formatCurrency } from "@/lib/notifications/templates";
 export const dynamic = "force-dynamic";
 
 const GRACE_PERIOD_DAYS = 7;
+const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
 function isAuthorized(req: NextRequest) {
   const secret = process.env.CRON_SECRET;
@@ -20,10 +21,6 @@ function isAuthorized(req: NextRequest) {
 export async function GET(req: NextRequest) {
   if (!isAuthorized(req)) return NextResponse.json({ ok: false }, { status: 401 });
 
-  const cutoff = new Date(Date.now() - GRACE_PERIOD_DAYS * 24 * 60 * 60 * 1000);
-
-  // Items that are funded, not disbursed, owner has no PIX key,
-  // and all pledges were paid more than GRACE_PERIOD_DAYS ago.
   const candidates = await prisma.wishlistItem.findMany({
     where: {
       status: "funded",
@@ -41,6 +38,7 @@ export async function GET(req: NextRequest) {
           amountCents: true,
           mpPaymentId: true,
           mpAmountCents: true,
+          creditsCentsUsed: true,
           paidAt: true,
         },
       },
@@ -60,8 +58,56 @@ export async function GET(req: NextRequest) {
       (max, p) => (p.paidAt! > max ? p.paidAt! : max),
       paidPledges[0].paidAt!
     );
-    if (latestPaidAt > cutoff) {
-      results.push({ itemId: item.id, status: "skipped_within_grace_period" });
+    const daysElapsed = Math.floor((Date.now() - latestPaidAt.getTime()) / ONE_DAY_MS);
+
+    if (daysElapsed < GRACE_PERIOD_DAYS) {
+      const steamData = await getAppDetails(item.steamAppId).catch(() => null);
+      const gameName = steamData?.name ?? `App #${item.steamAppId}`;
+      const totalCents = paidPledges.reduce((s, p) => s + p.amountCents, 0);
+      const reminderLevel = item.pixKeyReminderLevel;
+
+      if (daysElapsed >= 6 && reminderLevel < 2 && item.owner) {
+        await prisma.$transaction(async (tx) => {
+          await tx.wishlistItem.update({
+            where: { id: item.id },
+            data: { pixKeyReminderLevel: 2 },
+          });
+          await createNotification(tx, {
+            recipientUserId: item.owner!.id,
+            type: "PIX_KEY_FINAL_WARNING",
+            payload: {
+              itemId: item.id,
+              familyId: item.family.id,
+              gameName,
+              amountCents: totalCents,
+              currency: item.family.currency,
+            },
+          });
+        });
+        results.push({ itemId: item.id, status: "reminded_d6" });
+      } else if (daysElapsed >= 3 && reminderLevel < 1 && item.owner) {
+        await prisma.$transaction(async (tx) => {
+          await tx.wishlistItem.update({
+            where: { id: item.id },
+            data: { pixKeyReminderLevel: 1 },
+          });
+          await createNotification(tx, {
+            recipientUserId: item.owner!.id,
+            type: "PIX_KEY_REMINDER",
+            payload: {
+              itemId: item.id,
+              familyId: item.family.id,
+              gameName,
+              amountCents: totalCents,
+              currency: item.family.currency,
+              daysRemaining: GRACE_PERIOD_DAYS - daysElapsed,
+            },
+          });
+        });
+        results.push({ itemId: item.id, status: "reminded_d3" });
+      } else {
+        results.push({ itemId: item.id, status: "skipped_within_grace_period" });
+      }
       continue;
     }
 
@@ -72,20 +118,32 @@ export async function GET(req: NextRequest) {
     const refundErrors: string[] = [];
 
     for (const pledge of paidPledges) {
-      if (!pledge.mpPaymentId || !pledge.mpAmountCents) continue;
-      try {
-        await refundPayment(pledge.mpPaymentId, pledge.mpAmountCents);
+      const hasPixCharge = pledge.mpPaymentId && pledge.mpAmountCents;
+      const hasCredits = pledge.creditsCentsUsed > 0;
+
+      if (!hasPixCharge && !hasCredits) continue;
+
+      if (hasPixCharge) {
+        try {
+          await refundPayment(pledge.mpPaymentId!, pledge.mpAmountCents!);
+          refundedCount++;
+        } catch (err) {
+          console.error(`Refund failed for pledge ${pledge.id}:`, err);
+          refundErrors.push(pledge.id);
+        }
+      } else {
+        // Credit-only pledge: no Asaas call needed, credits returned in transaction
         refundedCount++;
-      } catch (err) {
-        console.error(`Refund failed for pledge ${pledge.id}:`, err);
-        refundErrors.push(pledge.id);
       }
     }
 
-    // Even if some refunds failed, mark successfully-refunded pledges and revert the item.
-    // Pledges with refund errors stay active for manual review.
     const successfulPledgeIds = paidPledges
-      .filter((p) => p.mpPaymentId && p.mpAmountCents && !refundErrors.includes(p.id))
+      .filter((p) => {
+        const hasPixCharge = p.mpPaymentId && p.mpAmountCents;
+        const hasCredits = p.creditsCentsUsed > 0;
+        if (!hasPixCharge && !hasCredits) return false;
+        return !refundErrors.includes(p.id);
+      })
       .map((p) => p.id);
 
     if (successfulPledgeIds.length > 0) {
@@ -97,12 +155,19 @@ export async function GET(req: NextRequest) {
 
         await tx.wishlistItem.update({
           where: { id: item.id },
-          data: { status: "open" },
+          data: { status: "open", pixKeyReminderLevel: 0 },
         });
 
-        // Notify each contributor
         for (const pledge of paidPledges.filter((p) => successfulPledgeIds.includes(p.id))) {
-          const refundAmountFormatted = formatCurrency(pledge.mpAmountCents!, item.family.currency);
+          if (pledge.creditsCentsUsed > 0) {
+            await tx.user.update({
+              where: { id: pledge.pledgerUserId },
+              data: { creditsCents: { increment: pledge.creditsCentsUsed } },
+            });
+          }
+
+          const totalRefundCents = (pledge.mpAmountCents ?? 0) + pledge.creditsCentsUsed;
+          const refundAmountFormatted = formatCurrency(totalRefundCents, item.family.currency);
           await createNotification(tx, {
             recipientUserId: pledge.pledgerUserId,
             type: "PLEDGE_REFUNDED_NO_PIX_KEY",
@@ -115,7 +180,6 @@ export async function GET(req: NextRequest) {
           });
         }
 
-        // Notify the item owner
         if (item.owner) {
           await createNotification(tx, {
             recipientUserId: item.owner.id,
