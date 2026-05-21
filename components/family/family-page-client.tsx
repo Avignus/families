@@ -15,6 +15,7 @@ import { VotesPanel } from "@/components/votes/votes-panel";
 import { SteamLibraryPanel } from "@/components/family/steam-library-panel";
 import { MemberActions } from "@/components/family/member-actions";
 import { Plus, ChevronDown, ChevronUp, Settings, Copy, LogIn, Gamepad2, Check, X, Camera, AlertTriangle, Library, Share2, Wallet, ShoppingCart } from "lucide-react";
+import { RecommendationsSection } from "@/components/recommendations/recommendations-section";
 import { FamilyTierBadge } from "@/components/family-tier-badge";
 import { ReputationBadge } from "@/components/reputation-badge";
 import { getTier, TIER_COLORS } from "@/lib/reputation";
@@ -624,6 +625,9 @@ export function FamilyPageClient({
               </div>
             </>
           )}
+
+          {/* AI recommendations */}
+          <RecommendationsSection familyId={familyId} currentUserId={userId} />
 
           {/* Steam — games & unified wishlist */}
           <Separator />

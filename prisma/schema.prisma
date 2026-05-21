@@ -34,6 +34,7 @@ model User {
   votesOpened        Vote[]
   ballots            VoteBallot[]
   walletTransactions WalletTransaction[]
+  gameRecommendations GameRecommendation[]
 }
 
 model Family {
@@ -58,9 +59,10 @@ model Family {
 
   familyScore Int @default(0)
 
-  memberships   FamilyMembership[]
-  wishlistItems WishlistItem[]
-  votes         Vote[]
+  memberships         FamilyMembership[]
+  wishlistItems       WishlistItem[]
+  votes               Vote[]
+  gameRecommendations GameRecommendation[]
 
   @@index([isPublic])
 }
@@ -103,8 +105,9 @@ model WishlistItem {
   currency         String
   status           WishlistStatus @default(open)
   createdAt        DateTime       @default(now())
-  disbursedAt      DateTime?
-  disbursementMpId String?
+  disbursedAt          DateTime?
+  disbursementMpId     String?
+  pixKeyReminderLevel  Int       @default(0)
 
   family  Family  @relation(fields: [familyId], references: [id])
   owner   User?   @relation(fields: [ownerUserId], references: [id])
@@ -195,6 +198,24 @@ model WalletTransaction {
   user User @relation(fields: [userId], references: [id])
 
   @@index([userId, createdAt])
+}
+
+model GameRecommendation {
+  id          String   @id @default(cuid())
+  userId      String?
+  familyId    String?
+  type        String   // "individual" | "family"
+  steamAppId  Int
+  gameName    String
+  reason      String
+  rank        Int
+  generatedAt DateTime @default(now())
+
+  user   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  family Family? @relation(fields: [familyId], references: [id], onDelete: Cascade)
+
+  @@index([userId, generatedAt])
+  @@index([familyId, generatedAt])
 }
 
 model SteamPriceHistory {
@@ -295,6 +316,9 @@ enum NotificationType {
   ITEM_GONE_FREE
   PRICE_ALERT_LOW
   PRICE_ALERT_HIGH
+  PIX_KEY_REMINDER
+  PIX_KEY_FINAL_WARNING
+  ENTRY_FEE_HELD
   PLEDGE_REFUNDED_NO_PIX_KEY
   ITEM_UNFUNDED_NO_PIX_KEY
   FAMILY_DELETED
