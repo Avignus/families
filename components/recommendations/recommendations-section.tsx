@@ -59,7 +59,7 @@ function EmptyState({ label }: { label: string }) {
 }
 
 export function RecommendationsSection({ familyId, currentUserId }: Props) {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(true);
 
   const familyQuery = useQuery<Recommendation[]>({
     queryKey: ["family-recommendations", familyId],
@@ -69,7 +69,6 @@ export function RecommendationsSection({ familyId, currentUserId }: Props) {
       const data = await res.json();
       return data.data ?? [];
     },
-    enabled: expanded,
     staleTime: 10 * 60 * 1000,
   });
 
@@ -81,7 +80,6 @@ export function RecommendationsSection({ familyId, currentUserId }: Props) {
       const data = await res.json();
       return data.data ?? [];
     },
-    enabled: expanded,
     staleTime: 10 * 60 * 1000,
   });
 
@@ -117,22 +115,22 @@ export function RecommendationsSection({ familyId, currentUserId }: Props) {
               <EmptyState label="Nenhuma recomendação disponível ainda. As recomendações são geradas semanalmente." />
             )}
 
-            {!isLoading && personalRecs.length > 0 && (
+            {!isLoading && familyRecs.length > 0 && (
               <div>
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Para você</p>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Para a família</p>
                 <div className="flex gap-3 overflow-x-auto pb-1">
-                  {personalRecs.map((rec) => (
+                  {familyRecs.map((rec) => (
                     <RecommendationCard key={rec.id} rec={rec} />
                   ))}
                 </div>
               </div>
             )}
 
-            {!isLoading && familyRecs.length > 0 && (
+            {!isLoading && personalRecs.length > 0 && (
               <div>
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Para a família</p>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Para você</p>
                 <div className="flex gap-3 overflow-x-auto pb-1">
-                  {familyRecs.map((rec) => (
+                  {personalRecs.map((rec) => (
                     <RecommendationCard key={rec.id} rec={rec} />
                   ))}
                 </div>
