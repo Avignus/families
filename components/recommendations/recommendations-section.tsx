@@ -63,6 +63,7 @@ function RecommendationCard({ rec }: { rec: Recommendation }) {
   const image = rec.steamData?.headerImage ?? `https://cdn.cloudflare.steamstatic.com/steam/apps/${rec.steamAppId}/header.jpg`;
   const name = rec.steamData?.name ?? rec.gameName;
   const storeUrl = `https://store.steampowered.com/app/${rec.steamAppId}`;
+  const isOpen = popover !== null;
 
   return (
     <>
@@ -71,7 +72,11 @@ function RecommendationCard({ rec }: { rec: Recommendation }) {
         href={storeUrl}
         target="_blank"
         rel="noopener noreferrer"
-        className="flex-shrink-0 w-44 rounded-lg border border-border/40 bg-card/60 hover:border-border hover:bg-card/80 transition-colors group"
+        className={`flex-shrink-0 w-44 border transition-colors group ${
+          isOpen
+            ? "rounded-t-lg border-border border-b-0 bg-card"
+            : "rounded-lg border-border/40 bg-card/60 hover:border-border hover:bg-card/80"
+        }`}
         onMouseEnter={open}
         onMouseLeave={close}
       >
@@ -82,7 +87,13 @@ function RecommendationCard({ rec }: { rec: Recommendation }) {
         />
         <div className="px-2 py-2 space-y-1">
           <p className="text-[11px] font-semibold leading-tight line-clamp-1">{name}</p>
-          <p ref={reasonRef} className="text-[10px] text-muted-foreground leading-snug line-clamp-3">
+          {/* When popup is open: overflow-hidden + explicit height hides the ellipsis
+              while keeping the same visual cut point as line-clamp-3 */}
+          <p
+            ref={reasonRef}
+            style={isOpen ? { height: popover!.visibleHeight, overflow: "hidden" } : undefined}
+            className={`text-[10px] text-muted-foreground leading-snug${isOpen ? "" : " line-clamp-3"}`}
+          >
             {rec.reason}
           </p>
         </div>
@@ -95,7 +106,6 @@ function RecommendationCard({ rec }: { rec: Recommendation }) {
             top: popover.rect.bottom,
             left: popover.rect.left,
             width: popover.rect.width,
-            // Fixed height = only the hidden overflow + 8px bottom padding
             height: popover.overflowHeight + 8,
             overflow: "hidden",
             zIndex: 9999,
@@ -104,11 +114,6 @@ function RecommendationCard({ rec }: { rec: Recommendation }) {
           onMouseEnter={cancelClose}
           onMouseLeave={close}
         >
-          {/*
-            Shift the full text UP by visibleHeight so the already-shown
-            lines sit above the container's top edge and get clipped.
-            Only the overflow portion remains inside the container.
-          */}
           <p
             style={{ marginTop: `-${popover.visibleHeight}px` }}
             className="text-[10px] text-muted-foreground leading-snug"
