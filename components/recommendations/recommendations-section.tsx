@@ -28,13 +28,20 @@ type Props = {
   currentUserId: string;
 };
 
+// 3 lines × (10px font × 1.375 leading-snug) = 41.25px → clip offset
+const CLAMP_LINES_HEIGHT = 41;
+
 function RecommendationCard({ rec }: { rec: Recommendation }) {
   const cardRef = useRef<HTMLAnchorElement>(null);
+  const reasonRef = useRef<HTMLParagraphElement>(null);
   const [popoverRect, setPopoverRect] = useState<DOMRect | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const open = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
+    // Only show if text is actually truncated
+    const el = reasonRef.current;
+    if (!el || el.scrollHeight <= el.clientHeight + 1) return;
     const rect = cardRef.current?.getBoundingClientRect();
     if (rect) setPopoverRect(rect);
   }, []);
@@ -69,7 +76,9 @@ function RecommendationCard({ rec }: { rec: Recommendation }) {
         />
         <div className="px-2 py-2 space-y-1">
           <p className="text-[11px] font-semibold leading-tight line-clamp-1">{name}</p>
-          <p className="text-[10px] text-muted-foreground leading-snug line-clamp-3">{rec.reason}</p>
+          <p ref={reasonRef} className="text-[10px] text-muted-foreground leading-snug line-clamp-3">
+            {rec.reason}
+          </p>
         </div>
       </a>
 
@@ -77,16 +86,23 @@ function RecommendationCard({ rec }: { rec: Recommendation }) {
         <div
           style={{
             position: "fixed",
-            top: popoverRect.bottom - 1,
+            top: popoverRect.bottom,
             left: popoverRect.left,
             width: popoverRect.width,
             zIndex: 9999,
+            overflow: "hidden",
           }}
-          className="bg-card border border-border border-t-primary/30 rounded-b-lg shadow-xl px-2 pb-2 pt-1.5"
+          className="bg-card border-x border-b border-border rounded-b-lg shadow-xl px-2 pb-2"
           onMouseEnter={cancelClose}
           onMouseLeave={close}
         >
-          <p className="text-[10px] text-muted-foreground leading-snug">{rec.reason}</p>
+          {/* Negative margin skips the already-visible lines, showing only the overflow */}
+          <p
+            style={{ marginTop: `-${CLAMP_LINES_HEIGHT}px` }}
+            className="text-[10px] text-muted-foreground leading-snug"
+          >
+            {rec.reason}
+          </p>
         </div>,
         document.body,
       )}
