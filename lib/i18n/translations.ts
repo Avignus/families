@@ -149,6 +149,7 @@ export const translations = {
       noSlots: "No slots",
       joinRequest: "Request to join",
       joinSpot: "See my price",
+      buySpot: "Buy spot",
     },
     catalogFamily: {
       backLink: "Catalog",
@@ -640,6 +641,7 @@ export const translations = {
       noSlots: "Sem vagas",
       joinRequest: "Pedir entrada",
       joinSpot: "Ver meu preço",
+      buySpot: "Comprar spot",
     },
     catalogFamily: {
       backLink: "Catálogo",

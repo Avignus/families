@@ -117,6 +117,8 @@ export function CatalogJoinButton({
     ? "..."
     : isSpot && resolvedSpotPrice === null
     ? t.catalog.joinSpot
+    : isSpot && displayFeeCents > 0
+    ? t.catalog.buySpot
     : displayFeeCents > 0
     ? t.catalogJoinBtn.join(formatCurrency(displayFeeCents, currency))
     : t.catalogJoinBtn.request;

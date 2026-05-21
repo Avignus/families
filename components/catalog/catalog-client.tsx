@@ -75,7 +75,7 @@ export function CatalogClient({ families, isLoggedIn, total, page, pageSize, que
   const [isPending, startTransition] = useTransition();
   const [search, setSearch] = useState(query);
   const [loading, setLoading] = useState<string | null>(null);
-  const [pixModal, setPixModal] = useState<{ family: Family; pix: PixData } | null>(null);
+  const [pixModal, setPixModal] = useState<{ family: Family; pix: PixData; amountCents: number } | null>(null);
   const [localStatus, setLocalStatus] = useState<Record<string, string>>({});
   const [filtersOpen, setFiltersOpen] = useState(() => {
     return Object.values(filters).some((v) => v !== "");
@@ -135,7 +135,7 @@ export function CatalogClient({ families, isLoggedIn, total, page, pageSize, que
         return;
       }
       if (data.data?.pendingPayment && data.data?.pix) {
-        setPixModal({ family, pix: data.data.pix });
+        setPixModal({ family, pix: data.data.pix, amountCents: data.data.spotPriceCents ?? family.entryFeeCents });
       } else {
         toast.success(t.catalog.requestSent);
         setLocalStatus((prev) => ({ ...prev, [family.id]: "pending" }));
@@ -375,7 +375,7 @@ export function CatalogClient({ families, isLoggedIn, total, page, pageSize, que
         <PixPaymentModal
           open
           onOpenChange={(v) => { if (!v) setPixModal(null); }}
-          amountCents={pixModal.family.entryFeeCents}
+          amountCents={pixModal.amountCents}
           currency={pixModal.family.currency}
           gameName={t.catalogJoinBtn.entryInto(pixModal.family.name)}
           pix={pixModal.pix}
@@ -397,6 +397,28 @@ function FamilyCard({
   const { t } = useLanguage();
   const hasFee = family.entryFeeCents > 0;
   const stats = family.libraryStats;
+  const [spotPrice, setSpotPrice] = useState<number | null>(null);
+  const [spotPriceLoading, setSpotPriceLoading] = useState(false);
+
+  const handleButtonClick = async () => {
+    if (!isLoggedIn) { toast.error(t.catalog.loginToJoin); return; }
+    if (family.spotPricingEnabled && spotPrice === null) {
+      setSpotPriceLoading(true);
+      try {
+        const res = await fetch(`/api/families/${family.id}/spot-price`);
+        const data = await res.json();
+        if (res.ok) {
+          setSpotPrice(data.data.spotPriceCents);
+        } else {
+          toast.error(data.error?.message ?? t.catalog.errorJoining);
+        }
+      } finally {
+        setSpotPriceLoading(false);
+      }
+    } else {
+      onJoin(family);
+    }
+  };
 
   const statusLabel = () => {
     if (myStatus === "active") return { text: t.catalog.member, color: "text-emerald-400" };
@@ -509,9 +531,15 @@ function FamilyCard({
             )}
           </div>
           {family.spotPricingEnabled ? (
-            <span className="flex items-center gap-1 text-primary font-semibold text-xs">
-              <Zap className="h-3 w-3" /> Spot
-            </span>
+            spotPrice !== null ? (
+              <span className="text-primary font-semibold text-xs">
+                {formatCurrency(spotPrice, family.currency)}
+              </span>
+            ) : (
+              <span className="flex items-center gap-1 text-primary font-semibold text-xs">
+                <Zap className="h-3 w-3" /> Spot
+              </span>
+            )
           ) : hasFee ? (
             <span className="text-primary font-semibold">
               {formatCurrency(family.entryFeeCents, family.currency)}
@@ -541,15 +569,19 @@ function FamilyCard({
             </div>
           ) : (
             <button
-              onClick={() => onJoin(family)}
-              disabled={loading}
+              onClick={handleButtonClick}
+              disabled={loading || spotPriceLoading}
               className="w-full h-8 rounded-md text-xs font-semibold text-white transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-50"
               style={{ background: "linear-gradient(135deg, hsl(258 82% 60%), hsl(258 82% 50%))" }}
             >
-              {loading
+              {loading || spotPriceLoading
                 ? "..."
                 : family.spotPricingEnabled
-                ? t.catalog.joinSpot
+                ? spotPrice !== null
+                  ? spotPrice === 0
+                    ? t.catalog.joinRequest
+                    : t.catalog.buySpot
+                  : t.catalog.joinSpot
                 : hasFee
                 ? t.catalogJoinBtn.join(formatCurrency(family.entryFeeCents, family.currency))
                 : t.catalog.joinRequest}
