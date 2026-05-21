@@ -61,7 +61,9 @@ type WishlistItem = {
 type PendingMember = {
   id: string;
   user: Member;
-  wishlistMatches: number[] | null; // appIds they own that are on the wishlist; null = no cache
+  wishlistMatches: number[] | null;
+  feePaidAt: string | null;
+  feeChargedCents: number | null;
 };
 
 type FamilyData = {
@@ -398,6 +400,8 @@ export function FamilyPageClient({
                   user={pending.user}
                   wishlistMatches={pending.wishlistMatches}
                   wishlistItems={family.wishlistItems}
+                  feePaidAt={pending.feePaidAt}
+                  feeChargedCents={pending.feeChargedCents}
                   onAction={() => refetch()}
                 />
               ))}
@@ -668,13 +672,15 @@ export function FamilyPageClient({
 }
 
 function PendingRequestCard({
-  membershipId, familyId, user, wishlistMatches, wishlistItems, onAction,
+  membershipId, familyId, user, wishlistMatches, wishlistItems, feePaidAt, feeChargedCents, onAction,
 }: {
   membershipId: string;
   familyId: string;
   user: Member;
   wishlistMatches: number[] | null;
   wishlistItems: WishlistItem[];
+  feePaidAt: string | null;
+  feeChargedCents: number | null;
   onAction: () => void;
 }) {
   const [loading, setLoading] = useState<"approve" | "reject" | null>(null);
@@ -712,6 +718,11 @@ function PendingRequestCard({
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm font-semibold truncate">{user.personaName}</span>
             {xp > 0 && <ReputationBadge score={xp} />}
+            {feePaidAt && (
+              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                Pagou {feeChargedCents ? new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(feeChargedCents / 100) : ""}
+              </span>
+            )}
           </div>
           {wishlistMatches === null ? null : matchedItems.length === 0 ? (
             <p className="text-xs text-muted-foreground mt-0.5">Não possui jogos da wishlist</p>

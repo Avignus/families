@@ -150,6 +150,7 @@ export const translations = {
       joinRequest: "Request to join",
       joinSpot: "See my price",
       buySpot: "Buy spot",
+      paymentPending: "Payment pending",
     },
     catalogFamily: {
       backLink: "Catalog",
@@ -384,6 +385,8 @@ export const translations = {
       spotMinPrice: (currency: string) => `Min price (${currency})`,
       spotMinPriceHint: "Floor price regardless of formula",
       spotPixKeyWarning: "Configure your PIX key in Settings to receive payouts when someone joins.",
+      autoApproveLabel: "Auto-approve join requests",
+      autoApproveDesc: "Free requests join instantly. Paid requests activate as soon as PIX is confirmed.",
     },
     monthlyBudget: {
       title: "Automatic monthly budget",
@@ -642,6 +645,7 @@ export const translations = {
       joinRequest: "Pedir entrada",
       joinSpot: "Ver meu preço",
       buySpot: "Comprar spot",
+      paymentPending: "Pagamento pendente",
     },
     catalogFamily: {
       backLink: "Catálogo",
@@ -876,6 +880,8 @@ export const translations = {
       spotMinPrice: (currency: string) => `Preço mínimo (${currency})`,
       spotMinPriceHint: "Piso de preço independente da fórmula",
       spotPixKeyWarning: "Configure sua chave PIX em Configurações para receber os repasses quando alguém entrar.",
+      autoApproveLabel: "Aprovar entradas automaticamente",
+      autoApproveDesc: "Solicitações gratuitas entram na hora. Solicitações pagas entram assim que o PIX for confirmado.",
     },
     monthlyBudget: {
       title: "Orçamento mensal automático",

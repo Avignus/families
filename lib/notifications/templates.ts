@@ -164,6 +164,11 @@ const templates: Record<Locale, Templates> = {
       body: (p) => `${p.personaName} adicionou "${p.gameName}" à biblioteca na família "${p.familyName}".`,
       link: (p) => `/families/${p.familyId}`,
     },
+    JOIN_PAYMENT_AWAITING_APPROVAL: {
+      title: () => "Pagamento recebido — aguarda aprovação",
+      body: (p) => `${p.personaName} pagou ${p.amountFormatted} para entrar em "${p.familyName}". Aprove ou recuse a solicitação.`,
+      link: (p) => `/families/${p.familyId}`,
+    },
   },
   en: {
     JOIN_REQUEST: {
@@ -314,6 +319,11 @@ const templates: Record<Locale, Templates> = {
     MEMBER_BOUGHT_GAME: {
       title: (p) => `${p.personaName} bought a game!`,
       body: (p) => `${p.personaName} added "${p.gameName}" to their library in family "${p.familyName}".`,
+      link: (p) => `/families/${p.familyId}`,
+    },
+    JOIN_PAYMENT_AWAITING_APPROVAL: {
+      title: () => "Payment received — awaiting approval",
+      body: (p) => `${p.personaName} paid ${p.amountFormatted} to join "${p.familyName}". Please approve or reject.`,
       link: (p) => `/families/${p.familyId}`,
     },
   },

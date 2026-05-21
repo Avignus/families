@@ -57,7 +57,8 @@ model Family {
   spotFraction       Float   @default(0.20)  // 0.0–1.0; chief's share of net value
   spotMinPriceCents  Int     @default(0)     // floor price regardless of formula
 
-  familyScore Int @default(0)
+  familyScore   Int     @default(0)
+  autoApprove   Boolean @default(false)
 
   memberships         FamilyMembership[]
   wishlistItems       WishlistItem[]
@@ -325,4 +326,5 @@ enum NotificationType {
   PLEDGE_REFUNDED_FAMILY_DELETED
   CREDITS_ADDED
   MEMBER_BOUGHT_GAME
+  JOIN_PAYMENT_AWAITING_APPROVAL
 }

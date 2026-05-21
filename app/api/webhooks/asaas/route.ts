@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
     const membership = await prisma.familyMembership.findUnique({
       where: { id: membershipId },
       include: {
-        family: { select: { id: true, name: true, chiefId: true, entryFeeCents: true, currency: true } },
+        family: { select: { id: true, name: true, chiefId: true, entryFeeCents: true, currency: true, autoApprove: true } },
         user: { select: { id: true, personaName: true } },
       },
     });
@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
     const membership = await prisma.familyMembership.findUnique({
       where: { id: membershipId },
       include: {
-        family: { select: { id: true, name: true, chiefId: true, entryFeeCents: true, currency: true } },
+        family: { select: { id: true, name: true, chiefId: true, entryFeeCents: true, currency: true, autoApprove: true } },
         user: { select: { id: true, personaName: true } },
       },
     });
@@ -117,7 +117,7 @@ type MembershipWithFamily = {
   feePaidAt: Date | null;
   feeChargedCents: number | null;
   feeRefundedAt: Date | null;
-  family: { id: string; name: string; chiefId: string; entryFeeCents: number; currency: string };
+  family: { id: string; name: string; chiefId: string; entryFeeCents: number; currency: string; autoApprove: boolean };
   user: { id: string; personaName: string };
 };
 
@@ -171,69 +171,96 @@ async function handleMembershipPayment(membership: MembershipWithFamily, status:
       return;
     }
 
-    await prisma.$transaction(async (tx) => {
-      // Atomic idempotency guard: only activates if not yet activated (ISO A.14.2.5)
-      const activated = await tx.familyMembership.updateMany({
-        where: { id: membership.id, feePaidAt: null },
-        data: { status: "active", feePaidAt: new Date(), joinedAt: new Date() },
-      });
-      if (activated.count === 0) return; // Already processed by a prior webhook delivery
-
-      await createNotification(tx, {
-        recipientUserId: membership.family.chiefId,
-        type: "JOIN_FEE_PAID",
-        payload: {
-          familyId: membership.family.id,
-          familyName: membership.family.name,
-          memberId: membership.userId,
-          personaName: membership.user.personaName,
-        },
-      });
-      await createNotification(tx, {
-        recipientUserId: membership.userId,
-        type: "JOIN_APPROVED",
-        payload: { familyId: membership.family.id, familyName: membership.family.name },
-      });
-    });
-
-    // Re-read to check if activation actually happened (guard against early return above)
-    const activated = await prisma.familyMembership.findUnique({
-      where: { id: membership.id },
-      select: { feePaidAt: true },
-    });
-    if (!activated?.feePaidAt) return;
-
-    // Disburse entry fee to chief — or hold in wallet if chief has no PIX key
-    const chief = await prisma.user.findUnique({
-      where: { id: membership.family.chiefId },
-      select: { pixKey: true },
-    });
-    if (membership.family.entryFeeCents > 0) {
-      if (chief?.pixKey) {
-        await sendPixDisbursement({
-          amountCents: membership.family.entryFeeCents,
-          pixKey: chief.pixKey,
-          description: `Families — Taxa de entrada em ${membership.family.name}`,
-        }).catch((err) => console.error("Entry fee disbursement error:", err));
-      } else {
-        await prisma.$transaction(async (tx) => {
-          await tx.user.update({
-            where: { id: membership.family.chiefId },
-            data: { chiefSpotEarningsCents: { increment: membership.family.entryFeeCents } },
-          });
-          await createNotification(tx, {
-            recipientUserId: membership.family.chiefId,
-            type: "ENTRY_FEE_HELD",
-            payload: {
-              familyId: membership.family.id,
-              familyName: membership.family.name,
-              amountCents: membership.family.entryFeeCents,
-              currency: membership.family.currency,
-              memberName: membership.user.personaName,
-            },
-          });
+    if (membership.family.autoApprove) {
+      await prisma.$transaction(async (tx) => {
+        // Atomic idempotency guard: only activates if not yet activated (ISO A.14.2.5)
+        const activated = await tx.familyMembership.updateMany({
+          where: { id: membership.id, feePaidAt: null },
+          data: { status: "active", feePaidAt: new Date(), joinedAt: new Date() },
         });
+        if (activated.count === 0) return;
+
+        await createNotification(tx, {
+          recipientUserId: membership.family.chiefId,
+          type: "JOIN_FEE_PAID",
+          payload: {
+            familyId: membership.family.id,
+            familyName: membership.family.name,
+            memberId: membership.userId,
+            personaName: membership.user.personaName,
+          },
+        });
+        await createNotification(tx, {
+          recipientUserId: membership.userId,
+          type: "JOIN_APPROVED",
+          payload: { familyId: membership.family.id, familyName: membership.family.name },
+        });
+      });
+
+      const activated = await prisma.familyMembership.findUnique({
+        where: { id: membership.id },
+        select: { feePaidAt: true },
+      });
+      if (!activated?.feePaidAt) return;
+
+      // Disburse entry fee to chief — or hold in wallet if chief has no PIX key
+      const chief = await prisma.user.findUnique({
+        where: { id: membership.family.chiefId },
+        select: { pixKey: true },
+      });
+      if (membership.family.entryFeeCents > 0) {
+        if (chief?.pixKey) {
+          await sendPixDisbursement({
+            amountCents: membership.family.entryFeeCents,
+            pixKey: chief.pixKey,
+            description: `Families — Taxa de entrada em ${membership.family.name}`,
+          }).catch((err) => console.error("Entry fee disbursement error:", err));
+        } else {
+          await prisma.$transaction(async (tx) => {
+            await tx.user.update({
+              where: { id: membership.family.chiefId },
+              data: { chiefSpotEarningsCents: { increment: membership.family.entryFeeCents } },
+            });
+            await createNotification(tx, {
+              recipientUserId: membership.family.chiefId,
+              type: "ENTRY_FEE_HELD",
+              payload: {
+                familyId: membership.family.id,
+                familyName: membership.family.name,
+                amountCents: membership.family.entryFeeCents,
+                currency: membership.family.currency,
+                memberName: membership.user.personaName,
+              },
+            });
+          });
+        }
       }
+    } else {
+      // autoApprove = false: mark payment received, keep pending for chief review
+      await prisma.$transaction(async (tx) => {
+        const marked = await tx.familyMembership.updateMany({
+          where: { id: membership.id, feePaidAt: null },
+          data: { feePaidAt: new Date() },
+        });
+        if (marked.count === 0) return;
+
+        const amountFormatted = new Intl.NumberFormat("pt-BR", {
+          style: "currency",
+          currency: membership.family.currency,
+        }).format((membership.feeChargedCents ?? membership.family.entryFeeCents) / 100);
+
+        await createNotification(tx, {
+          recipientUserId: membership.family.chiefId,
+          type: "JOIN_PAYMENT_AWAITING_APPROVAL",
+          payload: {
+            familyId: membership.family.id,
+            familyName: membership.family.name,
+            memberId: membership.userId,
+            personaName: membership.user.personaName,
+            amountFormatted,
+          },
+        });
+      });
     }
   }
 
@@ -290,47 +317,74 @@ async function handleSpotPayment(membership: MembershipWithFamily, status: strin
       return;
     }
 
-    await prisma.$transaction(async (tx) => {
-      // Atomic idempotency guard (ISO A.14.2.5)
-      const activated = await tx.familyMembership.updateMany({
-        where: { id: membership.id, feePaidAt: null },
-        data: { status: "active", feePaidAt: new Date(), joinedAt: new Date() },
-      });
-      if (activated.count === 0) return;
-
-      await createNotification(tx, {
-        recipientUserId: membership.family.chiefId,
-        type: "JOIN_FEE_PAID",
-        payload: {
-          familyId: membership.family.id,
-          familyName: membership.family.name,
-          memberId: membership.userId,
-          personaName: membership.user.personaName,
-        },
-      });
-      await createNotification(tx, {
-        recipientUserId: membership.userId,
-        type: "JOIN_APPROVED",
-        payload: { familyId: membership.family.id, familyName: membership.family.name },
-      });
-    });
-
-    const activated = await prisma.familyMembership.findUnique({
-      where: { id: membership.id },
-      select: { feePaidAt: true },
-    });
-    if (!activated?.feePaidAt) return;
-
-    // Credit 88% to chief's spot earnings balance (platform retains 12% commission)
-    // Chief withdraws manually from the admin panel — allows batching to reduce transfer fees
-    if (membership.feeChargedCents && membership.feeChargedCents > 0) {
-      const chiefAmountCents = Math.floor(membership.feeChargedCents * (1 - SPOT_COMMISSION_RATE));
-      if (chiefAmountCents > 0) {
-        await prisma.user.update({
-          where: { id: membership.family.chiefId },
-          data: { chiefSpotEarningsCents: { increment: chiefAmountCents } },
+    if (membership.family.autoApprove) {
+      await prisma.$transaction(async (tx) => {
+        // Atomic idempotency guard (ISO A.14.2.5)
+        const activated = await tx.familyMembership.updateMany({
+          where: { id: membership.id, feePaidAt: null },
+          data: { status: "active", feePaidAt: new Date(), joinedAt: new Date() },
         });
+        if (activated.count === 0) return;
+
+        await createNotification(tx, {
+          recipientUserId: membership.family.chiefId,
+          type: "JOIN_FEE_PAID",
+          payload: {
+            familyId: membership.family.id,
+            familyName: membership.family.name,
+            memberId: membership.userId,
+            personaName: membership.user.personaName,
+          },
+        });
+        await createNotification(tx, {
+          recipientUserId: membership.userId,
+          type: "JOIN_APPROVED",
+          payload: { familyId: membership.family.id, familyName: membership.family.name },
+        });
+      });
+
+      const activated = await prisma.familyMembership.findUnique({
+        where: { id: membership.id },
+        select: { feePaidAt: true },
+      });
+      if (!activated?.feePaidAt) return;
+
+      // Credit 88% to chief's spot earnings balance
+      if (membership.feeChargedCents && membership.feeChargedCents > 0) {
+        const chiefAmountCents = Math.floor(membership.feeChargedCents * (1 - SPOT_COMMISSION_RATE));
+        if (chiefAmountCents > 0) {
+          await prisma.user.update({
+            where: { id: membership.family.chiefId },
+            data: { chiefSpotEarningsCents: { increment: chiefAmountCents } },
+          });
+        }
       }
+    } else {
+      // autoApprove = false: mark payment received, keep pending for chief review
+      await prisma.$transaction(async (tx) => {
+        const marked = await tx.familyMembership.updateMany({
+          where: { id: membership.id, feePaidAt: null },
+          data: { feePaidAt: new Date() },
+        });
+        if (marked.count === 0) return;
+
+        const amountFormatted = new Intl.NumberFormat("pt-BR", {
+          style: "currency",
+          currency: membership.family.currency,
+        }).format((membership.feeChargedCents ?? 0) / 100);
+
+        await createNotification(tx, {
+          recipientUserId: membership.family.chiefId,
+          type: "JOIN_PAYMENT_AWAITING_APPROVAL",
+          payload: {
+            familyId: membership.family.id,
+            familyName: membership.family.name,
+            memberId: membership.userId,
+            personaName: membership.user.personaName,
+            amountFormatted,
+          },
+        });
+      });
     }
   }
 

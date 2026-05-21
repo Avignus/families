@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Globe, Lock, Users, Crown, Unlock, TrendingUp } from "lucide-react";
+import { Globe, Lock, Users, Crown, Unlock, TrendingUp, CheckCircle2 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { FamilyCoverArt } from "@/components/family-cover-art";
 import { useLanguage } from "@/lib/i18n/context";
@@ -28,6 +28,7 @@ type Props = {
     spotPricingEnabled: boolean;
     spotFraction: number;
     spotMinPriceCents: number;
+    autoApprove: boolean;
   };
 };
 
@@ -46,6 +47,7 @@ export function CatalogSettingsForm({ familyId, familyName, chiefName, chiefAvat
   const [spotMinPrice, setSpotMinPrice] = useState(
     initial.spotMinPriceCents > 0 ? (initial.spotMinPriceCents / 100).toFixed(2) : ""
   );
+  const [autoApprove, setAutoApprove] = useState(initial.autoApprove);
   const [saving, setSaving] = useState(false);
 
   const previewFeeCents = entryFee ? Math.round(parseFloat(entryFee) * 100) : 0;
@@ -67,6 +69,7 @@ export function CatalogSettingsForm({ familyId, familyName, chiefName, chiefAvat
           spotPricingEnabled: spotEnabled,
           spotFraction: spotFractionValue,
           spotMinPriceCents,
+          autoApprove,
         }),
       });
       const data = await res.json();
@@ -184,6 +187,18 @@ export function CatalogSettingsForm({ familyId, familyName, chiefName, chiefAvat
             </div>
           </div>
         )}
+      </div>
+
+      {/* Auto-approve */}
+      <div className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${autoApprove ? "border-emerald-500/40 bg-emerald-500/5" : "border-border/50 bg-secondary/30"}`}>
+        <div className="space-y-0.5">
+          <p className="text-sm font-medium flex items-center gap-1.5">
+            <CheckCircle2 className={`h-3.5 w-3.5 ${autoApprove ? "text-emerald-500" : "text-muted-foreground"}`} />
+            {t.catalogSettings.autoApproveLabel}
+          </p>
+          <p className="text-xs text-muted-foreground">{t.catalogSettings.autoApproveDesc}</p>
+        </div>
+        <Switch checked={autoApprove} onCheckedChange={setAutoApprove} />
       </div>
 
       {/* Preview */}

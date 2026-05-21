@@ -26,15 +26,15 @@ export async function POST(
     return err("INVALID_STATE", "Request is not pending");
   }
 
-  // Issue partial refund if entry fee was paid (refund only the entry fee, not service fee)
+  // Refund whatever was charged if payment was already confirmed
   let refunded = false;
-  if (membership.feePaidAt && membership.mpPaymentId && !membership.feeRefundedAt) {
+  const refundAmountCents = membership.feeChargedCents ?? family.entryFeeCents;
+  if (membership.feePaidAt && membership.mpPaymentId && !membership.feeRefundedAt && refundAmountCents > 0) {
     try {
-      await refundPayment(membership.mpPaymentId, family.entryFeeCents);
+      await refundPayment(membership.mpPaymentId, refundAmountCents);
       refunded = true;
     } catch (refundErr) {
       console.error("Refund error:", refundErr);
-      // Don't block rejection on refund failure — mark for manual review
     }
   }
 
@@ -55,7 +55,7 @@ export async function POST(
         refunded,
         refundAmountFormatted: refunded
           ? new Intl.NumberFormat("pt-BR", { style: "currency", currency: family.currency })
-              .format(family.entryFeeCents / 100)
+              .format(refundAmountCents / 100)
           : null,
       },
     });

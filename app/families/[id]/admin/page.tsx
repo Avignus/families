@@ -167,6 +167,7 @@ export default async function AdminPage({ params }: { params: { id: string } }) 
               spotPricingEnabled: family.spotPricingEnabled,
               spotFraction: family.spotFraction,
               spotMinPriceCents: family.spotMinPriceCents,
+              autoApprove: family.autoApprove,
             }}
             chiefHasPixKey={!!family.chief.pixKey}
           />

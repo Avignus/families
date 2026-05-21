@@ -106,14 +106,14 @@ async function handlePost(req: NextRequest, params: { id: string }) {
 
     // Free spot (buyer contributes more than they gain)
     if (spotPriceCents === 0) {
+      const newStatus = family.autoApprove ? "active" : "pending";
       if (existing) {
         await prisma.familyMembership.update({
           where: { id: existing.id },
-          data: { status: "pending", joinedAt: new Date() },
+          data: { status: newStatus, joinedAt: new Date() },
         });
       } else {
         await prisma.$transaction(async (tx) => {
-          // Atomic re-check inside transaction to prevent race condition (ISO A.14.2.1)
           const concurrentActive = await tx.familyMembership.findFirst({
             where: { userId: user.id, status: "active", familyId: { not: params.id } },
             select: { familyId: true },
@@ -121,16 +121,18 @@ async function handlePost(req: NextRequest, params: { id: string }) {
           if (concurrentActive) throw Object.assign(new Error("ALREADY_IN_FAMILY"), { code: 409 });
 
           await tx.familyMembership.create({
-            data: { userId: user.id, familyId: params.id, status: "pending" },
+            data: { userId: user.id, familyId: params.id, status: newStatus },
           });
-          await createNotification(tx, {
-            recipientUserId: family.chiefId,
-            type: "JOIN_REQUEST",
-            payload: { familyId: family.id, familyName: family.name, requesterId: user.id, personaName },
-          });
+          if (!family.autoApprove) {
+            await createNotification(tx, {
+              recipientUserId: family.chiefId,
+              type: "JOIN_REQUEST",
+              payload: { familyId: family.id, familyName: family.name, requesterId: user.id, personaName },
+            });
+          }
         });
       }
-      return ok({ message: "Join request sent" }, 201);
+      return ok({ message: family.autoApprove ? "Joined family" : "Join request sent" }, 201);
     }
 
     if (spotPriceCents < ASAAS_MIN_CHARGE_CENTS) {
@@ -209,16 +211,16 @@ async function handlePost(req: NextRequest, params: { id: string }) {
   }
 
   // ── Fixed entry fee path ─────────────────────────────────────────────────
-  // No entry fee — create pending membership and notify chief
+  // No entry fee — create pending membership and notify chief (or auto-approve)
   if (!family.entryFeeCents) {
+    const newStatus = family.autoApprove ? "active" : "pending";
     if (existing) {
       await prisma.familyMembership.update({
         where: { id: existing.id },
-        data: { status: "pending", joinedAt: new Date() },
+        data: { status: newStatus, joinedAt: new Date() },
       });
     } else {
       await prisma.$transaction(async (tx) => {
-        // Atomic re-check inside transaction to prevent race condition (ISO A.14.2.1)
         const concurrentActive = await tx.familyMembership.findFirst({
           where: { userId: user.id, status: "active", familyId: { not: params.id } },
           select: { familyId: true },
@@ -226,21 +228,23 @@ async function handlePost(req: NextRequest, params: { id: string }) {
         if (concurrentActive) throw Object.assign(new Error("ALREADY_IN_FAMILY"), { code: 409 });
 
         await tx.familyMembership.create({
-          data: { userId: user.id, familyId: params.id, status: "pending" },
+          data: { userId: user.id, familyId: params.id, status: newStatus },
         });
-        await createNotification(tx, {
-          recipientUserId: family.chiefId,
-          type: "JOIN_REQUEST",
-          payload: {
-            familyId: family.id,
-            familyName: family.name,
-            requesterId: user.id,
-            personaName,
-          },
-        });
+        if (!family.autoApprove) {
+          await createNotification(tx, {
+            recipientUserId: family.chiefId,
+            type: "JOIN_REQUEST",
+            payload: {
+              familyId: family.id,
+              familyName: family.name,
+              requesterId: user.id,
+              personaName,
+            },
+          });
+        }
       });
     }
-    return ok({ message: "Join request sent" }, 201);
+    return ok({ message: family.autoApprove ? "Joined family" : "Join request sent" }, 201);
   }
 
   const baseUrl = getAppBaseUrl(req);

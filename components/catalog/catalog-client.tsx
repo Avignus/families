@@ -33,6 +33,7 @@ type Family = {
   chief: { id: string; personaName: string; avatarUrl: string; avatarMedium: string };
   gameCovers: string[];
   myStatus: string | null;
+  hasPendingPix: boolean;
   libraryStats: LibraryStats | null;
   gameNames: string[];
   gameNamesLabel: "missing" | "library";
@@ -422,6 +423,7 @@ function FamilyCard({
 
   const statusLabel = () => {
     if (myStatus === "active") return { text: t.catalog.member, color: "text-emerald-400" };
+    if (myStatus === "pending" && family.hasPendingPix) return { text: t.catalog.paymentPending, color: "text-amber-400" };
     if (myStatus === "pending") return { text: t.catalog.requestPending, color: "text-amber-400" };
     if (myStatus === "rejected") return { text: t.catalog.rejected, color: "text-destructive" };
     return null;

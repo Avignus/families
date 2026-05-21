@@ -68,7 +68,7 @@ export default async function CatalogPage({
       chief: { select: { id: true, personaName: true, avatarUrl: true, avatarMedium: true } },
       _count: { select: { memberships: { where: { status: "active" } } } },
       ...(currentUserId
-        ? { memberships: { where: { userId: currentUserId }, select: { status: true } } }
+        ? { memberships: { where: { userId: currentUserId }, select: { status: true, mpPaymentId: true, feePaidAt: true } } }
         : {}),
     },
     orderBy: { createdAt: "desc" },
@@ -302,7 +302,7 @@ export default async function CatalogPage({
         "memberships" in f &&
         Array.isArray((f as { memberships?: unknown[] }).memberships) &&
         (f as { memberships?: unknown[] }).memberships!.length
-          ? ((f as { memberships?: { status: string }[] }).memberships![0])
+          ? ((f as { memberships?: { status: string; mpPaymentId: string | null; feePaidAt: Date | null }[] }).memberships![0])
           : null;
 
       return {
@@ -320,6 +320,7 @@ export default async function CatalogPage({
         chief: f.chief,
         gameCovers: covers,
         myStatus: myMembership?.status ?? null,
+        hasPendingPix: !!(myMembership?.status === "pending" && myMembership.mpPaymentId && !myMembership.feePaidAt),
         familyScore: f.familyScore,
         libraryStats: familyLibraryStats.get(f.id) ?? null,
         gameNames: (gameNameAppIdsPerFamily.get(f.id)?.ids ?? [])
