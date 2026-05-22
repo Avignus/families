@@ -57,11 +57,13 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
       },
       activeCoverTheme:   { select: { id: true, slug: true, name: true, config: true } },
       activeCoverOverlay: { select: { id: true, slug: true, name: true, config: true } },
+      activeCoverVideo:   { select: { id: true, slug: true, name: true, config: true } },
       memberPersonalizations: {
         where: { userId: user.id },
         select: {
           coverTheme:   { select: { id: true, slug: true, name: true, config: true } },
           coverOverlay: { select: { id: true, slug: true, name: true, config: true } },
+          coverVideo:   { select: { id: true, slug: true, name: true, config: true } },
         },
       },
     },
@@ -172,6 +174,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
       : [],
     coverTheme:   family.memberPersonalizations?.[0]?.coverTheme   ?? family.activeCoverTheme   ?? null,
     coverOverlay: family.memberPersonalizations?.[0]?.coverOverlay ?? family.activeCoverOverlay ?? null,
+    coverVideo:   family.memberPersonalizations?.[0]?.coverVideo   ?? family.activeCoverVideo   ?? null,
   });
 }
 

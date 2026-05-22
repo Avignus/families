@@ -68,6 +68,8 @@ model Family {
   activeCoverTheme     Cosmetic? @relation("FamilyActiveCoverTheme", fields: [activeCoverThemeId], references: [id])
   activeCoverOverlayId String?
   activeCoverOverlay   Cosmetic? @relation("FamilyActiveCoverOverlay", fields: [activeCoverOverlayId], references: [id])
+  activeCoverVideoId   String?
+  activeCoverVideo     Cosmetic? @relation("FamilyActiveCoverVideo", fields: [activeCoverVideoId], references: [id])
 
   memberships            FamilyMembership[]
   wishlistItems          WishlistItem[]
@@ -351,8 +353,10 @@ model Cosmetic {
   equippedCardEffect     EquippedCosmetics[]         @relation("EquippedCardEffect")
   activeFamilyCover      Family[]                    @relation("FamilyActiveCoverTheme")
   activeFamilyOverlay    Family[]                    @relation("FamilyActiveCoverOverlay")
+  activeFamilyVideo      Family[]                    @relation("FamilyActiveCoverVideo")
   personalCover          FamilyMemberPersonalization[] @relation("PersonalCoverTheme")
   personalOverlay        FamilyMemberPersonalization[] @relation("PersonalCoverOverlay")
+  personalVideo          FamilyMemberPersonalization[] @relation("PersonalCoverVideo")
 }
 
 model UserCosmetic {
@@ -385,10 +389,12 @@ model FamilyMemberPersonalization {
   familyId       String
   coverThemeId   String?
   coverOverlayId String?
+  coverVideoId   String?
   user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   family         Family    @relation(fields: [familyId], references: [id], onDelete: Cascade)
   coverTheme     Cosmetic? @relation("PersonalCoverTheme", fields: [coverThemeId], references: [id])
   coverOverlay   Cosmetic? @relation("PersonalCoverOverlay", fields: [coverOverlayId], references: [id])
+  coverVideo     Cosmetic? @relation("PersonalCoverVideo", fields: [coverVideoId], references: [id])
   @@id([userId, familyId])
 }
 

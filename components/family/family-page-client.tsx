@@ -23,6 +23,7 @@ import { MonthlyBudgetForm } from "@/components/family/monthly-budget-form";
 import { FamilyCoverArt } from "@/components/family-cover-art";
 import { CoverTheme } from "@/components/cosmetics/cover-theme";
 import { CoverOverlay } from "@/components/cosmetics/cover-overlay";
+import { CoverVideo } from "@/components/cosmetics/cover-video";
 import { THEME_IMAGES, type CoverThemeVariant } from "@/lib/cosmetics";
 import { getMemberColor, formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
@@ -80,6 +81,7 @@ type FamilyData = {
   coverImageUrl: string | null;
   coverTheme:   { id: string; slug: string; name: string; config: Record<string, unknown> } | null;
   coverOverlay: { id: string; slug: string; name: string; config: Record<string, unknown> } | null;
+  coverVideo:   { id: string; slug: string; name: string; config: Record<string, unknown> } | null;
   familyScore: number;
   memberships: Array<{ user: Member }>;
   pendingMemberships: PendingMember[];
@@ -290,8 +292,10 @@ export function FamilyPageClient({
         {/* isolate forces stacking context so overflow-hidden clips transforms */}
         <div className="relative h-[480px] overflow-hidden isolate group/banner">
           <div className="absolute inset-0">
-            {/* Base layer: themed image or fallback */}
-            {family.coverTheme ? (
+            {/* Base layer: video > themed image > fallback */}
+            {family.coverVideo ? (
+              <CoverVideo config={family.coverVideo.config as { videoPath?: string }} />
+            ) : family.coverTheme ? (
               <CoverTheme config={family.coverTheme.config} className="w-full h-full">
                 {(localCoverUrl ?? family.coverImageUrl) ? (
                   <img src={localCoverUrl ?? family.coverImageUrl!} alt={family.name} className="w-full h-full object-cover" />

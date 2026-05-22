@@ -6,9 +6,10 @@ import { prisma } from "@/lib/prisma";
 const Schema = z.object({
   cosmeticId: z.string().nullable().optional(),
   overlayId:  z.string().nullable().optional(),
+  videoId:    z.string().nullable().optional(),
 });
 
-// GET — list themes available to this family (unlocked by any active member)
+// GET — list themes, overlays, and videos available to this family
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   const user = await requireSession();
   if (isApiError(user)) return user;
@@ -20,12 +21,10 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     return err("FORBIDDEN", "Not a member", 403);
   }
 
-  // Default themes always available
   const defaults = await prisma.cosmetic.findMany({
     where: { type: "cover_theme", isDefault: true },
   });
 
-  // Themes unlocked by any active member of this family
   const poolThemes = await prisma.cosmetic.findMany({
     where: {
       type: "cover_theme",
@@ -53,13 +52,23 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 
   const family = await prisma.family.findUnique({
     where: { id: params.id },
-    select: { activeCoverThemeId: true, activeCoverOverlayId: true },
+    select: { activeCoverThemeId: true, activeCoverOverlayId: true, activeCoverVideoId: true },
   });
 
-  // Overlays available to this family (owned by any active member)
   const overlays = await prisma.cosmetic.findMany({
     where: {
       type: "cover_overlay",
+      userCosmetics: {
+        some: {
+          user: { memberships: { some: { familyId: params.id, status: "active" } } },
+        },
+      },
+    },
+  });
+
+  const videos = await prisma.cosmetic.findMany({
+    where: {
+      type: "cover_video",
       userCosmetics: {
         some: {
           user: { memberships: { some: { familyId: params.id, status: "active" } } },
@@ -78,12 +87,14 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
       })),
     ],
     overlays,
+    videos,
     activeCoverThemeId: family?.activeCoverThemeId ?? null,
     activeCoverOverlayId: family?.activeCoverOverlayId ?? null,
+    activeCoverVideoId: family?.activeCoverVideoId ?? null,
   });
 }
 
-// PATCH — chief sets the active cover theme
+// PATCH — chief sets the active cover theme, overlay, and/or video
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const user = await requireSession();
   if (isApiError(user)) return user;
@@ -105,7 +116,6 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     }
 
     if (!cosmetic.isDefault) {
-      // Verify at least one active member unlocked this theme
       const contributed = await prisma.userCosmetic.findFirst({
         where: {
           cosmeticId: body.cosmeticId,
@@ -120,7 +130,6 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     }
   }
 
-  // Validate overlay if provided
   if (body.overlayId) {
     const overlay = await prisma.cosmetic.findUnique({ where: { id: body.overlayId } });
     if (!overlay || overlay.type !== "cover_overlay") {
@@ -135,9 +144,24 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     if (!hasOverlay) return err("OVERLAY_NOT_IN_POOL", "Nenhum membro possui este overlay", 403);
   }
 
+  if (body.videoId) {
+    const video = await prisma.cosmetic.findUnique({ where: { id: body.videoId } });
+    if (!video || video.type !== "cover_video") {
+      return err("INVALID_VIDEO", "Vídeo inválido", 400);
+    }
+    const hasVideo = await prisma.userCosmetic.findFirst({
+      where: {
+        cosmeticId: body.videoId,
+        user: { memberships: { some: { familyId: params.id, status: "active" } } },
+      },
+    });
+    if (!hasVideo) return err("VIDEO_NOT_IN_POOL", "Nenhum membro possui este vídeo", 403);
+  }
+
   const data: Record<string, string | null> = {};
-  if (body.cosmeticId !== undefined) data.activeCoverThemeId = body.cosmeticId ?? null;
-  if (body.overlayId !== undefined)  data.activeCoverOverlayId = body.overlayId ?? null;
+  if (body.cosmeticId !== undefined) data.activeCoverThemeId  = body.cosmeticId ?? null;
+  if (body.overlayId  !== undefined) data.activeCoverOverlayId = body.overlayId  ?? null;
+  if (body.videoId    !== undefined) data.activeCoverVideoId   = body.videoId    ?? null;
 
   await prisma.family.update({ where: { id: params.id }, data });
 

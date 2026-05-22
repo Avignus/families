@@ -73,6 +73,7 @@ export default async function CatalogPage({
       _count: { select: { memberships: { where: { status: "active" } } } },
       activeCoverTheme:   { select: { config: true } },
       activeCoverOverlay: { select: { config: true } },
+      activeCoverVideo:   { select: { config: true } },
       ...(currentUserId
         ? { memberships: { where: { userId: currentUserId }, select: { status: true, mpPaymentId: true, feePaidAt: true } } }
         : {}),
@@ -434,6 +435,7 @@ export default async function CatalogPage({
         // Personal theme overrides family theme for the current user
         coverTheme:   f.activeCoverTheme   as { config: Record<string, unknown> } | null,
         coverOverlay: f.activeCoverOverlay as { config: Record<string, unknown> } | null,
+        coverVideo:   f.activeCoverVideo   as { config: Record<string, unknown> } | null,
       };
     })
   );

@@ -15,6 +15,7 @@ import Link from "next/link";
 import { FamilyCoverArt } from "@/components/family-cover-art";
 import { CoverTheme } from "@/components/cosmetics/cover-theme";
 import { CoverOverlay } from "@/components/cosmetics/cover-overlay";
+import { CoverVideo } from "@/components/cosmetics/cover-video";
 import { useLanguage } from "@/lib/i18n/context";
 import { FamilyTierBadge } from "@/components/family-tier-badge";
 
@@ -86,6 +87,7 @@ type Family = {
   topGenres: string[];
   coverTheme:   { config: Record<string, unknown> } | null;
   coverOverlay: { config: Record<string, unknown> } | null;
+  coverVideo:   { config: Record<string, unknown> } | null;
 };
 
 type PixData = {
@@ -520,7 +522,9 @@ function FamilyCard({
       <Link href={`/catalog/${family.id}`} className="absolute inset-0 z-0" aria-label={family.name} />
 
       <div className="h-20 overflow-hidden bg-secondary pointer-events-none relative isolate">
-        {family.coverTheme ? (
+        {family.coverVideo ? (
+          <CoverVideo config={family.coverVideo.config as { videoPath?: string }} />
+        ) : family.coverTheme ? (
           <CoverTheme config={family.coverTheme.config} className="absolute inset-0" />
         ) : family.gameCovers.length > 0 ? (
           <div className="flex h-full">
@@ -531,7 +535,6 @@ function FamilyCard({
         ) : (
           <FamilyCoverArt familyId={family.id} />
         )}
-        {/* Animated overlay — chief-configured effect visible in catalog */}
         {family.coverOverlay && (
           <CoverOverlay config={family.coverOverlay.config as { cssClass?: string }} />
         )}
