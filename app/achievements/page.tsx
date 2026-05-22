@@ -42,6 +42,7 @@ const COSMETIC_ICON_SLUGS = new Set([
   // card effects
   "efeito-sincronizado",
   "efeito-maldicao-ativa",
+  "efeito-toque-midas",
   // cover themes (dynamic)
   "capa-mosaico",
   "capa-gradiente",
