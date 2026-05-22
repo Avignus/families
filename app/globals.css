@@ -177,3 +177,217 @@
 }
 .mosaic-row-left  { animation: marquee-left  35s linear infinite; }
 .mosaic-row-right { animation: marquee-right 35s linear infinite; }
+
+/* ─── Cover Themes ─────────────────────────────────────────────────────────── */
+
+/* Cripta Ancestral */
+@keyframes torch-flicker {
+  0%,100% { opacity: 0.85; transform: scaleY(1) scaleX(1); }
+  25%      { opacity: 0.70; transform: scaleY(0.95) scaleX(1.05); }
+  50%      { opacity: 0.90; transform: scaleY(1.05) scaleX(0.97); }
+  75%      { opacity: 0.75; transform: scaleY(0.98) scaleX(1.03); }
+}
+@keyframes mist-drift {
+  0%   { transform: translateX(0) scaleX(1); opacity: 0.35; }
+  50%  { transform: translateX(8px) scaleX(1.04); opacity: 0.55; }
+  100% { transform: translateX(0) scaleX(1); opacity: 0.35; }
+}
+.cover-theme-cripta {
+  background: linear-gradient(160deg, #0d0015 0%, #1a0a2e 55%, #2d1052 100%);
+  position: relative; overflow: hidden;
+}
+.cover-theme-cripta::before {
+  content: ""; position: absolute; inset: 0;
+  background: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(107,33,168,0.04) 3px, rgba(107,33,168,0.04) 4px),
+              repeating-linear-gradient(90deg, transparent, transparent 3px, rgba(107,33,168,0.04) 3px, rgba(107,33,168,0.04) 4px);
+}
+.cover-theme-cripta::after {
+  content: ""; position: absolute; bottom: 0; left: 0; right: 0; height: 40%;
+  background: linear-gradient(to top, rgba(107,33,168,0.18) 0%, transparent 100%);
+  animation: mist-drift 6s ease-in-out infinite;
+}
+
+/* Sala do Tesouro */
+@keyframes gold-shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+@keyframes coin-float {
+  0%,100% { transform: translateY(0); opacity: 0.6; }
+  50%      { transform: translateY(-4px); opacity: 0.9; }
+}
+.cover-theme-tesouro {
+  background: linear-gradient(135deg, #1a0e00 0%, #3d2000 45%, #7a4500 80%, #3d2000 100%);
+  position: relative; overflow: hidden;
+}
+.cover-theme-tesouro::before {
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(105deg, transparent 40%, rgba(251,191,36,0.15) 50%, transparent 60%);
+  background-size: 200% 100%;
+  animation: gold-shimmer 4s linear infinite;
+}
+.cover-theme-tesouro::after {
+  content: ""; position: absolute; bottom: 0; left: 0; right: 0; height: 50%;
+  background: radial-gradient(ellipse at 50% 100%, rgba(251,191,36,0.2) 0%, transparent 70%);
+  animation: coin-float 3s ease-in-out infinite;
+}
+
+/* Fortaleza do Clã */
+@keyframes flag-wave {
+  0%,100% { transform: skewX(0deg) scaleX(1); }
+  25%      { transform: skewX(-2deg) scaleX(0.98); }
+  75%      { transform: skewX(2deg) scaleX(1.02); }
+}
+.cover-theme-fortaleza {
+  background: linear-gradient(180deg, #0f1a0f 0%, #1a2e1a 40%, #0f2027 80%, #071520 100%);
+  position: relative; overflow: hidden;
+}
+.cover-theme-fortaleza::before {
+  content: ""; position: absolute; inset: 0;
+  background: repeating-linear-gradient(180deg, rgba(16,185,129,0.03) 0px, rgba(16,185,129,0.03) 1px, transparent 1px, transparent 20px);
+}
+.cover-theme-fortaleza::after {
+  content: ""; position: absolute; top: 0; left: 0; right: 0; height: 35%;
+  background: linear-gradient(to bottom, rgba(16,185,129,0.12) 0%, transparent 100%);
+  animation: flag-wave 3s ease-in-out infinite;
+}
+
+/* Cidade Neon */
+@keyframes neon-pulse {
+  0%,100% { opacity: 0.7; }
+  50%      { opacity: 1; }
+}
+@keyframes rain-fall {
+  from { transform: translateY(-100%); }
+  to   { transform: translateY(100%); }
+}
+.cover-theme-neon {
+  background: linear-gradient(180deg, #0a0a1a 0%, #0f1a2e 50%, #0a0a1a 100%);
+  position: relative; overflow: hidden;
+}
+.cover-theme-neon::before {
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(90deg,
+    rgba(99,102,241,0.12) 0%, transparent 30%,
+    rgba(168,85,247,0.08) 60%, transparent 80%,
+    rgba(99,102,241,0.10) 100%);
+  animation: neon-pulse 2.5s ease-in-out infinite;
+}
+.cover-theme-neon::after {
+  content: ""; position: absolute; inset: 0;
+  background: repeating-linear-gradient(
+    100deg,
+    transparent 0, transparent 2px,
+    rgba(129,140,248,0.05) 2px, rgba(129,140,248,0.05) 3px
+  );
+  animation: rain-fall 1.5s linear infinite;
+}
+
+/* Salão do Trono */
+@keyframes torch-glow {
+  0%,100% { box-shadow: 0 0 20px rgba(234,179,8,0.4); }
+  50%      { box-shadow: 0 0 35px rgba(234,179,8,0.7); }
+}
+@keyframes throne-radiance {
+  0%,100% { opacity: 0.5; }
+  50%      { opacity: 0.8; }
+}
+.cover-theme-trono {
+  background: linear-gradient(180deg, #0c0a09 0%, #1c1008 50%, #0c0a09 100%);
+  position: relative; overflow: hidden;
+}
+.cover-theme-trono::before {
+  content: ""; position: absolute; inset: 0;
+  background: radial-gradient(ellipse at 50% 100%, rgba(234,179,8,0.25) 0%, rgba(234,179,8,0.05) 40%, transparent 70%);
+  animation: throne-radiance 3s ease-in-out infinite;
+}
+.cover-theme-trono::after {
+  content: ""; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(234,179,8,0.6), transparent);
+  animation: torch-glow 2s ease-in-out infinite;
+}
+
+/* Gradiente do Clã */
+.cover-theme-gradient {
+  background: linear-gradient(135deg, hsl(var(--card)) 0%, hsl(var(--primary) / 0.4) 100%);
+}
+
+/* ─── Avatar Frames ─────────────────────────────────────────────────────────── */
+@keyframes frame-haunt-pulse {
+  0%,100% { box-shadow: 0 0 0 2px #7c3aed, 0 0 12px #7c3aed, 0 0 24px rgba(124,58,237,0.3); }
+  50%      { box-shadow: 0 0 0 2px #9f67ff, 0 0 18px #9f67ff, 0 0 36px rgba(159,103,255,0.5); }
+}
+@keyframes frame-gold-pulse {
+  0%,100% { box-shadow: 0 0 0 2px #f59e0b, 0 0 10px rgba(245,158,11,0.5); }
+  50%      { box-shadow: 0 0 0 2px #fbbf24, 0 0 18px rgba(251,191,36,0.7); }
+}
+@keyframes frame-chain-rotate {
+  0%   { box-shadow: 0 0 0 2px #10b981, 0 0 8px rgba(16,185,129,0.4); }
+  50%  { box-shadow: 0 0 0 2px #34d399, 0 0 14px rgba(52,211,153,0.6); }
+  100% { box-shadow: 0 0 0 2px #10b981, 0 0 8px rgba(16,185,129,0.4); }
+}
+@keyframes frame-neon-flicker {
+  0%,95%,100% { box-shadow: 0 0 0 2px #6366f1, 0 0 14px rgba(99,102,241,0.6); }
+  96%,98%     { box-shadow: 0 0 0 2px #818cf8, 0 0 4px rgba(129,140,248,0.2); }
+}
+@keyframes frame-royal-shine {
+  0%,100% { box-shadow: 0 0 0 2px #0ea5e9, 0 0 12px rgba(14,165,233,0.5), 0 0 24px rgba(56,189,248,0.2); }
+  50%      { box-shadow: 0 0 0 2px #38bdf8, 0 0 20px rgba(56,189,248,0.7), 0 0 40px rgba(56,189,248,0.3); }
+}
+.avatar-frame-haunt  { animation: frame-haunt-pulse 2.5s ease-in-out infinite; }
+.avatar-frame-gold   { animation: frame-gold-pulse  2s ease-in-out infinite; }
+.avatar-frame-chain  { animation: frame-chain-rotate 2s ease-in-out infinite; }
+.avatar-frame-neon   { animation: frame-neon-flicker 4s ease-in-out infinite; }
+.avatar-frame-royal  { animation: frame-royal-shine  2.5s ease-in-out infinite; }
+
+/* ─── Name Tags ─────────────────────────────────────────────────────────────── */
+@keyframes tag-horror-blink {
+  0%,90%,100% { opacity: 1; }
+  95%          { opacity: 0.2; }
+}
+@keyframes tag-spin-coin {
+  0%   { transform: rotateY(0deg); }
+  50%  { transform: rotateY(90deg); }
+  100% { transform: rotateY(0deg); }
+}
+@keyframes tag-pulse-glow {
+  0%,100% { filter: drop-shadow(0 0 2px currentColor); }
+  50%      { filter: drop-shadow(0 0 6px currentColor); }
+}
+@keyframes tag-float-gentle {
+  0%,100% { transform: translateY(0); }
+  50%      { transform: translateY(-2px); }
+}
+.tag-horror  { animation: tag-horror-blink 3s ease-in-out infinite; }
+.tag-spin    { animation: tag-spin-coin 1.5s ease-in-out infinite; }
+.tag-pulse   { animation: tag-pulse-glow 2s ease-in-out infinite; }
+.tag-float   { animation: tag-float-gentle 2.5s ease-in-out infinite; }
+.tag-shield  { animation: tag-pulse-glow 3s ease-in-out infinite; }
+
+/* ─── Card Effects ──────────────────────────────────────────────────────────── */
+@keyframes card-effect-curse {
+  0%,100% { box-shadow: 0 0 0 1px rgba(124,58,237,0.4); }
+  50%      { box-shadow: 0 0 16px rgba(124,58,237,0.5), 0 0 32px rgba(124,58,237,0.2); }
+}
+@keyframes card-effect-gold {
+  0%,100% { box-shadow: 0 0 0 1px rgba(251,191,36,0.4); }
+  50%      { box-shadow: 0 0 16px rgba(251,191,36,0.6), 0 0 32px rgba(251,191,36,0.25); }
+}
+@keyframes card-effect-sync {
+  0%,100% { box-shadow: 0 0 0 1px rgba(16,185,129,0.4); }
+  50%      { box-shadow: 0 0 12px rgba(16,185,129,0.5), 0 0 24px rgba(16,185,129,0.2); }
+}
+.card-effect-curse:hover { animation: card-effect-curse 2s ease-in-out infinite; }
+.card-effect-gold:hover  { animation: card-effect-gold  1.5s ease-in-out infinite; }
+.card-effect-sync:hover  { animation: card-effect-sync  2s ease-in-out infinite; }
+
+/* ─── Achievement unlock toast ──────────────────────────────────────────────── */
+@keyframes achievement-shine {
+  from { background-position: -200% center; }
+  to   { background-position: 200% center; }
+}
+.achievement-shine {
+  background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.15) 50%, transparent 60%);
+  background-size: 200% 100%;
+  animation: achievement-shine 2s linear infinite;
+}

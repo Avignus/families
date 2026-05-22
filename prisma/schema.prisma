@@ -35,6 +35,10 @@ model User {
   ballots            VoteBallot[]
   walletTransactions WalletTransaction[]
   gameRecommendations GameRecommendation[]
+  userAchievements   UserAchievement[]
+  userCosmetics      UserCosmetic[]
+  equippedCosmetics  EquippedCosmetics?
+  familyPersonalizations FamilyMemberPersonalization[]
 }
 
 model Family {
@@ -60,10 +64,14 @@ model Family {
   familyScore   Int     @default(0)
   autoApprove   Boolean @default(false)
 
-  memberships         FamilyMembership[]
-  wishlistItems       WishlistItem[]
-  votes               Vote[]
-  gameRecommendations GameRecommendation[]
+  activeCoverThemeId String?
+  activeCoverTheme   Cosmetic? @relation("FamilyActiveCoverTheme", fields: [activeCoverThemeId], references: [id])
+
+  memberships            FamilyMembership[]
+  wishlistItems          WishlistItem[]
+  votes                  Vote[]
+  gameRecommendations    GameRecommendation[]
+  memberPersonalizations FamilyMemberPersonalization[]
 
   @@index([isPublic])
 }
@@ -301,6 +309,83 @@ enum VoteChoice {
   abstain
 }
 
+model Achievement {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  description String
+  category    String
+  rarity      String   // comum | incomum | raro | lendario
+  setSlug     String?
+  sortOrder   Int      @default(0)
+  userAchievements UserAchievement[]
+}
+
+model UserAchievement {
+  id            String      @id @default(cuid())
+  userId        String
+  achievementId String
+  unlockedAt    DateTime    @default(now())
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievement   Achievement @relation(fields: [achievementId], references: [id])
+  @@unique([userId, achievementId])
+  @@index([userId, unlockedAt])
+}
+
+model Cosmetic {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  name        String
+  description String   @default("")
+  type        String   // avatar_frame | profile_bg | name_tag | card_effect | cover_theme
+  rarity      String
+  config      Json
+  isDefault   Boolean  @default(false)
+
+  userCosmetics          UserCosmetic[]
+  equippedAvatarFrame    EquippedCosmetics[]         @relation("EquippedAvatarFrame")
+  equippedProfileBg      EquippedCosmetics[]         @relation("EquippedProfileBg")
+  equippedNameTag        EquippedCosmetics[]         @relation("EquippedNameTag")
+  equippedCardEffect     EquippedCosmetics[]         @relation("EquippedCardEffect")
+  activeFamilyCover      Family[]                    @relation("FamilyActiveCoverTheme")
+  personalCover          FamilyMemberPersonalization[]
+}
+
+model UserCosmetic {
+  id          String   @id @default(cuid())
+  userId      String
+  cosmeticId  String
+  source      String   // achievement slug that granted this
+  unlockedAt  DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cosmetic    Cosmetic @relation(fields: [cosmeticId], references: [id])
+  @@unique([userId, cosmeticId])
+  @@index([userId])
+}
+
+model EquippedCosmetics {
+  userId        String    @id
+  avatarFrameId String?
+  profileBgId   String?
+  nameTagId     String?
+  cardEffectId  String?
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  avatarFrame   Cosmetic? @relation("EquippedAvatarFrame", fields: [avatarFrameId], references: [id])
+  profileBg     Cosmetic? @relation("EquippedProfileBg", fields: [profileBgId], references: [id])
+  nameTag       Cosmetic? @relation("EquippedNameTag", fields: [nameTagId], references: [id])
+  cardEffect    Cosmetic? @relation("EquippedCardEffect", fields: [cardEffectId], references: [id])
+}
+
+model FamilyMemberPersonalization {
+  userId       String
+  familyId     String
+  coverThemeId String?
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  family       Family    @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  coverTheme   Cosmetic? @relation(fields: [coverThemeId], references: [id])
+  @@id([userId, familyId])
+}
+
 enum NotificationType {
   JOIN_REQUEST
   JOIN_APPROVED
@@ -333,4 +418,5 @@ enum NotificationType {
   JOIN_PAYMENT_AWAITING_APPROVAL
   SPOT_EXPIRING_SOON
   SPOT_EXPIRED
+  ACHIEVEMENT_UNLOCKED
 }

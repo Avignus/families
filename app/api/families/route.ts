@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { z } from "zod";
 import { requireSession, isApiError, ok, err, parseBody } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
+import { checkAchievements } from "@/lib/achievements";
 
 const CreateFamilySchema = z.object({
   name: z.string().min(1).max(100),
@@ -42,6 +43,7 @@ export async function POST(req: NextRequest) {
       return f;
     });
 
+    checkAchievements(user.id, { type: "family_created", familyId: family.id }).catch(() => {});
     return ok(family, 201);
   } catch (e) {
     console.error("Create family error:", e);

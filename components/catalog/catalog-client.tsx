@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { PixPaymentModal } from "@/components/wishlist/pix-payment-modal";
 import Link from "next/link";
 import { FamilyCoverArt } from "@/components/family-cover-art";
+import { CoverTheme } from "@/components/cosmetics/cover-theme";
 import { useLanguage } from "@/lib/i18n/context";
 import { FamilyTierBadge } from "@/components/family-tier-badge";
 
@@ -82,6 +83,7 @@ type Family = {
   gameNamesLabel: "missing" | "library";
   familyScore: number;
   topGenres: string[];
+  coverTheme: { config: Record<string, unknown> } | null;
 };
 
 type PixData = {
@@ -515,11 +517,15 @@ function FamilyCard({
       {/* Full-card link overlay */}
       <Link href={`/catalog/${family.id}`} className="absolute inset-0 z-0" aria-label={family.name} />
 
-      <div className="h-20 flex overflow-hidden bg-secondary pointer-events-none">
-        {family.gameCovers.length > 0 ? (
-          family.gameCovers.map((src, i) => (
-            <img key={i} src={src} alt="" className="h-full object-cover flex-1 min-w-0" />
-          ))
+      <div className="h-20 overflow-hidden bg-secondary pointer-events-none relative">
+        {family.coverTheme ? (
+          <CoverTheme config={family.coverTheme.config} className="absolute inset-0" />
+        ) : family.gameCovers.length > 0 ? (
+          <div className="flex h-full">
+            {family.gameCovers.map((src, i) => (
+              <img key={i} src={src} alt="" className="h-full object-cover flex-1 min-w-0" />
+            ))}
+          </div>
         ) : (
           <FamilyCoverArt familyId={family.id} />
         )}

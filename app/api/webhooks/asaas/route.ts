@@ -8,6 +8,7 @@ import { maybeDisburseFunds } from "@/lib/disbursement";
 import { creditWallet } from "@/lib/wallet";
 import { autoDistributeCredits } from "@/lib/auto-distribute";
 import { computeAndSaveFamilyReputation } from "@/lib/family-reputation";
+import { checkAchievements } from "@/lib/achievements";
 
 export const dynamic = "force-dynamic";
 
@@ -458,5 +459,11 @@ async function handlePledgePayment(pledgeId: string, paymentId: string, status: 
     await computeAndSaveReputation(pledge.pledgerUserId).catch(() => {});
     await computeAndSaveFamilyReputation(pledge.wishlistItem.familyId).catch(() => {});
     await maybeDisburseFunds(pledge.wishlistItemId);
+    // Check night-time payment achievement
+    const hour = new Date().getHours();
+    if (hour >= 0 && hour < 3) {
+      checkAchievements(pledge.pledgerUserId, { type: "pix_paid_at_night" }).catch(() => {});
+    }
+    checkAchievements(pledge.pledgerUserId, { type: "pledge_paid", pledgeId: pledge.id }).catch(() => {});
   }
 }

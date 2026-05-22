@@ -2,7 +2,7 @@ import { NotificationType } from "@prisma/client";
 
 type Locale = "pt-BR" | "en";
 
-type TemplatePayload = Record<string, string | number>;
+type TemplatePayload = Record<string, unknown>;
 
 type Template = {
   title: (payload: TemplatePayload) => string;
@@ -179,6 +179,11 @@ const templates: Record<Locale, Templates> = {
       body: (p) => `Seu período de 1 ano no spot da família "${p.familyName}" encerrou. Seu acesso foi removido.`,
       link: () => `/catalog`,
     },
+    ACHIEVEMENT_UNLOCKED: {
+      title: (p) => `Conquista desbloqueada: ${p.title}`,
+      body: (p) => `${p.description}${p.cosmeticsCount ? ` • ${p.cosmeticsCount} cosmético(s) desbloqueado(s)` : ""}`,
+      link: () => `/profile#achievements`,
+    },
   },
   en: {
     JOIN_REQUEST: {
@@ -345,6 +350,11 @@ const templates: Record<Locale, Templates> = {
       title: () => "Spot expired",
       body: (p) => `Your 1-year spot in family "${p.familyName}" has ended. Your access has been removed.`,
       link: () => `/catalog`,
+    },
+    ACHIEVEMENT_UNLOCKED: {
+      title: (p) => `Achievement unlocked: ${p.title}`,
+      body: (p) => `${p.description}${p.cosmeticsCount ? ` • ${p.cosmeticsCount} cosmetic(s) unlocked` : ""}`,
+      link: () => `/profile#achievements`,
     },
   },
 };
