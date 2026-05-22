@@ -71,9 +71,9 @@ export default async function CatalogPage({
     include: {
       chief: { select: { id: true, personaName: true, avatarUrl: true, avatarMedium: true } },
       _count: { select: { memberships: { where: { status: "active" } } } },
-      activeCoverTheme:   { select: { config: true } },
-      activeCoverOverlay: { select: { config: true } },
-      activeCoverVideo:   { select: { config: true } },
+      activeCoverTheme:   { select: { config: true, rarity: true, slug: true } },
+      activeCoverOverlay: { select: { config: true, rarity: true, slug: true } },
+      activeCoverVideo:   { select: { config: true, rarity: true, slug: true } },
       ...(currentUserId
         ? { memberships: { where: { userId: currentUserId }, select: { status: true, mpPaymentId: true, feePaidAt: true } } }
         : {}),
@@ -433,9 +433,9 @@ export default async function CatalogPage({
         gameNamesLabel: gameNameAppIdsPerFamily.get(f.id)?.label ?? "library",
         topGenres: familyTopGenresMap.get(f.id) ?? [],
         // Personal theme overrides family theme for the current user
-        coverTheme:   f.activeCoverTheme   as { config: Record<string, unknown> } | null,
-        coverOverlay: f.activeCoverOverlay as { config: Record<string, unknown> } | null,
-        coverVideo:   f.activeCoverVideo   as { config: Record<string, unknown> } | null,
+        coverTheme:   f.activeCoverTheme   as { config: Record<string, unknown>; rarity: string; slug: string } | null,
+        coverOverlay: f.activeCoverOverlay as { config: Record<string, unknown>; rarity: string; slug: string } | null,
+        coverVideo:   f.activeCoverVideo   as { config: Record<string, unknown>; rarity: string; slug: string } | null,
       };
     })
   );

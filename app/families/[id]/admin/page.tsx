@@ -171,6 +171,7 @@ export default async function AdminPage({ params }: { params: { id: string } }) 
               autoApprove: family.autoApprove,
             }}
             chiefHasPixKey={!!family.chief.pixKey}
+            familyScore={family.familyScore}
           />
         </CardContent>
       </Card>

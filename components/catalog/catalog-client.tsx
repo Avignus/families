@@ -85,10 +85,25 @@ type Family = {
   gameNamesLabel: "missing" | "library";
   familyScore: number;
   topGenres: string[];
-  coverTheme:   { config: Record<string, unknown> } | null;
-  coverOverlay: { config: Record<string, unknown> } | null;
-  coverVideo:   { config: Record<string, unknown> } | null;
+  coverTheme:   { config: Record<string, unknown>; rarity: string; slug: string } | null;
+  coverOverlay: { config: Record<string, unknown>; rarity: string; slug: string } | null;
+  coverVideo:   { config: Record<string, unknown>; rarity: string; slug: string } | null;
 };
+
+const RARITY_ORDER = ["lendario", "epico", "raro", "incomum"] as const;
+
+const CARD_GLOW: Record<string, string> = {
+  lendario: "0 0 0 1.5px rgba(251,191,36,0.55), 0 0 18px rgba(251,191,36,0.28)",
+  epico:    "0 0 0 1.5px rgba(167,139,250,0.5),  0 0 14px rgba(167,139,250,0.24)",
+  raro:     "0 0 0 1.5px rgba(96,165,250,0.45),  0 0 10px rgba(96,165,250,0.2)",
+  incomum:  "0 0 0 1.5px rgba(52,211,153,0.4),   0 0 8px  rgba(52,211,153,0.16)",
+};
+
+function familyCardStyle(family: Family): React.CSSProperties {
+  const cosmetics = [family.coverTheme, family.coverOverlay].filter(Boolean);
+  const top = RARITY_ORDER.find((r) => cosmetics.some((c) => c?.rarity === r));
+  return top ? { boxShadow: CARD_GLOW[top] } : {};
+}
 
 type PixData = {
   qrCode: string;
@@ -520,7 +535,10 @@ function FamilyCard({
   const status = statusLabel();
 
   return (
-    <div className="relative rounded-xl border border-border/50 bg-card overflow-hidden flex flex-col hover:border-primary/30 transition-colors">
+    <div
+      className="relative rounded-xl border border-border/50 bg-card overflow-hidden flex flex-col hover:border-primary/30 transition-colors"
+      style={familyCardStyle(family)}
+    >
       {/* Full-card link overlay — own family goes to management page */}
       <Link href={isOwn ? `/families/${family.id}` : `/catalog/${family.id}`} className="absolute inset-0 z-0" aria-label={family.name} />
 

@@ -1,16 +1,43 @@
 "use client";
 
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Globe, Lock, Users, Crown, Unlock, TrendingUp, CheckCircle2 } from "lucide-react";
+import { Globe, Lock, Users, Crown, Unlock, TrendingUp, CheckCircle2, Zap } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { FamilyCoverArt } from "@/components/family-cover-art";
+import { CoverTheme } from "@/components/cosmetics/cover-theme";
+import { CoverOverlay } from "@/components/cosmetics/cover-overlay";
+import { CoverVideo } from "@/components/cosmetics/cover-video";
+import { FamilyTierBadge } from "@/components/family-tier-badge";
 import { useLanguage } from "@/lib/i18n/context";
+
+type Cosmetic = {
+  id: string;
+  slug: string;
+  name: string;
+  rarity: string;
+  config: Record<string, unknown>;
+  isDefault: boolean;
+};
+
+const CARD_GLOW: Record<string, string> = {
+  lendario: "0 0 0 1.5px rgba(251,191,36,0.55), 0 0 18px rgba(251,191,36,0.28)",
+  epico:    "0 0 0 1.5px rgba(167,139,250,0.5),  0 0 14px rgba(167,139,250,0.24)",
+  raro:     "0 0 0 1.5px rgba(96,165,250,0.45),  0 0 10px rgba(96,165,250,0.2)",
+  incomum:  "0 0 0 1.5px rgba(52,211,153,0.4),   0 0 8px  rgba(52,211,153,0.16)",
+};
+const RARITY_ORDER = ["lendario", "epico", "raro", "incomum"] as const;
+
+function cardGlow(theme: Cosmetic | null, overlay: Cosmetic | null): React.CSSProperties {
+  const top = RARITY_ORDER.find((r) => theme?.rarity === r || overlay?.rarity === r);
+  return top ? { boxShadow: CARD_GLOW[top] } : {};
+}
 
 type Props = {
   familyId: string;
@@ -18,6 +45,7 @@ type Props = {
   chiefName: string;
   chiefAvatar: string;
   chiefHasPixKey: boolean;
+  familyScore: number;
   initial: {
     isPublic: boolean;
     description: string | null;
@@ -32,7 +60,7 @@ type Props = {
   };
 };
 
-export function CatalogSettingsForm({ familyId, familyName, chiefName, chiefAvatar, chiefHasPixKey, initial }: Props) {
+export function CatalogSettingsForm({ familyId, familyName, chiefName, chiefAvatar, chiefHasPixKey, familyScore, initial }: Props) {
   const { t } = useLanguage();
   const [isPublic, setIsPublic] = useState(initial.isPublic);
   const [description, setDescription] = useState(initial.description ?? "");
@@ -54,6 +82,28 @@ export function CatalogSettingsForm({ familyId, familyName, chiefName, chiefAvat
   const previewMax = maxMembers ? parseInt(maxMembers) : null;
   const spotFractionValue = spotFraction ? Math.min(1, Math.max(0.01, parseFloat(spotFraction) / 100)) : 0.2;
   const spotMinPriceCents = spotMinPrice ? Math.round(parseFloat(spotMinPrice) * 100) : 0;
+
+  // Live cosmetics — same query key as CoverThemeSelector so they share state
+  const { data: coverData } = useQuery({
+    queryKey: ["family-cover-themes", familyId],
+    queryFn: async () => {
+      const res = await fetch(`/api/families/${familyId}/cover-theme`);
+      if (!res.ok) return null;
+      return (await res.json()).data as {
+        available: Cosmetic[];
+        overlays: Cosmetic[];
+        videos: Cosmetic[];
+        activeCoverThemeId:   string | null;
+        activeCoverOverlayId: string | null;
+        activeCoverVideoId:   string | null;
+      };
+    },
+    staleTime: 0,
+  });
+
+  const activeTheme   = coverData?.available.find((t) => t.id === coverData.activeCoverThemeId) ?? null;
+  const activeOverlay = coverData?.overlays.find((o) => o.id === coverData.activeCoverOverlayId) ?? null;
+  const activeVideo   = coverData?.videos.find((v) => v.id === coverData.activeCoverVideoId) ?? null;
 
   const handleSave = async () => {
     setSaving(true);
@@ -201,41 +251,89 @@ export function CatalogSettingsForm({ familyId, familyName, chiefName, chiefAvat
         <Switch checked={autoApprove} onCheckedChange={setAutoApprove} />
       </div>
 
-      {/* Preview */}
+      {/* Live card preview */}
       <div className="space-y-2">
         <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">{t.catalogSettings.previewLabel}</p>
-        <div className="rounded-xl border border-border/50 bg-card overflow-hidden max-w-[240px]">
-          <div className="h-16 overflow-hidden">
-            <FamilyCoverArt familyId={familyId} />
+
+        <div
+          className="rounded-xl border border-border/50 bg-card overflow-hidden max-w-[240px] flex flex-col transition-all"
+          style={cardGlow(activeTheme, activeOverlay)}
+        >
+          {/* Cover area */}
+          <div className="h-16 overflow-hidden bg-secondary relative isolate">
+            {activeVideo ? (
+              <video
+                key={(activeVideo.config as { videoPath?: string }).videoPath}
+                autoPlay muted loop playsInline
+                className="absolute inset-0 w-full h-full object-cover"
+              >
+                <source src={(activeVideo.config as { videoPath?: string }).videoPath} type="video/mp4" />
+              </video>
+            ) : activeTheme ? (
+              <CoverTheme config={activeTheme.config} className="absolute inset-0" />
+            ) : (
+              <FamilyCoverArt familyId={familyId} />
+            )}
+            {activeOverlay && (
+              <CoverOverlay config={activeOverlay.config as { cssClass?: string }} />
+            )}
           </div>
-          <div className="p-3 space-y-2">
-            <p className="font-semibold text-xs truncate" style={{ fontFamily: "var(--font-space-grotesk)" }}>
-              {familyName}
-            </p>
+
+          {/* Card content */}
+          <div className="p-3 space-y-2 flex-1 flex flex-col">
+            <div className="flex items-center gap-1.5">
+              <p className="font-semibold text-xs truncate flex-1" style={{ fontFamily: "var(--font-space-grotesk)" }}>
+                {familyName}
+              </p>
+              <FamilyTierBadge score={familyScore} />
+            </div>
+
             {description && (
               <p className="text-[10px] text-muted-foreground line-clamp-2">{description}</p>
             )}
+
             <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
               <img src={chiefAvatar} alt="" className="h-3.5 w-3.5 rounded-full" />
               <span className="truncate max-w-[70px]">{chiefName}</span>
               <Crown className="h-2.5 w-2.5 text-amber-400 flex-shrink-0" />
             </div>
-            <div className="flex items-center justify-between text-[10px]">
+
+            <div className="flex items-center justify-between text-[10px] mt-auto">
               <span className="text-muted-foreground flex items-center gap-1">
                 <Users className="h-3 w-3" />
                 {t.catalogSettings.members(initial.memberCount, previewMax)}
               </span>
-              {previewFeeCents > 0
-                ? <span className="text-primary font-semibold">{formatCurrency(previewFeeCents, initial.currency)}</span>
-                : <span className="text-emerald-400 flex items-center gap-0.5"><Unlock className="h-2.5 w-2.5" /> {t.catalogSettings.free}</span>
-              }
+              {spotEnabled ? (
+                <span className="flex items-center gap-1 text-primary font-semibold">
+                  <Zap className="h-2.5 w-2.5" /> Spot
+                </span>
+              ) : previewFeeCents > 0 ? (
+                <span className="text-primary font-semibold">{formatCurrency(previewFeeCents, initial.currency)}</span>
+              ) : (
+                <span className="text-emerald-400 flex items-center gap-0.5">
+                  <Unlock className="h-2.5 w-2.5" /> {t.catalogSettings.free}
+                </span>
+              )}
             </div>
-            <div className="h-6 rounded-md text-[10px] font-semibold text-white flex items-center justify-center"
-              style={{ background: "linear-gradient(135deg, hsl(258 82% 60%), hsl(258 82% 50%))" }}>
-              {previewFeeCents > 0 ? t.catalogSettings.joinBtn(formatCurrency(previewFeeCents, initial.currency)) : t.catalogSettings.joinFree}
+
+            <div
+              className="h-6 rounded-md text-[10px] font-semibold text-white flex items-center justify-center"
+              style={{ background: "linear-gradient(135deg, hsl(258 82% 60%), hsl(258 82% 50%))" }}
+            >
+              {spotEnabled
+                ? t.catalogSettings.joinFree
+                : previewFeeCents > 0
+                ? t.catalogSettings.joinBtn(formatCurrency(previewFeeCents, initial.currency))
+                : t.catalogSettings.joinFree}
             </div>
           </div>
         </div>
+
+        {(activeTheme || activeOverlay || activeVideo) && (
+          <p className="text-[10px] text-muted-foreground">
+            {[activeVideo?.name, activeTheme?.name, activeOverlay?.name].filter(Boolean).join(" · ")}
+          </p>
+        )}
       </div>
 
       <Button onClick={handleSave} disabled={saving} size="sm" className="w-full">
