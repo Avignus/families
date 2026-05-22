@@ -31,6 +31,20 @@ const COSMETIC_ICON_SLUGS = new Set([
   "bg-sala-tesouro",
   "bg-fortaleza-cla",
   "bg-salao-trono",
+  // name tags
+  "etiqueta-lua-carrinho",
+  "etiqueta-olhos-escuridao",
+  // avatar frames
+  "moldura-noite-compras",
+  "moldura-brasao-real",
+  "moldura-assombracao",
+  "moldura-coroa-mecenas",
+  // card effects
+  "efeito-sincronizado",
+  "efeito-maldicao-ativa",
+  // cover themes (dynamic)
+  "capa-mosaico",
+  "capa-gradiente",
 ]);
 
 const ACHIEVEMENT_SLUGS = new Set([
