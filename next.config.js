@@ -19,7 +19,8 @@ const securityHeaders = [
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob: https://*.steamstatic.com https://store.steampowered.com https://*.public.blob.vercel-storage.com",
       "font-src 'self'",
-      "connect-src 'self' https://steamcommunity.com https://api.steampowered.com https://prod.spline.design",
+      "connect-src 'self' https://steamcommunity.com https://api.steampowered.com",
+      "frame-src https://my.spline.design",
       "frame-ancestors 'none'",
       "form-action 'self' https://steamcommunity.com",
       "base-uri 'self'",
@@ -28,7 +29,6 @@ const securityHeaders = [
 ];
 
 const nextConfig = {
-  transpilePackages: ["@splinetool/react-spline", "@splinetool/runtime"],
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "avatars.steamstatic.com" },

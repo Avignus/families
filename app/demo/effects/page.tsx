@@ -18,8 +18,8 @@ export const dynamic = "force-dynamic";
  * 1. Acesse https://spline.design → crie conta gratuita
  * 2. Abra https://community.spline.design/file/43b4d565-2839-426e-a0b7-1ca798ad58cb (Black Hole)
  * 3. Clique em "Remix" → abrir no editor
- * 4. Export → Public URL → copie o URL gerado (prod.spline.design/...)
- * 5. Substitua SPLINE_URL abaixo
+ * 4. Export → Public URL → copie o URL gerado (my.spline.design/...)
+ * 5. Substitua SPLINE_IFRAME abaixo
  *
  * VIDEO ———————————————————————————————————————
  * 1. Acesse https://pixabay.com/videos/search/nebula/
@@ -28,21 +28,17 @@ export const dynamic = "force-dynamic";
  */
 
 const LOTTIE_URL = "/effects/galaxy.json";
-// Spline community file — tente exportar como Public URL para obter o prod.spline.design URL.
-// Fallback: iframe viewer com o ID do arquivo comunitário.
-const SPLINE_SCENE = "https://prod.spline.design/43b4d565-2839-426e-a0b7-1ca798ad58cb/scene.splinecode";
 const SPLINE_IFRAME = "https://my.spline.design/43b4d565-2839-426e-a0b7-1ca798ad58cb/";
 const VIDEO_URL = "/effects/nebula.mp4";
 
 import lazyLoad from "next/dynamic";
-import { useState, Suspense } from "react";
+import { Suspense } from "react";
 
-// Both packages use browser-only APIs at module level — must be loaded client-side only
+// @lottiefiles/react-lottie-player uses browser-only APIs at module level
 const Player = lazyLoad(
   () => import("@lottiefiles/react-lottie-player").then((m) => ({ default: m.Player })),
   { ssr: false }
 );
-const Spline = lazyLoad(() => import("@splinetool/react-spline"), { ssr: false });
 import { Loader2, ExternalLink } from "lucide-react";
 
 function LoadingState({ label }: { label: string }) {
@@ -91,9 +87,6 @@ function CardWrapper({ title, rarity, description, tech, resourceUrl, resourceLa
 }
 
 export default function EffectsDemo() {
-  const [splineReady, setSplineReady] = useState(false);
-  const [splineError, setSplineError] = useState(false);
-
   return (
     <div className="min-h-screen bg-background px-6 py-10 space-y-8">
       <div className="max-w-5xl mx-auto">
@@ -131,24 +124,12 @@ export default function EffectsDemo() {
             resourceUrl="https://community.spline.design/file/43b4d565-2839-426e-a0b7-1ca798ad58cb"
             resourceLabel="Abrir Black Hole no Spline Community (CC0)"
           >
-            {splineError ? (
-              <iframe
-                src={SPLINE_IFRAME}
-                title="Spline 3D Black Hole"
-                className="absolute inset-0 w-full h-full border-0"
-                loading="lazy"
-              />
-            ) : (
-              <>
-                {!splineReady && <LoadingState label="Renderizando 3D..." />}
-                <Spline
-                  scene={SPLINE_SCENE}
-                  onLoad={() => setSplineReady(true)}
-                  onError={() => setSplineError(true)}
-                  style={{ width: "100%", height: "100%" }}
-                />
-              </>
-            )}
+            <iframe
+              src={SPLINE_IFRAME}
+              title="Spline 3D Black Hole"
+              className="absolute inset-0 w-full h-full border-0"
+              loading="lazy"
+            />
           </CardWrapper>
 
           {/* ── VIDEO ──────────────────────────────────────────── */}
