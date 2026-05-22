@@ -10,9 +10,10 @@ import { CatalogSettingsForm } from "@/components/family/catalog-settings-form";
 import { ReputationBadge } from "@/components/reputation-badge";
 import { DeleteFamilyButton } from "@/components/family/delete-family-button";
 import { InviteLinkPanel } from "@/components/family/invite-link-panel";
-import { ArrowLeft, Crown, Users, Globe, Link2 } from "lucide-react";
+import { ArrowLeft, Crown, Users, Globe, Link2, Palette } from "lucide-react";
 import { FamilyTierBadge } from "@/components/family-tier-badge";
 import { WithdrawPanel } from "@/components/family/withdraw-panel";
+import { CoverThemeSelector } from "@/components/family/cover-theme-selector";
 import Link from "next/link";
 import { getServerTranslations } from "@/lib/i18n/server";
 
@@ -171,6 +172,19 @@ export default async function AdminPage({ params }: { params: { id: string } }) 
             }}
             chiefHasPixKey={!!family.chief.pixKey}
           />
+        </CardContent>
+      </Card>
+
+      {/* Cover theme */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Palette className="h-4 w-4" />
+            Tema da Família
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <CoverThemeSelector familyId={params.id} isChief currentUserId={userId} />
         </CardContent>
       </Card>
 

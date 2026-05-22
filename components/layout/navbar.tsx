@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import { Bell, LogOut, Settings, Globe, Wallet, UsersRound } from "lucide-react";
+import { Bell, LogOut, Settings, Globe, Wallet, UsersRound, Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -259,6 +259,12 @@ export function Navbar() {
                 <Link href="/notifications" className="cursor-pointer">
                   <Bell className="h-4 w-4 mr-2 text-muted-foreground" />
                   {t.nav.notifications}
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild className="focus:bg-primary/10 focus:text-foreground">
+                <Link href="/achievements" className="cursor-pointer">
+                  <Trophy className="h-4 w-4 mr-2 text-amber-400" />
+                  Insígnias
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild className="focus:bg-primary/10 focus:text-foreground">
