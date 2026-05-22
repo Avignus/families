@@ -86,13 +86,23 @@ export default async function AchievementsPage() {
               return (
                 <div
                   key={uc.id}
-                  className={`rounded-lg border border-border/40 bg-card/60 p-3 space-y-1 ${rarity.glow}`}
+                  className={`rounded-lg border border-border/40 bg-card/60 p-3 space-y-2 ${rarity.glow}`}
                 >
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">
-                      {COSMETIC_TYPE_ICON[uc.cosmetic.type]}
-                    </span>
-                    <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${rarity.bg} ${rarity.color}`}>
+                  <div className="flex items-start justify-between gap-2">
+                    {uc.source ? (
+                      <Image
+                        src={`/badges/${uc.source}.png`}
+                        alt={uc.source}
+                        width={40}
+                        height={40}
+                        className="shrink-0 object-contain"
+                      />
+                    ) : (
+                      <span className="text-muted-foreground mt-0.5">
+                        {COSMETIC_TYPE_ICON[uc.cosmetic.type]}
+                      </span>
+                    )}
+                    <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full shrink-0 ${rarity.bg} ${rarity.color}`}>
                       {rarity.label}
                     </span>
                   </div>
