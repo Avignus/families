@@ -7,7 +7,7 @@ import { CoverTheme } from "@/components/cosmetics/cover-theme";
 import { CoverOverlay } from "@/components/cosmetics/cover-overlay";
 import { CoverVideo } from "@/components/cosmetics/cover-video";
 import { toast } from "sonner";
-import { Lock, Loader2, Film } from "lucide-react";
+import { Lock, Film } from "lucide-react";
 
 type Cosmetic = {
   id: string;
@@ -37,7 +37,6 @@ type Props = {
 
 export function CoverThemeSelector({ familyId, isChief, currentUserId }: Props) {
   const qc = useQueryClient();
-  const [pendingAction, setPendingAction] = useState<string | null>(null);
 
   const { data } = useQuery({
     queryKey: ["family-cover-themes", familyId],
@@ -83,18 +82,15 @@ export function CoverThemeSelector({ familyId, isChief, currentUserId }: Props) 
       cosmeticId?: string | null;
       overlayId?: string | null;
       videoId?: string | null;
-      _actionId?: string;
     }) => {
-      const { _actionId, ...payload } = body;
       const res = await fetch(`/api/families/${familyId}/cover-theme`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error((await res.json()).error?.message ?? "Erro");
     },
     onMutate: (body) => {
-      setPendingAction(body._actionId ?? "patch");
       if (body.cosmeticId !== undefined) {
         const theme = body.cosmeticId
           ? (data?.available ?? []).find(t => t.id === body.cosmeticId) ?? null
@@ -125,16 +121,14 @@ export function CoverThemeSelector({ familyId, isChief, currentUserId }: Props) 
       qc.invalidateQueries({ queryKey: ["family-cover-themes", familyId] });
     },
     onSettled: () => {
-      setPendingAction(null);
       setOptimisticVideoId(undefined);
     },
   });
 
   const setPersonalTheme = useMutation({
-    mutationFn: async ({ coverThemeId, coverVideoId, _actionId }: {
+    mutationFn: async ({ coverThemeId, coverVideoId }: {
       coverThemeId?: string | null;
       coverVideoId?: string | null;
-      _actionId: string;
     }) => {
       const res = await fetch(`/api/families/${familyId}/personalization`, {
         method: "PATCH",
@@ -143,8 +137,7 @@ export function CoverThemeSelector({ familyId, isChief, currentUserId }: Props) 
       });
       if (!res.ok) throw new Error((await res.json()).error?.message ?? "Erro");
     },
-    onMutate: ({ coverThemeId, coverVideoId, _actionId }) => {
-      setPendingAction(_actionId);
+    onMutate: ({ coverThemeId, coverVideoId }) => {
       if (coverThemeId !== undefined) {
         const theme = coverThemeId
           ? (personal?.ownedCoverThemes ?? []).find(t => t.id === coverThemeId) ?? null
@@ -166,30 +159,26 @@ export function CoverThemeSelector({ familyId, isChief, currentUserId }: Props) 
       qc.invalidateQueries({ queryKey: ["family", familyId] });
       qc.invalidateQueries({ queryKey: ["family-personalization", familyId] });
     },
-    onSettled: () => setPendingAction(null),
   });
-
-  const isBusy = patchFamilyCover.isPending || setPersonalTheme.isPending;
 
   // Track optimistic video selection so the chip highlights instantly on click
   const [optimisticVideoId, setOptimisticVideoId] = useState<string | null | undefined>(undefined);
 
   if (!data) return null;
 
-  const available       = data.available ?? [];
-  const overlays        = data.overlays ?? [];
-  const videos          = data.videos ?? [];
-  const ownedPersonal   = personal?.ownedCoverThemes ?? [];
+  const available           = data.available ?? [];
+  const overlays            = data.overlays ?? [];
+  const videos              = data.videos ?? [];
+  const ownedPersonal       = personal?.ownedCoverThemes ?? [];
   const ownedPersonalVideos = personal?.ownedCoverVideos ?? [];
-  const personalThemeId = personal?.coverTheme?.id ?? null;
-  const personalVideoId = personal?.coverVideo?.id ?? null;
-  const activeOverlayId = data.activeCoverOverlayId ?? null;
-  // Use optimistic value while mutation is in-flight; fall back to server value
-  const activeVideoId   = optimisticVideoId !== undefined ? optimisticVideoId : (data.activeCoverVideoId ?? null);
-  const previewVideo    = videos.find(v => v.id === activeVideoId) ?? null;
+  const personalThemeId     = personal?.coverTheme?.id ?? null;
+  const personalVideoId     = personal?.coverVideo?.id ?? null;
+  const activeOverlayId     = data.activeCoverOverlayId ?? null;
+  const activeVideoId       = optimisticVideoId !== undefined ? optimisticVideoId : (data.activeCoverVideoId ?? null);
+  const previewVideo        = videos.find(v => v.id === activeVideoId) ?? null;
 
   return (
-    <div className={`space-y-6 relative ${isBusy ? "cursor-wait" : ""}`}>
+    <div className="space-y-6">
 
       {/* Chief section */}
       {isChief && (
@@ -205,18 +194,15 @@ export function CoverThemeSelector({ familyId, isChief, currentUserId }: Props) 
               const rarity = RARITY_CONFIG[theme.rarity] ?? RARITY_CONFIG.comum;
               const isActive = data.activeCoverThemeId === theme.id
                 || (!data.activeCoverThemeId && theme.slug === "capa-mosaico");
-              const isLoading = pendingAction === `theme-${theme.id}`;
               return (
                 <button
                   key={theme.id}
                   onClick={() => patchFamilyCover.mutate({
                     cosmeticId: theme.isDefault ? null : theme.id,
-                    _actionId: `theme-${theme.id}`,
                   })}
-                  disabled={isBusy}
                   className={`relative rounded-lg overflow-hidden border-2 transition-all duration-200 text-left ${
                     isActive ? "border-primary" : "border-border/40 hover:border-border"
-                  } ${isBusy && !isLoading ? "opacity-50 pointer-events-none" : ""}`}
+                  }`}
                 >
                   <div className="h-14 relative overflow-hidden">
                     <CoverTheme config={theme.config as Record<string, unknown>} className="absolute inset-0" />
@@ -241,13 +227,9 @@ export function CoverThemeSelector({ familyId, isChief, currentUserId }: Props) 
                       )}
                     </div>
                   </div>
-                  <div className="absolute top-1 right-1">
-                    {isLoading
-                      ? <Loader2 className="h-3 w-3 animate-spin text-primary drop-shadow-[0_0_4px_hsl(var(--primary))]" />
-                      : isActive
-                        ? <div className="h-2 w-2 rounded-full bg-primary" />
-                        : null}
-                  </div>
+                  {isActive && (
+                    <div className="absolute top-1 right-1 h-2 w-2 rounded-full bg-primary" />
+                  )}
                 </button>
               );
             })}
@@ -274,29 +256,26 @@ export function CoverThemeSelector({ familyId, isChief, currentUserId }: Props) 
 
               <div className="flex flex-wrap gap-2">
                 <button
-                  onClick={() => patchFamilyCover.mutate({ videoId: null, _actionId: "video-none" })}
-                  disabled={isBusy}
+                  onClick={() => patchFamilyCover.mutate({ videoId: null })}
                   className={`text-[11px] px-3 py-1.5 rounded-full border transition-all duration-150 ${
                     !activeVideoId ? "border-primary bg-primary/10 text-primary" : "border-border/40 text-muted-foreground hover:border-border"
-                  } ${isBusy && pendingAction !== "video-none" ? "opacity-40 pointer-events-none" : ""}`}
+                  }`}
                 >
                   Nenhum
                 </button>
                 {videos.map((vid) => {
                   const rarity = RARITY_CONFIG[vid.rarity] ?? RARITY_CONFIG.comum;
                   const isActive = activeVideoId === vid.id;
-                  const isLoading = pendingAction === `video-${vid.id}`;
                   return (
                     <button
                       key={vid.id}
-                      onClick={() => patchFamilyCover.mutate({ videoId: vid.id, _actionId: `video-${vid.id}` })}
-                      disabled={isBusy}
+                      onClick={() => patchFamilyCover.mutate({ videoId: vid.id })}
                       title={vid.description ?? vid.name}
                       className={`text-[11px] px-3 py-1.5 rounded-full border transition-all duration-150 flex items-center gap-1.5 ${
                         isActive ? `border-current ${rarity.color} ${rarity.bg}` : "border-border/40 text-muted-foreground hover:border-border"
-                      } ${isBusy && !isLoading ? "opacity-40 pointer-events-none" : ""}`}
+                      }`}
                     >
-                      {isLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Film className="h-3 w-3" />}
+                      <Film className="h-3 w-3" />
                       {vid.name}
                     </button>
                   );
@@ -311,29 +290,25 @@ export function CoverThemeSelector({ familyId, isChief, currentUserId }: Props) 
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Sobreposição</p>
               <div className="flex flex-wrap gap-2">
                 <button
-                  onClick={() => patchFamilyCover.mutate({ overlayId: null, _actionId: "overlay-none" })}
-                  disabled={isBusy}
+                  onClick={() => patchFamilyCover.mutate({ overlayId: null })}
                   className={`text-[11px] px-3 py-1.5 rounded-full border transition-all duration-150 ${
                     !activeOverlayId ? "border-primary bg-primary/10 text-primary" : "border-border/40 text-muted-foreground hover:border-border"
-                  } ${isBusy && pendingAction !== "overlay-none" ? "opacity-40 pointer-events-none" : ""}`}
+                  }`}
                 >
                   Nenhuma
                 </button>
                 {overlays.map((ov) => {
                   const rarity = RARITY_CONFIG[ov.rarity] ?? RARITY_CONFIG.comum;
                   const isActive = activeOverlayId === ov.id;
-                  const isLoading = pendingAction === `overlay-${ov.id}`;
                   return (
                     <button
                       key={ov.id}
-                      onClick={() => patchFamilyCover.mutate({ overlayId: ov.id, _actionId: `overlay-${ov.id}` })}
-                      disabled={isBusy}
+                      onClick={() => patchFamilyCover.mutate({ overlayId: ov.id })}
                       title={ov.description ?? ov.name}
-                      className={`text-[11px] px-3 py-1.5 rounded-full border transition-all duration-150 flex items-center gap-1 ${
+                      className={`text-[11px] px-3 py-1.5 rounded-full border transition-all duration-150 ${
                         isActive ? `border-current ${rarity.color} ${rarity.bg}` : "border-border/40 text-muted-foreground hover:border-border"
-                      } ${isBusy && !isLoading ? "opacity-40 pointer-events-none" : ""}`}
+                      }`}
                     >
-                      {isLoading && <Loader2 className="h-3 w-3 animate-spin" />}
                       {ov.name}
                     </button>
                   );
@@ -360,29 +335,26 @@ export function CoverThemeSelector({ familyId, isChief, currentUserId }: Props) 
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Vídeo de fundo</p>
               <div className="flex flex-wrap gap-2">
                 <button
-                  onClick={() => setPersonalTheme.mutate({ coverVideoId: null, _actionId: "personal-video-none" })}
-                  disabled={isBusy}
+                  onClick={() => setPersonalTheme.mutate({ coverVideoId: null })}
                   className={`text-[11px] px-3 py-1.5 rounded-full border transition-all duration-150 ${
                     !personalVideoId ? "border-primary bg-primary/10 text-primary" : "border-border/40 text-muted-foreground hover:border-border"
-                  } ${isBusy && pendingAction !== "personal-video-none" ? "opacity-40 pointer-events-none" : ""}`}
+                  }`}
                 >
                   Nenhum
                 </button>
                 {ownedPersonalVideos.map((vid) => {
                   const rarity = RARITY_CONFIG[vid.rarity] ?? RARITY_CONFIG.comum;
                   const isActive = personalVideoId === vid.id;
-                  const isLoading = pendingAction === `personal-video-${vid.id}`;
                   return (
                     <button
                       key={vid.id}
-                      onClick={() => setPersonalTheme.mutate({ coverVideoId: vid.id, _actionId: `personal-video-${vid.id}` })}
-                      disabled={isBusy}
+                      onClick={() => setPersonalTheme.mutate({ coverVideoId: vid.id })}
                       title={vid.description ?? vid.name}
                       className={`text-[11px] px-3 py-1.5 rounded-full border transition-all duration-150 flex items-center gap-1.5 ${
                         isActive ? `border-current ${rarity.color} ${rarity.bg}` : "border-border/40 text-muted-foreground hover:border-border"
-                      } ${isBusy && !isLoading ? "opacity-40 pointer-events-none" : ""}`}
+                      }`}
                     >
-                      {isLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Film className="h-3 w-3" />}
+                      <Film className="h-3 w-3" />
                       {vid.name}
                     </button>
                   );
@@ -395,11 +367,10 @@ export function CoverThemeSelector({ familyId, isChief, currentUserId }: Props) 
           {ownedPersonal.length > 0 && (
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               <button
-                onClick={() => setPersonalTheme.mutate({ coverThemeId: null, _actionId: "personal-default" })}
-                disabled={isBusy}
+                onClick={() => setPersonalTheme.mutate({ coverThemeId: null })}
                 className={`relative rounded-lg overflow-hidden border-2 transition-all duration-200 text-left ${
                   !personalThemeId ? "border-primary" : "border-border/40 hover:border-border"
-                } ${isBusy && pendingAction !== "personal-default" ? "opacity-50 pointer-events-none" : ""}`}
+                }`}
               >
                 <div className="h-14 bg-card/40 flex items-center justify-center">
                   <span className="text-[10px] text-muted-foreground">Tema do chief</span>
@@ -413,15 +384,13 @@ export function CoverThemeSelector({ familyId, isChief, currentUserId }: Props) 
               {ownedPersonal.map((theme) => {
                 const rarity = RARITY_CONFIG[theme.rarity] ?? RARITY_CONFIG.comum;
                 const isPersonal = personalThemeId === theme.id;
-                const isLoading = pendingAction === `personal-${theme.id}`;
                 return (
                   <button
                     key={theme.id}
-                    onClick={() => setPersonalTheme.mutate({ coverThemeId: theme.id, _actionId: `personal-${theme.id}` })}
-                    disabled={isBusy}
+                    onClick={() => setPersonalTheme.mutate({ coverThemeId: theme.id })}
                     className={`relative rounded-lg overflow-hidden border-2 transition-all duration-200 text-left ${
                       isPersonal ? "border-primary" : "border-border/40 hover:border-border"
-                    } ${isBusy && !isLoading ? "opacity-50 pointer-events-none" : ""}`}
+                    }`}
                   >
                     <div className="h-14 relative overflow-hidden">
                       <CoverTheme config={theme.config as Record<string, unknown>} className="absolute inset-0" />
@@ -434,13 +403,7 @@ export function CoverThemeSelector({ familyId, isChief, currentUserId }: Props) 
                       <p className="text-[11px] font-semibold leading-tight">{theme.name}</p>
                       <span className={`text-[9px] font-medium ${rarity.color}`}>{rarity.label}</span>
                     </div>
-                    <div className="absolute top-1 right-1">
-                      {isLoading
-                        ? <Loader2 className="h-3 w-3 animate-spin text-primary drop-shadow-[0_0_4px_hsl(var(--primary))]" />
-                        : isPersonal
-                          ? <div className="h-2 w-2 rounded-full bg-primary" />
-                          : null}
-                    </div>
+                    {isPersonal && <div className="absolute top-1 right-1 h-2 w-2 rounded-full bg-primary" />}
                   </button>
                 );
               })}
