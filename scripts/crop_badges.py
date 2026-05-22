@@ -194,16 +194,28 @@ def main():
             badge = keep_largest_component(badge)
             badge = autocrop(badge, padding=14)
 
-            # 280px content max on a 320px canvas → guaranteed ≥20px margin all sides
-            badge.thumbnail((280, 280), Image.LANCZOS)
-            canvas = Image.new("RGBA", (320, 320), (0, 0, 0, 0))
-            offset_x = (320 - badge.width) // 2
-            offset_y = (320 - badge.height) // 2
+            # Normalize: all badges to the same height (264px), preserving aspect ratio.
+            # thumbnail() only downscales; resize() handles both up and down uniformly.
+            TARGET_H = 264
+            TARGET_W = 264
+            CANVAS   = 320
+            scale = TARGET_H / badge.height
+            new_w = int(badge.width * scale)
+            new_h = TARGET_H
+            if new_w > TARGET_W:          # constrain by width if shield is unusually wide
+                scale = TARGET_W / badge.width
+                new_w = TARGET_W
+                new_h = int(badge.height * scale)
+            badge = badge.resize((new_w, new_h), Image.LANCZOS)
+
+            canvas = Image.new("RGBA", (CANVAS, CANVAS), (0, 0, 0, 0))
+            offset_x = (CANVAS - new_w) // 2
+            offset_y = (CANVAS - new_h) // 2
             canvas.paste(badge, (offset_x, offset_y), badge)
 
             out_path = os.path.join(out_dir, f"{slug}.png")
             canvas.save(out_path, "PNG")
-            print(f"  [{row_i},{col_i}] {slug}.png  content={badge.width}×{badge.height}")
+            print(f"  [{row_i},{col_i}] {slug}.png  {new_w}×{new_h}  margins t={offset_y} b={CANVAS-offset_y-new_h}")
             saved += 1
 
     print(f"\nDone: {saved} saved, {skipped} skipped.")
