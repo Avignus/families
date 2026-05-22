@@ -1,8 +1,7 @@
 "use client";
 
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
-import { useState, useRef, useCallback, useEffect } from "react";
-import { createPortal } from "react-dom";
+import { useState } from "react";
 import { ChevronDown, ChevronUp, Lightbulb, Plus, Check, Loader2, Sparkles } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
@@ -39,18 +38,8 @@ type Props = {
   currentUserId: string;
 };
 
-type PopoverState = {
-  cardRect: DOMRect;
-  reasonBottom: number;
-  visibleHeight: number;
-  overflowHeight: number;
-} | null;
-
 function RecommendationCard({ rec, familyId }: { rec: Recommendation; familyId: string }) {
   const qc = useQueryClient();
-  const cardRef = useRef<HTMLAnchorElement>(null);
-  const reasonRef = useRef<HTMLParagraphElement>(null);
-  const [popover, setPopover] = useState<PopoverState>(null);
   const [adding, setAdding] = useState(false);
   const [added, setAdded] = useState(false);
 
@@ -78,128 +67,54 @@ function RecommendationCard({ rec, familyId }: { rec: Recommendation; familyId: 
     }
   };
 
-  const open = useCallback(() => {
-    if (timerRef.current) clearTimeout(timerRef.current);
-    const el = reasonRef.current;
-    if (!el || el.scrollHeight <= el.clientHeight + 1) return;
-    const cardRect = cardRef.current?.getBoundingClientRect();
-    const reasonRect = el.getBoundingClientRect();
-    if (cardRect) setPopover({
-      cardRect,
-      reasonBottom: reasonRect.bottom,
-      visibleHeight: el.clientHeight,
-      overflowHeight: el.scrollHeight - el.clientHeight,
-    });
-  }, []);
-
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const close = useCallback(() => {
-    timerRef.current = setTimeout(() => setPopover(null), 80);
-  }, []);
-
-  const closeImmediate = useCallback(() => {
-    if (timerRef.current) clearTimeout(timerRef.current);
-    setPopover(null);
-  }, []);
-
-  const cancelClose = useCallback(() => {
-    if (timerRef.current) clearTimeout(timerRef.current);
-  }, []);
-
-  useEffect(() => {
-    if (!popover) return;
-    window.addEventListener("scroll", closeImmediate, { passive: true, capture: true });
-    return () => window.removeEventListener("scroll", closeImmediate, { capture: true });
-  }, [popover, closeImmediate]);
-
   const image = rec.steamData?.headerImage ?? `https://cdn.cloudflare.steamstatic.com/steam/apps/${rec.steamAppId}/header.jpg`;
   const name = rec.steamData?.name ?? rec.gameName;
   const storeUrl = `https://store.steampowered.com/app/${rec.steamAppId}`;
-  const isOpen = popover !== null;
   const isNew = rec.source === "ondemand";
 
   return (
-    <>
-      <a
-        ref={cardRef}
-        href={storeUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        className={`flex-shrink-0 w-44 border transition-colors group relative ${
-          isNew ? "ring-1 ring-primary/30" : ""
-        } ${
-          isOpen
-            ? "rounded-t-lg border-border border-b-0 bg-card"
-            : "rounded-lg border-border/40 bg-card/60 hover:border-border hover:bg-card/80"
-        }`}
-        onMouseEnter={open}
-        onMouseLeave={close}
-      >
-        {isNew && (
-          <span className="absolute top-1.5 left-1.5 z-10 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-primary/90 text-white">
-            novo
-          </span>
-        )}
-        <img
-          src={image}
-          alt={name}
-          className="w-full h-[62px] object-cover rounded-t-lg group-hover:brightness-110 transition-[filter]"
-        />
-        <div className="px-2 py-2 space-y-1">
-          <p className="text-[11px] font-semibold leading-tight line-clamp-1">{name}</p>
-          <p
-            ref={reasonRef}
-            style={isOpen ? { height: popover!.visibleHeight, overflow: "hidden" } : undefined}
-            className={`text-[10px] text-muted-foreground leading-snug${isOpen ? "" : " line-clamp-3"}`}
-          >
-            {rec.reason}
-          </p>
-          <button
-            onClick={handleAdd}
-            disabled={adding || added}
-            className={`w-full h-6 rounded text-[10px] font-semibold flex items-center justify-center gap-1 transition-colors mt-1 ${
-              added
-                ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/25"
-                : "bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20"
-            } disabled:opacity-60`}
-          >
-            {adding ? (
-              <Loader2 className="h-3 w-3 animate-spin" />
-            ) : added ? (
-              <><Check className="h-3 w-3" /> Na lista</>
-            ) : (
-              <><Plus className="h-3 w-3" /> Adicionar</>
-            )}
-          </button>
-        </div>
-      </a>
-
-      {popover && typeof document !== "undefined" && createPortal(
-        <div
-          style={{
-            position: "fixed",
-            top: popover.reasonBottom,
-            left: popover.cardRect.left,
-            width: popover.cardRect.width,
-            height: popover.overflowHeight + 8,
-            overflow: "hidden",
-            zIndex: 9999,
-          }}
-          className="bg-card border-x border-b border-border rounded-b-lg shadow-xl px-2"
-          onMouseEnter={cancelClose}
-          onMouseLeave={close}
-        >
-          <p
-            style={{ marginTop: `-${popover.visibleHeight}px` }}
-            className="text-[10px] text-muted-foreground leading-snug"
-          >
-            {rec.reason}
-          </p>
-        </div>,
-        document.body,
+    <a
+      href={storeUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={`flex flex-col flex-shrink-0 w-44 border transition-colors group relative rounded-lg ${
+        isNew ? "ring-1 ring-primary/30" : ""
+      } border-border/40 bg-card/60 hover:border-border hover:bg-card/80`}
+    >
+      {isNew && (
+        <span className="absolute top-1.5 left-1.5 z-10 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-primary/90 text-white">
+          novo
+        </span>
       )}
-    </>
+      <img
+        src={image}
+        alt={name}
+        className="w-full h-[62px] object-cover rounded-t-lg group-hover:brightness-110 transition-[filter]"
+      />
+      <div className="px-2 py-2 flex flex-col flex-1 gap-1">
+        <p className="text-[11px] font-semibold leading-tight line-clamp-1">{name}</p>
+        <p className="text-[10px] text-muted-foreground leading-snug line-clamp-5 flex-1">
+          {rec.reason}
+        </p>
+        <button
+          onClick={handleAdd}
+          disabled={adding || added}
+          className={`w-full h-6 rounded text-[10px] font-semibold flex items-center justify-center gap-1 transition-colors mt-1 shrink-0 ${
+            added
+              ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/25"
+              : "bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20"
+          } disabled:opacity-60`}
+        >
+          {adding ? (
+            <Loader2 className="h-3 w-3 animate-spin" />
+          ) : added ? (
+            <><Check className="h-3 w-3" /> Na lista</>
+          ) : (
+            <><Plus className="h-3 w-3" /> Adicionar</>
+          )}
+        </button>
+      </div>
+    </a>
   );
 }
 
@@ -317,12 +232,26 @@ export function RecommendationsSection({ familyId, currentUserId }: Props) {
             {isLoading && (
               <div className="flex gap-3">
                 {[1, 2, 3].map((i) => (
-                  <div key={i} className="flex-shrink-0 w-44 h-32 rounded-lg bg-secondary animate-pulse" />
+                  <div key={i} className="flex-shrink-0 w-44 h-40 rounded-lg bg-secondary animate-pulse" />
                 ))}
               </div>
             )}
 
-            {isEmpty && !isLoading && (
+            {refreshMutation.isPending && (
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground flex items-center gap-2">
+                  <Loader2 className="h-3 w-3 animate-spin shrink-0" />
+                  Consultando IA e buscando jogos — pode levar até 30 segundos…
+                </p>
+                <div className="flex gap-3">
+                  {[1, 2, 3, 4].map((i) => (
+                    <div key={i} className="flex-shrink-0 w-44 h-40 rounded-lg bg-secondary animate-pulse" />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {isEmpty && !isLoading && !refreshMutation.isPending && (
               <EmptyState label={quota && quota.remaining > 0 ? "Nenhuma recomendação ainda. Clique em \"Descobrir mais\" para gerar agora." : "Nenhuma recomendação disponível. O limite diário foi atingido — tente amanhã."} />
             )}
 
