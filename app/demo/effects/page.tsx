@@ -27,10 +27,12 @@ export const dynamic = "force-dynamic";
  * 3. Substitua VIDEO_URL abaixo
  */
 
-// ← Substitua estes valores:
-const LOTTIE_URL = "/effects/galaxy.json";         // ou URL do lottie.host
-const SPLINE_URL = "https://prod.spline.design/COLE-SEU-ID-AQUI/scene.splinecode";
-const VIDEO_URL  = "/effects/nebula.mp4";          // ou URL direto do CDN
+const LOTTIE_URL = "/effects/galaxy.json";
+// Spline community file — tente exportar como Public URL para obter o prod.spline.design URL.
+// Fallback: iframe viewer com o ID do arquivo comunitário.
+const SPLINE_SCENE = "https://prod.spline.design/43b4d565-2839-426e-a0b7-1ca798ad58cb/scene.splinecode";
+const SPLINE_IFRAME = "https://my.spline.design/43b4d565-2839-426e-a0b7-1ca798ad58cb/";
+const VIDEO_URL = "/effects/nebula.mp4";
 
 import lazyLoad from "next/dynamic";
 import { useState, Suspense } from "react";
@@ -90,6 +92,7 @@ function CardWrapper({ title, rarity, description, tech, resourceUrl, resourceLa
 
 export default function EffectsDemo() {
   const [splineReady, setSplineReady] = useState(false);
+  const [splineError, setSplineError] = useState(false);
 
   return (
     <div className="min-h-screen bg-background px-6 py-10 space-y-8">
@@ -111,20 +114,11 @@ export default function EffectsDemo() {
             resourceLabel="Baixar animação gratuita no LottieFiles"
           >
             <Suspense fallback={<LoadingState label="Carregando Lottie..." />}>
-              {LOTTIE_URL.includes("COLE") || LOTTIE_URL === "/effects/galaxy.json" ? (
-                <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-center p-4">
-                  <p className="text-xs text-muted-foreground">
-                    Adicione o arquivo <code className="bg-muted px-1 rounded">galaxy.json</code> em <code className="bg-muted px-1 rounded">/public/effects/</code>
-                  </p>
-                  <p className="text-[10px] text-muted-foreground/60">ou substitua LOTTIE_URL com a URL do lottie.host</p>
-                </div>
-              ) : (
-                <Player
-                  autoplay loop
-                  src={LOTTIE_URL}
-                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                />
-              )}
+              <Player
+                autoplay loop
+                src={LOTTIE_URL}
+                style={{ width: "100%", height: "100%", objectFit: "cover" }}
+              />
             </Suspense>
           </CardWrapper>
 
@@ -137,20 +131,20 @@ export default function EffectsDemo() {
             resourceUrl="https://community.spline.design/file/43b4d565-2839-426e-a0b7-1ca798ad58cb"
             resourceLabel="Abrir Black Hole no Spline Community (CC0)"
           >
-            {SPLINE_URL.includes("COLE") ? (
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-center p-4">
-                <p className="text-xs text-muted-foreground">
-                  1. Acesse o link acima → Remix a cena no Spline<br />
-                  2. Export → Public URL<br />
-                  3. Cole o URL em SPLINE_URL
-                </p>
-              </div>
+            {splineError ? (
+              <iframe
+                src={SPLINE_IFRAME}
+                title="Spline 3D Black Hole"
+                className="absolute inset-0 w-full h-full border-0"
+                loading="lazy"
+              />
             ) : (
               <>
                 {!splineReady && <LoadingState label="Renderizando 3D..." />}
                 <Spline
-                  scene={SPLINE_URL}
+                  scene={SPLINE_SCENE}
                   onLoad={() => setSplineReady(true)}
+                  onError={() => setSplineError(true)}
                   style={{ width: "100%", height: "100%" }}
                 />
               </>
@@ -166,21 +160,12 @@ export default function EffectsDemo() {
             resourceUrl="https://pixabay.com/videos/search/nebula/"
             resourceLabel="Vídeos gratuitos de nebulosa no Pixabay (CC0)"
           >
-            {VIDEO_URL === "/effects/nebula.mp4" ? (
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-center p-4">
-                <p className="text-xs text-muted-foreground">
-                  Baixe um vídeo no Pixabay → salve em <code className="bg-muted px-1 rounded">/public/effects/nebula.mp4</code>
-                </p>
-                <p className="text-[10px] text-muted-foreground/60">ou substitua VIDEO_URL com a URL direta do CDN</p>
-              </div>
-            ) : (
-              <video
-                autoPlay muted loop playsInline
-                className="absolute inset-0 w-full h-full object-cover"
-              >
-                <source src={VIDEO_URL} type="video/mp4" />
-              </video>
-            )}
+            <video
+              autoPlay muted loop playsInline
+              className="absolute inset-0 w-full h-full object-cover"
+            >
+              <source src={VIDEO_URL} type="video/mp4" />
+            </video>
           </CardWrapper>
 
         </div>
