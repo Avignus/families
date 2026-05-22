@@ -22,6 +22,7 @@ import { getTier, TIER_COLORS } from "@/lib/reputation";
 import { MonthlyBudgetForm } from "@/components/family/monthly-budget-form";
 import { FamilyCoverArt } from "@/components/family-cover-art";
 import { CoverTheme } from "@/components/cosmetics/cover-theme";
+import { CoverOverlay } from "@/components/cosmetics/cover-overlay";
 import { THEME_IMAGES, type CoverThemeVariant } from "@/lib/cosmetics";
 import { getMemberColor, formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
@@ -310,11 +311,10 @@ export function FamilyPageClient({
           </div>
           {/* Gradient — z-10 so overlay (z-20) renders above it */}
           <div className="absolute inset-0 z-10 bg-gradient-to-t from-card via-card/20 to-transparent" />
-          {/* Overlay — z-20 ensures it's above the gradient (z-10) */}
-          {family.coverOverlay && (() => {
-            const cls = (family.coverOverlay.config as { cssClass?: string }).cssClass;
-            return cls ? <div className={`absolute inset-0 pointer-events-none z-20 ${cls}`} /> : null;
-          })()}
+          {/* Overlay — inline-style divs, z-20 above gradient */}
+          {family.coverOverlay && (
+            <CoverOverlay config={family.coverOverlay.config as { cssClass?: string }} />
+          )}
 
           {/* Chief: change cover button (appears on hover) */}
           {family.isChief && (
