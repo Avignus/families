@@ -22,6 +22,7 @@ import { getTier, TIER_COLORS } from "@/lib/reputation";
 import { MonthlyBudgetForm } from "@/components/family/monthly-budget-form";
 import { FamilyCoverArt } from "@/components/family-cover-art";
 import { CoverTheme } from "@/components/cosmetics/cover-theme";
+import { THEME_IMAGES, type CoverThemeVariant } from "@/lib/cosmetics";
 import { getMemberColor, formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
 import Link from "next/link";
@@ -259,15 +260,32 @@ export function FamilyPageClient({
     }
   }
 
+  const themeVariant = family.coverTheme?.config?.variant as CoverThemeVariant | undefined;
+  const themeImage = themeVariant ? THEME_IMAGES[themeVariant] : null;
+
   return (
+    <div className="relative">
+      {/* Full-page ambient background — very subtle, carries the theme atmosphere */}
+      {themeImage && (
+        <div
+          className="fixed inset-0 -z-10 pointer-events-none"
+          style={{
+            backgroundImage: `url(${themeImage})`,
+            backgroundSize: "cover",
+            backgroundPosition: "center top",
+            opacity: 0.07,
+            filter: "blur(12px) saturate(1.4)",
+          }}
+        />
+      )}
+
     <div className="container py-8 space-y-6">
       <Card className="overflow-hidden">
-        {/* Cover art banner */}
-        <div className="relative h-44 group/banner">
+        {/* Cover art banner — taller, softer fade */}
+        <div className="relative h-64 group/banner">
           <div className="absolute inset-0">
             {family.coverTheme ? (
               <CoverTheme config={family.coverTheme.config} className="w-full h-full">
-                {/* fallback to image if mosaic variant */}
                 {(localCoverUrl ?? family.coverImageUrl) ? (
                   <img src={localCoverUrl ?? family.coverImageUrl!} alt={family.name} className="w-full h-full object-cover" />
                 ) : (
@@ -284,7 +302,8 @@ export function FamilyPageClient({
               <FamilyCoverArt familyId={familyId} />
             )}
           </div>
-          <div className="absolute inset-0 bg-gradient-to-t from-card via-card/50 to-transparent" />
+          {/* Longer, softer gradient — image shows more, fades gently at bottom */}
+          <div className="absolute inset-0 bg-gradient-to-t from-card via-card/20 to-transparent" />
 
           {/* Chief: change cover button (appears on hover) */}
           {family.isChief && (
@@ -678,6 +697,7 @@ export function FamilyPageClient({
         familyId={familyId}
         existingAppIds={new Set(family.wishlistItems.map((i) => i.steamAppId))}
       />
+    </div>
     </div>
   );
 }
