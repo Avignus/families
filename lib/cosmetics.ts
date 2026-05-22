@@ -56,6 +56,23 @@ export function isThemedCover(variant: string | undefined): boolean {
   return !!variant && variant !== "mosaic" && variant !== "gradient";
 }
 
+// Base images for each cover theme variant (overlay animations sit on top via CSS ::before/::after)
+export const THEME_IMAGES: Partial<Record<CoverThemeVariant, string>> = {
+  "cripta-ancestral": "/images/theme-cripta-ancestral.png",
+  "sala-tesouro":     "/images/theme-sala-tesouro.png",
+  "fortaleza-cla":    "/images/theme-fortaleza-cla.png",
+  "cidade-neon":      "/images/theme-cidade-neon.png",
+  "salao-trono":      "/images/theme-salao-trono.png",
+};
+
+// Profile background images for cosmetics of type profile_bg
+export const PROFILE_BG_IMAGES: Record<string, string> = {
+  "bg-mansao-sombria":  "/images/theme-mansao-sombria-perfil.png",
+  "bg-sala-tesouro":    "/images/theme-sala-tesouro.png",
+  "bg-fortaleza-cla":   "/images/theme-fortaleza-cla.png",
+  "bg-salao-trono":     "/images/theme-salao-trono-perfil.png",
+};
+
 // Rarity display config
 export const RARITY_CONFIG: Record<string, { label: string; color: string; bg: string; glow: string }> = {
   padrao:      { label: "Padrão",    color: "text-muted-foreground", bg: "bg-muted/30",        glow: "" },

@@ -193,7 +193,7 @@
   100% { transform: translateX(0) scaleX(1); opacity: 0.35; }
 }
 .cover-theme-cripta {
-  background: linear-gradient(160deg, #0d0015 0%, #1a0a2e 55%, #2d1052 100%);
+  background: linear-gradient(160deg, rgba(13,0,21,0.55) 0%, rgba(26,10,46,0.45) 55%, rgba(45,16,82,0.35) 100%);
   position: relative; overflow: hidden;
 }
 .cover-theme-cripta::before {
@@ -217,7 +217,7 @@
   50%      { transform: translateY(-4px); opacity: 0.9; }
 }
 .cover-theme-tesouro {
-  background: linear-gradient(135deg, #1a0e00 0%, #3d2000 45%, #7a4500 80%, #3d2000 100%);
+  background: linear-gradient(135deg, rgba(26,14,0,0.45) 0%, rgba(61,32,0,0.35) 45%, rgba(122,69,0,0.25) 80%, rgba(61,32,0,0.45) 100%);
   position: relative; overflow: hidden;
 }
 .cover-theme-tesouro::before {
@@ -239,7 +239,7 @@
   75%      { transform: skewX(2deg) scaleX(1.02); }
 }
 .cover-theme-fortaleza {
-  background: linear-gradient(180deg, #0f1a0f 0%, #1a2e1a 40%, #0f2027 80%, #071520 100%);
+  background: linear-gradient(180deg, rgba(15,26,15,0.4) 0%, rgba(26,46,26,0.3) 40%, rgba(15,32,39,0.4) 80%, rgba(7,21,32,0.5) 100%);
   position: relative; overflow: hidden;
 }
 .cover-theme-fortaleza::before {
@@ -262,7 +262,7 @@
   to   { transform: translateY(100%); }
 }
 .cover-theme-neon {
-  background: linear-gradient(180deg, #0a0a1a 0%, #0f1a2e 50%, #0a0a1a 100%);
+  background: linear-gradient(180deg, rgba(10,10,26,0.35) 0%, rgba(15,26,46,0.25) 50%, rgba(10,10,26,0.35) 100%);
   position: relative; overflow: hidden;
 }
 .cover-theme-neon::before {
@@ -293,7 +293,7 @@
   50%      { opacity: 0.8; }
 }
 .cover-theme-trono {
-  background: linear-gradient(180deg, #0c0a09 0%, #1c1008 50%, #0c0a09 100%);
+  background: linear-gradient(180deg, rgba(12,10,9,0.4) 0%, rgba(28,16,8,0.3) 50%, rgba(12,10,9,0.4) 100%);
   position: relative; overflow: hidden;
 }
 .cover-theme-trono::before {

@@ -1,16 +1,14 @@
 "use client";
 
-import { coverThemeClass, isThemedCover, type CoverThemeVariant } from "@/lib/cosmetics";
+import { coverThemeClass, isThemedCover, THEME_IMAGES, type CoverThemeVariant } from "@/lib/cosmetics";
 
 type CosmeticConfig = {
   variant?: string;
-  primaryColor?: string;
-  accentColor?: string;
 };
 
 type CoverThemeProps = {
   config: CosmeticConfig | null;
-  children?: React.ReactNode; // fallback (game mosaic images)
+  children?: React.ReactNode;
   className?: string;
 };
 
@@ -19,18 +17,23 @@ export function CoverTheme({ config, children, className = "" }: CoverThemeProps
   const themed = isThemedCover(variant);
 
   if (!themed) {
-    // Mosaic or gradient — render children (game images) or gradient
     if (variant === "gradient") {
-      return (
-        <div className={`cover-theme-gradient w-full h-full ${className}`} />
-      );
+      return <div className={`cover-theme-gradient w-full h-full ${className}`} />;
     }
     return <>{children}</>;
   }
 
-  const cls = coverThemeClass(variant);
+  const cssClass = coverThemeClass(variant);
+  const imagePath = THEME_IMAGES[variant];
 
   return (
-    <div className={`${cls} w-full h-full ${className}`} />
+    <div
+      className={`${cssClass} w-full h-full ${className}`}
+      style={imagePath ? {
+        backgroundImage: `url(${imagePath})`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+      } : undefined}
+    />
   );
 }
