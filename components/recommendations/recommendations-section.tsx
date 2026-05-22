@@ -1,10 +1,11 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, useRef, useCallback, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { ChevronDown, ChevronUp, Lightbulb } from "lucide-react";
+import { ChevronDown, ChevronUp, Lightbulb, Plus, Check, Loader2 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { toast } from "sonner";
 
 type SteamData = {
   name: string;
@@ -26,6 +27,7 @@ type Recommendation = {
 type Props = {
   familyId: string;
   currentUserId: string;
+  isChief?: boolean;
 };
 
 type PopoverState = {
@@ -36,10 +38,37 @@ type PopoverState = {
   overflowHeight: number;
 } | null;
 
-function RecommendationCard({ rec }: { rec: Recommendation }) {
+function RecommendationCard({ rec, familyId }: { rec: Recommendation; familyId: string }) {
+  const qc = useQueryClient();
   const cardRef = useRef<HTMLAnchorElement>(null);
   const reasonRef = useRef<HTMLParagraphElement>(null);
   const [popover, setPopover] = useState<PopoverState>(null);
+  const [adding, setAdding] = useState(false);
+  const [added, setAdded] = useState(false);
+
+  const handleAdd = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setAdding(true);
+    try {
+      const res = await fetch(`/api/families/${familyId}/wishlist`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ steamAppId: rec.steamAppId }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        const code = data.error?.code;
+        toast.error(code === "GAME_ALREADY_IN_FAMILY" ? "Jogo já está na lista" : (data.error?.message ?? "Erro ao adicionar"));
+        return;
+      }
+      setAdded(true);
+      toast.success("Adicionado à lista", { description: rec.steamData?.name ?? rec.gameName });
+      qc.invalidateQueries({ queryKey: ["family", familyId] });
+    } finally {
+      setAdding(false);
+    }
+  };
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const open = useCallback(() => {
@@ -114,6 +143,23 @@ function RecommendationCard({ rec }: { rec: Recommendation }) {
           >
             {rec.reason}
           </p>
+          <button
+            onClick={handleAdd}
+            disabled={adding || added}
+            className={`w-full h-6 rounded text-[10px] font-semibold flex items-center justify-center gap-1 transition-colors mt-1 ${
+              added
+                ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/25"
+                : "bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20"
+            } disabled:opacity-60`}
+          >
+            {adding ? (
+              <Loader2 className="h-3 w-3 animate-spin" />
+            ) : added ? (
+              <><Check className="h-3 w-3" /> Na lista</>
+            ) : (
+              <><Plus className="h-3 w-3" /> Adicionar</>
+            )}
+          </button>
         </div>
       </a>
 
@@ -153,7 +199,7 @@ function EmptyState({ label }: { label: string }) {
   );
 }
 
-export function RecommendationsSection({ familyId, currentUserId }: Props) {
+export function RecommendationsSection({ familyId, currentUserId, isChief }: Props) {
   const [expanded, setExpanded] = useState(true);
 
   const familyQuery = useQuery<Recommendation[]>({
@@ -215,7 +261,7 @@ export function RecommendationsSection({ familyId, currentUserId }: Props) {
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Para a família</p>
                 <div className="flex gap-3 overflow-x-auto pb-2">
                   {familyRecs.map((rec) => (
-                    <RecommendationCard key={rec.id} rec={rec} />
+                    <RecommendationCard key={rec.id} rec={rec} familyId={familyId} />
                   ))}
                 </div>
               </div>
@@ -226,7 +272,7 @@ export function RecommendationsSection({ familyId, currentUserId }: Props) {
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Para você</p>
                 <div className="flex gap-3 overflow-x-auto pb-2">
                   {personalRecs.map((rec) => (
-                    <RecommendationCard key={rec.id} rec={rec} />
+                    <RecommendationCard key={rec.id} rec={rec} familyId={familyId} />
                   ))}
                 </div>
               </div>
