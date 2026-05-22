@@ -30,7 +30,8 @@ type Quota = {
   used: number;
   limit: number;
   remaining: number;
-  resetsAt: string;
+  tier: string;
+  resetsAt: string | null;
 };
 
 type Props = {
@@ -129,9 +130,9 @@ export function RecommendationsSection({ familyId, currentUserId }: Props) {
     queryKey: ["family-recommendations", familyId],
     queryFn: async () => {
       const res = await fetch(`/api/families/${familyId}/recommendations`);
-      if (!res.ok) return { recs: [], quota: { used: 0, limit: 3, remaining: 3, resetsAt: "" } };
+      if (!res.ok) return { recs: [], quota: { used: 0, limit: 1, remaining: 1, tier: "bronze", resetsAt: null } };
       const data = await res.json();
-      return data.data ?? { recs: [], quota: { used: 0, limit: 3, remaining: 3, resetsAt: "" } };
+      return data.data ?? { recs: [], quota: { used: 0, limit: 1, remaining: 1, tier: "bronze", resetsAt: null } };
     },
     staleTime: 10 * 60 * 1000,
   });
@@ -202,7 +203,11 @@ export function RecommendationsSection({ familyId, currentUserId }: Props) {
               onClick={() => refreshMutation.mutate()}
               disabled={refreshMutation.isPending || quota.remaining === 0}
               className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-              title={quota.remaining === 0 ? `Limite diário atingido. Renova amanhã.` : `${quota.remaining} busca${quota.remaining !== 1 ? "s" : ""} restante${quota.remaining !== 1 ? "s" : ""} hoje`}
+              title={
+                quota.remaining === 0
+                  ? `Limite semanal atingido (elo ${quota.tier}). ${quota.resetsAt ? `Renova em ${Math.ceil((new Date(quota.resetsAt).getTime() - Date.now()) / 86400000)}d.` : ""}`
+                  : `${quota.remaining} busca${quota.remaining !== 1 ? "s" : ""} restante${quota.remaining !== 1 ? "s" : ""} esta semana · elo ${quota.tier}`
+              }
             >
               {refreshMutation.isPending ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -213,7 +218,7 @@ export function RecommendationsSection({ familyId, currentUserId }: Props) {
                 {refreshMutation.isPending
                   ? "Buscando..."
                   : quota.remaining === 0
-                  ? "Limite atingido"
+                  ? "Limite semanal"
                   : "Descobrir mais"}
               </span>
               <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${

@@ -29,7 +29,8 @@ function parseJsonResponse(text: string): RecommendedGame[] {
 
 export async function recommendGamesForUser(
   ownedGames: Array<{ name: string; playtimeMinutes: number }>,
-  exclude: string[] = []
+  exclude: string[] = [],
+  count = 8
 ): Promise<RecommendedGame[]> {
   if (!process.env.GOOGLE_API_KEY) return [];
 
@@ -47,7 +48,7 @@ export async function recommendGamesForUser(
 Player's top games by playtime:
 ${topGames.join("\n")}
 ${excludeSection}
-Return EXACTLY 8 recommendations as a JSON array with the correct Steam App ID for each game.
+Return EXACTLY ${count} recommendations as a JSON array with the correct Steam App ID for each game.
 Format: [{"name": "Exact Steam Store Name", "steamAppId": 123456, "reason": "1-2 sentence explanation in Portuguese (pt-BR)"}]
 
 Rules:
@@ -65,7 +66,8 @@ Return ONLY the JSON array, no other text.`;
 
 export async function recommendGamesForFamily(
   wishlistGames: string[],
-  exclude: string[] = []
+  exclude: string[] = [],
+  count = 8
 ): Promise<RecommendedGame[]> {
   if (!process.env.GOOGLE_API_KEY) return [];
 
@@ -78,7 +80,7 @@ export async function recommendGamesForFamily(
 Family wishlist:
 ${wishlistGames.map((g) => `- ${g}`).join("\n")}
 ${excludeSection}
-Return EXACTLY 8 recommendations as a JSON array with the correct Steam App ID for each game.
+Return EXACTLY ${count} recommendations as a JSON array with the correct Steam App ID for each game.
 Format: [{"name": "Exact Steam Store Name", "steamAppId": 123456, "reason": "1-2 sentence explanation in Portuguese (pt-BR)"}]
 
 Rules:

@@ -2,13 +2,10 @@ import { NextRequest } from "next/server";
 import { requireSession, isApiError, ok, err } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { recommendGamesForFamily, recommendGamesForUser } from "@/lib/gemini";
+import { getTier, TIER_WEEKLY_ONDEMAND_LIMIT } from "@/lib/reputation";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
-
-const DAILY_ONDEMAND_LIMIT = process.env.RECOMMENDATION_DAILY_LIMIT
-  ? parseInt(process.env.RECOMMENDATION_DAILY_LIMIT, 10)
-  : 3;
 
 async function resolveAppId(aiName: string, aiAppId: number): Promise<number> {
   const normalize = (s: string) =>
@@ -45,20 +42,34 @@ async function resolveAppId(aiName: string, aiAppId: number): Promise<number> {
   return aiAppId;
 }
 
-async function getQuota(userId: string) {
-  const startOfDay = new Date();
-  startOfDay.setUTCHours(0, 0, 0, 0);
+async function getQuota(userId: string, reputationScore: number) {
+  const tier = getTier(reputationScore);
+  // Dev override: RECOMMENDATION_DAILY_LIMIT env var bypasses tier limits
+  const limit = process.env.RECOMMENDATION_DAILY_LIMIT
+    ? parseInt(process.env.RECOMMENDATION_DAILY_LIMIT, 10)
+    : TIER_WEEKLY_ONDEMAND_LIMIT[tier];
+
+  const windowStart = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
   const rows = await prisma.gameRecommendation.findMany({
-    where: { userId, source: "ondemand", generatedAt: { gte: startOfDay } },
-    select: { batchId: true },
+    where: { userId, source: "ondemand", generatedAt: { gte: windowStart } },
+    select: { batchId: true, generatedAt: true },
   });
-  const used = new Set(rows.map((r) => r.batchId).filter(Boolean)).size;
-  const remaining = Math.max(0, DAILY_ONDEMAND_LIMIT - used);
-  const resetsAt = new Date(startOfDay);
-  resetsAt.setUTCDate(resetsAt.getUTCDate() + 1);
 
-  return { used, limit: DAILY_ONDEMAND_LIMIT, remaining, resetsAt };
+  const batches = rows.filter((r) => r.batchId);
+  const used = new Set(batches.map((r) => r.batchId)).size;
+  const remaining = Math.max(0, limit - used);
+
+  // Earliest batch in window expires first → that's when a slot frees up
+  const earliest = batches.reduce<Date | null>(
+    (min, r) => (!min || r.generatedAt < min ? r.generatedAt : min),
+    null
+  );
+  const resetsAt = earliest
+    ? new Date(earliest.getTime() + 7 * 24 * 60 * 60 * 1000)
+    : null;
+
+  return { used, limit, remaining, tier, resetsAt };
 }
 
 async function enrichRecs(recs: Array<{ steamAppId: number } & Record<string, unknown>>) {
@@ -83,12 +94,15 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     return err("FORBIDDEN", "Not an active member of this family", 403);
   }
 
-  const recs = await prisma.gameRecommendation.findMany({
-    where: { familyId: params.id, type: "family" },
-    orderBy: [{ generatedAt: "desc" }, { rank: "asc" }],
-  });
+  const [recs, dbUser] = await Promise.all([
+    prisma.gameRecommendation.findMany({
+      where: { familyId: params.id, type: "family" },
+      orderBy: [{ generatedAt: "desc" }, { rank: "asc" }],
+    }),
+    prisma.user.findUnique({ where: { id: user.id }, select: { reputationScore: true } }),
+  ]);
 
-  const quota = await getQuota(user.id);
+  const quota = await getQuota(user.id, dbUser?.reputationScore ?? 0);
   return ok({ recs: await enrichRecs(recs), quota });
 }
 
@@ -109,17 +123,17 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
     return err("FORBIDDEN", "Not an active member", 403);
   }
 
-  const quota = await getQuota(user.id);
-  if (quota.remaining === 0) {
-    return err("QUOTA_EXCEEDED", `Limite diário de ${quota.limit} buscas atingido`, 429);
-  }
-
   const batchId = crypto.randomUUID();
 
   const dbUser = await prisma.user.findUnique({
     where: { id: user.id },
-    select: { steamId: true },
+    select: { steamId: true, reputationScore: true },
   });
+
+  const quota = await getQuota(user.id, dbUser?.reputationScore ?? 0);
+  if (quota.remaining === 0) {
+    return err("QUOTA_EXCEEDED", `Limite semanal de ${quota.limit} buscas atingido para o elo ${quota.tier}`, 429);
+  }
 
   const [existingFamily, existingPersonal, userLibCache, family] = await Promise.all([
     prisma.gameRecommendation.findMany({
@@ -215,7 +229,7 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
   const [enrichedFamily, enrichedPersonal, newQuota] = await Promise.all([
     enrichRecs(familyData),
     enrichRecs(personalData),
-    getQuota(user.id),
+    getQuota(user.id, dbUser?.reputationScore ?? 0),
   ]);
 
   return ok({ family: enrichedFamily, personal: enrichedPersonal, quota: newQuota });

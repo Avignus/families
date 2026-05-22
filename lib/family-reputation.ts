@@ -2,6 +2,15 @@ import { prisma } from "@/lib/prisma";
 
 export type FamilyTier = "ferro" | "bronze" | "prata" | "ouro" | "elite";
 
+// Games generated per family by the weekly cron
+export const FAMILY_TIER_CRON_REC_COUNT: Record<FamilyTier, number> = {
+  ferro:   4,
+  bronze:  5,
+  prata:   6,
+  ouro:    8,
+  elite:   10,
+};
+
 export function getFamilyTier(score: number): FamilyTier {
   if (score >= 81) return "elite";
   if (score >= 61) return "ouro";

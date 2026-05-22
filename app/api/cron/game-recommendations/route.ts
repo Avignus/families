@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { recommendGamesForUser, recommendGamesForFamily } from "@/lib/gemini";
 import { isCronAuthorized } from "@/lib/api";
+import { getTier, TIER_CRON_REC_COUNT } from "@/lib/reputation";
+import { getFamilyTier, FAMILY_TIER_CRON_REC_COUNT } from "@/lib/family-reputation";
 
 // Validates AI-generated steamAppId by checking name against catalog + Steam search API.
 // Gemini frequently returns wrong appIds — we resolve the real one from the game name.
@@ -72,7 +74,7 @@ export async function GET(req: NextRequest) {
   // --- Individual recommendations ---
   const activeUsers = await prisma.user.findMany({
     where: { memberships: { some: { status: "active" } } },
-    select: { id: true, steamId: true },
+    select: { id: true, steamId: true, reputationScore: true },
   });
 
   for (const user of activeUsers) {
@@ -86,7 +88,9 @@ export async function GET(req: NextRequest) {
       const library = cache.payload as unknown as OwnedGame[];
       if (!Array.isArray(library) || library.length === 0) continue;
 
-      const recommendations = await recommendGamesForUser(library);
+      const tier = getTier(user.reputationScore ?? 0);
+      const count = TIER_CRON_REC_COUNT[tier];
+      const recommendations = await recommendGamesForUser(library, [], count);
       if (recommendations.length === 0) continue;
 
       const data = await Promise.all(recommendations.map(async (rec, i) => ({
@@ -115,6 +119,7 @@ export async function GET(req: NextRequest) {
     where: { wishlistItems: { some: { status: { not: "cancelled" } } } },
     select: {
       id: true,
+      familyScore: true,
       wishlistItems: {
         where: { status: { not: "cancelled" } },
         select: { steamAppId: true },
@@ -135,7 +140,9 @@ export async function GET(req: NextRequest) {
       const wishlistNames = appIds.map((id) => nameMap.get(id) ?? "").filter(Boolean);
       if (wishlistNames.length === 0) continue;
 
-      const recommendations = await recommendGamesForFamily(wishlistNames);
+      const familyTier = getFamilyTier(family.familyScore ?? 0);
+      const familyCount = FAMILY_TIER_CRON_REC_COUNT[familyTier];
+      const recommendations = await recommendGamesForFamily(wishlistNames, [], familyCount);
       if (recommendations.length === 0) continue;
 
       const data = await Promise.all(recommendations.map(async (rec, i) => ({
