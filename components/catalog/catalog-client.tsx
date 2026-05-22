@@ -598,7 +598,7 @@ function FamilyCard({
                 </span>
                 <span className="flex items-center gap-1 text-primary">
                   <PlusCircle className="h-3 w-3" />
-                  {stats.missingGames} novos
+                  {stats.missingGames} na wishlist
                 </span>
               </>
             )}
@@ -610,7 +610,7 @@ function FamilyCard({
           <div className="flex flex-wrap gap-1">
             {family.gameNamesLabel === "missing" ? (
               <span className="text-[10px] font-medium text-primary/80 self-center shrink-0">
-                você ganharia:
+                wishlist em comum:
               </span>
             ) : (
               <span className="text-[10px] font-medium text-muted-foreground/60 self-center shrink-0">
