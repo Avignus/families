@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { RARITY_CONFIG } from "@/lib/cosmetics";
 import { CoverTheme } from "@/components/cosmetics/cover-theme";
+import { CoverOverlay } from "@/components/cosmetics/cover-overlay";
 import { toast } from "sonner";
 import { Lock } from "lucide-react";
 
@@ -118,12 +119,16 @@ export function CoverThemeSelector({ familyId, isChief, currentUserId }: Props) 
                     isActive ? "border-primary" : "border-border/40 hover:border-border"
                   }`}
                 >
-                  <div className="h-14 relative">
+                  <div className="h-14 relative overflow-hidden">
                     <CoverTheme config={theme.config as Record<string, unknown>} className="absolute inset-0" />
                     {theme.isDefault && (
                       <div className="absolute inset-0 bg-card/60 flex items-center justify-center">
                         <span className="text-[10px] text-muted-foreground">Padrão</span>
                       </div>
+                    )}
+                    {/* Show active overlay on top of selected theme */}
+                    {activeOverlayId && overlays.find(o => o.id === activeOverlayId) && (
+                      <CoverOverlay config={overlays.find(o => o.id === activeOverlayId)!.config as {cssClass?:string}} />
                     )}
                   </div>
                   <div className="px-2 py-1.5 bg-card/80">
@@ -216,8 +221,11 @@ export function CoverThemeSelector({ familyId, isChief, currentUserId }: Props) 
                     isPersonal ? "border-primary" : "border-border/40 hover:border-border"
                   }`}
                 >
-                  <div className="h-14 relative">
+                  <div className="h-14 relative overflow-hidden">
                     <CoverTheme config={theme.config as Record<string, unknown>} className="absolute inset-0" />
+                    {activeOverlayId && overlays.find(o => o.id === activeOverlayId) && (
+                      <CoverOverlay config={overlays.find(o => o.id === activeOverlayId)!.config as {cssClass?:string}} />
+                    )}
                   </div>
                   <div className="px-2 py-1.5 bg-card/80">
                     <p className="text-[11px] font-semibold leading-tight">{theme.name}</p>

@@ -287,8 +287,8 @@ export function FamilyPageClient({
 
     <div className="container py-8 space-y-6">
       <Card className="overflow-hidden">
-        {/* Cover art banner — hero height */}
-        <div className="relative h-[480px] group/banner">
+        {/* Cover art banner — hero height, overflow-hidden clips overlay to banner bounds */}
+        <div className="relative h-[480px] overflow-hidden group/banner">
           <div className="absolute inset-0">
             {/* Base layer: themed image or fallback */}
             {family.coverTheme ? (
@@ -315,14 +315,9 @@ export function FamilyPageClient({
           {family.coverOverlay && (
             <CoverOverlay config={family.coverOverlay.config as { cssClass?: string }} />
           )}
-          {/* DEBUG — remove after verifying */}
-          <div className="absolute top-2 left-2 z-50 bg-black/70 text-white text-[10px] px-2 py-1 rounded font-mono">
-            overlay: {family.coverOverlay ? (family.coverOverlay.config as {cssClass?:string}).cssClass ?? 'no-class' : 'null'}
-          </div>
-
-          {/* Chief: change cover button (appears on hover) */}
+          {/* Chief: change cover button — z-30 above overlay */}
           {family.isChief && (
-            <label className="absolute top-3 right-3 cursor-pointer opacity-0 group-hover/banner:opacity-100 transition-opacity">
+            <label className="absolute top-3 right-3 z-30 cursor-pointer opacity-0 group-hover/banner:opacity-100 transition-opacity">
               <input
                 type="file"
                 accept="image/jpeg,image/png,image/webp,image/gif"
@@ -346,7 +341,7 @@ export function FamilyPageClient({
             </label>
           )}
 
-          <div className="absolute bottom-0 left-0 right-0 px-6 pb-4 flex items-end justify-between gap-3">
+          <div className="absolute bottom-0 left-0 right-0 z-30 px-6 pb-4 flex items-end justify-between gap-3">
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-2xl font-bold leading-tight" style={{ fontFamily: "var(--font-space-grotesk)" }}>
