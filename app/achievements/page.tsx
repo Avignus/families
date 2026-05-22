@@ -9,6 +9,7 @@ import Image from "next/image";
 
 // Cosmetics that have a dedicated icon in /public/cosmetics/
 const COSMETIC_ICON_SLUGS = new Set([
+  // overlays / video (from Gemini composite)
   "video-nebula",
   "overlay-blackhole",
   "overlay-crt",
@@ -19,6 +20,17 @@ const COSMETIC_ICON_SLUGS = new Set([
   "overlay-radiancia-real",
   "overlay-chama-violeta",
   "overlay-scanner",
+  // cover themes (generated from theme images)
+  "capa-cripta-ancestral",
+  "capa-sala-tesouro",
+  "capa-fortaleza-cla",
+  "capa-salao-trono",
+  "capa-cidade-neon",
+  // profile backgrounds (generated from theme images)
+  "bg-mansao-sombria",
+  "bg-sala-tesouro",
+  "bg-fortaleza-cla",
+  "bg-salao-trono",
 ]);
 
 const ACHIEVEMENT_SLUGS = new Set([
