@@ -267,22 +267,26 @@ export function FamilyPageClient({
     <div className="relative">
       {/* Full-page ambient background — very subtle, carries the theme atmosphere */}
       {themeImage && (
-        <div
-          className="fixed inset-0 -z-10 pointer-events-none"
-          style={{
-            backgroundImage: `url(${themeImage})`,
-            backgroundSize: "cover",
-            backgroundPosition: "center top",
-            opacity: 0.07,
-            filter: "blur(12px) saturate(1.4)",
-          }}
-        />
+        <>
+          {/* Full-page base image — dim but clearly present throughout the page */}
+          <div
+            className="fixed inset-0 -z-20 pointer-events-none"
+            style={{
+              backgroundImage: `url(${themeImage})`,
+              backgroundSize: "cover",
+              backgroundPosition: "center top",
+              backgroundAttachment: "fixed",
+            }}
+          />
+          {/* Dark scrim so content stays readable */}
+          <div className="fixed inset-0 -z-10 pointer-events-none bg-background/80" />
+        </>
       )}
 
     <div className="container py-8 space-y-6">
       <Card className="overflow-hidden">
-        {/* Cover art banner — taller, softer fade */}
-        <div className="relative h-64 group/banner">
+        {/* Cover art banner — hero height */}
+        <div className="relative h-[480px] group/banner">
           <div className="absolute inset-0">
             {family.coverTheme ? (
               <CoverTheme config={family.coverTheme.config} className="w-full h-full">
