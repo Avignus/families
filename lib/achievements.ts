@@ -34,6 +34,16 @@ const ACHIEVEMENT_COSMETICS: Record<string, string[]> = {
   "pix-as-2-da-manha":                  ["etiqueta-lua-carrinho", "moldura-noite-compras"],
   "sem-volta-agora":                    ["etiqueta-lua-carrinho"],
   "confiavel-como-save":                ["etiqueta-lua-carrinho", "moldura-noite-compras", "capa-cidade-neon"],
+  // Overlay cosmetics
+  "olhos-nas-trevas":                   ["overlay-nevoa-rasteira"],
+  "chama-das-sombras":                  ["overlay-chama-violeta"],
+  "brilho-do-mecenas":                  ["overlay-shimmer-dourado"],
+  "cacador-de-coop":                    ["overlay-scanner"],
+  "bandeira-do-cla":                    ["overlay-bandeiras"],
+  "soberano-da-linhagem":               ["overlay-radiancia-real"],
+  "noturno-inveterado":                 ["overlay-chuva-neon"],
+  "reliquia-retro":                     ["overlay-crt"],
+  "singularidade":                      ["overlay-blackhole"],
 };
 
 // ─── Condition checkers ────────────────────────────────────────────────────────
@@ -211,6 +221,47 @@ async function checkCondition(userId: string, slug: string): Promise<boolean> {
       const cancelled = await countCancelledPledges(userId);
       return completed >= 10 && cancelled === 0;
     }
+    case "olhos-nas-trevas":    return (await countHorrorWishlistItems(userId)) >= 3;
+    case "chama-das-sombras":   return (await countFundedHorrorGames(userId)) >= 3;
+    case "brilho-do-mecenas":   return (await totalPledgeCents(userId)) >= 20000;
+    case "cacador-de-coop":     return (await countCoopGamesFunded(userId)) >= 3;
+    case "bandeira-do-cla": {
+      const mem = await prisma.familyMembership.findFirst({
+        where: { userId, status: "active" },
+        select: { familyId: true },
+      });
+      if (!mem) return false;
+      const count = await prisma.familyMembership.count({
+        where: { familyId: mem.familyId, status: "active" },
+      });
+      return count >= 3;
+    }
+    case "soberano-da-linhagem": return (await membershipDays(userId)) >= 120;
+    case "noturno-inveterado": {
+      const pledges = await prisma.pledge.findMany({
+        where: { pledgerUserId: userId, paidAt: { not: null } },
+        select: { paidAt: true },
+      });
+      const nightCount = pledges.filter(p => {
+        const h = p.paidAt!.getHours();
+        return h >= 0 && h < 6;
+      }).length;
+      return nightCount >= 3;
+    }
+    case "reliquia-retro": return (await membershipDays(userId)) >= 60;
+    case "singularidade": {
+      const all21 = [
+        "colecionador-de-traumas","dormiu-com-a-luz-acesa","nao-pode-assistir-mas-pode-comprar","senhor-das-trevas",
+        "mecenas-da-dungeon","lancador-de-coin","compra-tudo-nao-pode","robin-hood-dos-pixels","o-tesouro-de-ganon","patrocinador-da-jogatina-alheia",
+        "sem-amigos-mas-com-coop","elo-de-guilda","a-familia-que-joga-unida","mestre-da-cooperacao",
+        "sem-casa-no-mapa","membro-honroso-do-cla","aquele-que-nao-sai-da-guilda","fundador-de-linhagem",
+        "pix-as-2-da-manha","sem-volta-agora","confiavel-como-save",
+      ];
+      const unlocked = await prisma.userAchievement.count({
+        where: { userId, achievement: { slug: { in: all21 } } },
+      });
+      return unlocked >= all21.length;
+    }
     default: return false;
   }
 }
@@ -271,17 +322,19 @@ export async function checkAchievements(userId: string, trigger: AchievementTrig
         return ["colecionador-de-traumas","dormiu-com-a-luz-acesa","nao-pode-assistir-mas-pode-comprar","senhor-das-trevas",
                 "mecenas-da-dungeon","lancador-de-coin","compra-tudo-nao-pode","robin-hood-dos-pixels","o-tesouro-de-ganon","patrocinador-da-jogatina-alheia",
                 "sem-amigos-mas-com-coop","elo-de-guilda","a-familia-que-joga-unida","mestre-da-cooperacao",
-                "pix-as-2-da-manha","confiavel-como-save"];
+                "pix-as-2-da-manha","confiavel-como-save",
+                "chama-das-sombras","brilho-do-mecenas","cacador-de-coop","noturno-inveterado","singularidade"];
       case "wishlist_added":
-        return ["nao-pode-assistir-mas-pode-comprar","senhor-das-trevas"];
+        return ["nao-pode-assistir-mas-pode-comprar","senhor-das-trevas","olhos-nas-trevas","singularidade"];
       case "family_created":
-        return ["sem-casa-no-mapa"];
+        return ["sem-casa-no-mapa","singularidade"];
       case "membership_active":
-        return ["membro-honroso-do-cla","aquele-que-nao-sai-da-guilda","fundador-de-linhagem"];
+        return ["membro-honroso-do-cla","aquele-que-nao-sai-da-guilda","fundador-de-linhagem",
+                "bandeira-do-cla","soberano-da-linhagem","reliquia-retro","singularidade"];
       case "pix_paid_at_night":
-        return ["pix-as-2-da-manha"];
+        return ["pix-as-2-da-manha","noturno-inveterado","singularidade"];
       case "spot_bought":
-        return ["sem-volta-agora"];
+        return ["sem-volta-agora","singularidade"];
       default:
         return ALL_SLUGS;
     }

@@ -6,6 +6,8 @@ import { Trophy, Lock, Palette, Frame, Tag, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import Image from "next/image";
+import { existsSync } from "fs";
+import { join } from "path";
 
 // Cosmetics that have a dedicated icon in /public/cosmetics/
 const COSMETIC_ICON_SLUGS = new Set([
@@ -79,6 +81,16 @@ const UNLOCK_CONDITIONS: Record<string, string> = {
   "pix-as-2-da-manha":                 "Pague um pledge via PIX entre meia-noite e 3h da manhã.",
   "sem-volta-agora":                   "Compre um spot em uma família.",
   "confiavel-como-save":               "Complete 10 pledges sem cancelar nenhum.",
+  // Overlay achievements
+  "olhos-nas-trevas":                  "Tenha 3 jogos de terror na sua lista de desejos.",
+  "chama-das-sombras":                 "Financie 3 jogos de terror na lista de desejos de alguém.",
+  "brilho-do-mecenas":                 "Contribua com pelo menos R$200 em pledges no total.",
+  "cacador-de-coop":                   "Financie 3 jogos co-op na lista de desejos de alguém.",
+  "bandeira-do-cla":                   "Sua família tem 3 ou mais membros ativos.",
+  "soberano-da-linhagem":              "Fique 120 dias como membro ativo de uma família.",
+  "noturno-inveterado":                "Faça 3 pagamentos PIX entre meia-noite e 6h da manhã.",
+  "reliquia-retro":                    "Fique 60 dias como membro ativo de uma família.",
+  "singularidade":                     "Desbloqueie todas as outras 21 insígnias.",
 };
 
 // Maps cosmetic slug → first achievement that grants it (for source-null cosmetics)
@@ -104,6 +116,22 @@ const COSMETIC_TO_ACHIEVEMENT: Record<string, string> = {
   "etiqueta-lua-carrinho":    "pix-as-2-da-manha",
   "moldura-noite-compras":    "pix-as-2-da-manha",
   "capa-cidade-neon":         "confiavel-como-save",
+  // Overlay cosmetics
+  "overlay-nevoa-rasteira":   "olhos-nas-trevas",
+  "overlay-chama-violeta":    "chama-das-sombras",
+  "overlay-shimmer-dourado":  "brilho-do-mecenas",
+  "overlay-scanner":          "cacador-de-coop",
+  "overlay-bandeiras":        "bandeira-do-cla",
+  "overlay-radiancia-real":   "soberano-da-linhagem",
+  "overlay-chuva-neon":       "noturno-inveterado",
+  "overlay-crt":              "reliquia-retro",
+  "overlay-blackhole":        "singularidade",
+};
+
+// Padrao cosmetics are free — no achievement required
+const COSMETIC_FREE_CONDITION: Record<string, string> = {
+  "capa-mosaico":   "Disponível para todos os membros.",
+  "capa-gradiente": "Disponível para todos os membros.",
 };
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -162,6 +190,12 @@ export default async function AchievementsPage() {
 
   const totalUnlocked = userAchievements.length;
   const total = allAchievements.length;
+
+  const slugsWithBadge = new Set(
+    allAchievements
+      .map((a) => a.slug)
+      .filter((slug) => existsSync(join(process.cwd(), "public", "badges", `${slug}.png`)))
+  );
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-8 space-y-8">
@@ -231,22 +265,31 @@ export default async function AchievementsPage() {
                   <p className="text-[10px] text-muted-foreground leading-tight">{uc.cosmetic.description}</p>
                   {(() => {
                     const src = uc.source ?? COSMETIC_TO_ACHIEVEMENT[uc.cosmetic.slug];
-                    if (!src || !sourceMap.has(src)) return null;
-                    return (
-                      <div className="pt-0.5 border-t border-border/20 space-y-1">
-                        <p className="text-[10px] text-muted-foreground/60 leading-tight flex items-center gap-1">
-                          <Trophy className="h-2.5 w-2.5 shrink-0" />
-                          {sourceMap.get(src)}
-                        </p>
-                        {UNLOCK_CONDITIONS[src] && (
-                          <p className="text-[10px] text-muted-foreground/40 leading-snug">
-                            {UNLOCK_CONDITIONS[src]}
+                    if (src && sourceMap.has(src)) {
+                      return (
+                        <div className="pt-0.5 border-t border-border/20 space-y-1">
+                          <p className="text-[10px] text-muted-foreground/60 leading-tight flex items-center gap-1">
+                            <Trophy className="h-2.5 w-2.5 shrink-0" />
+                            {sourceMap.get(src)}
                           </p>
-                        )}
-                      </div>
-                    );
+                          {UNLOCK_CONDITIONS[src] && (
+                            <p className="text-[10px] text-muted-foreground/40 leading-snug">
+                              {UNLOCK_CONDITIONS[src]}
+                            </p>
+                          )}
+                        </div>
+                      );
+                    }
+                    const freeCondition = COSMETIC_FREE_CONDITION[uc.cosmetic.slug];
+                    if (freeCondition) {
+                      return (
+                        <p className="text-[10px] text-muted-foreground/40 pt-0.5 border-t border-border/20 leading-snug">
+                          {freeCondition}
+                        </p>
+                      );
+                    }
+                    return null;
                   })()}
-                  )}
                 </div>
               );
             })}
@@ -275,15 +318,19 @@ export default async function AchievementsPage() {
                   }`}
                 >
                   <div className="shrink-0 relative h-20 w-20 flex items-center justify-center rounded-lg bg-background/60 border border-border/20">
-                    <Image
-                      src={`/badges/${a.slug}.png`}
-                      alt={a.title}
-                      width={80}
-                      height={80}
-                      className={`h-20 w-20 object-contain transition-all ${
-                        unlocked ? "" : "grayscale opacity-30"
-                      }`}
-                    />
+                    {slugsWithBadge.has(a.slug) ? (
+                      <Image
+                        src={`/badges/${a.slug}.png`}
+                        alt={a.title}
+                        width={80}
+                        height={80}
+                        className={`h-20 w-20 object-contain transition-all ${
+                          unlocked ? "" : "grayscale opacity-30"
+                        }`}
+                      />
+                    ) : (
+                      <Trophy className={`h-10 w-10 ${unlocked ? "text-amber-400/60" : "text-muted-foreground/20"}`} />
+                    )}
                     {!unlocked && (
                       <Lock className="absolute bottom-1 right-1 h-3.5 w-3.5 text-muted-foreground/60" />
                     )}
