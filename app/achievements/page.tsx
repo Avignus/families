@@ -7,6 +7,20 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import Image from "next/image";
 
+// Cosmetics that have a dedicated icon in /public/cosmetics/
+const COSMETIC_ICON_SLUGS = new Set([
+  "video-nebula",
+  "overlay-blackhole",
+  "overlay-crt",
+  "overlay-nevoa-rasteira",
+  "overlay-shimmer-dourado",
+  "overlay-bandeiras",
+  "overlay-chuva-neon",
+  "overlay-radiancia-real",
+  "overlay-chama-violeta",
+  "overlay-scanner",
+]);
+
 const ACHIEVEMENT_SLUGS = new Set([
   "colecionador-de-traumas","dormiu-com-a-luz-acesa","nao-pode-assistir-mas-pode-comprar","senhor-das-trevas",
   "mecenas-da-dungeon","lancador-de-coin","compra-tudo-nao-pode","robin-hood-dos-pixels",
@@ -98,12 +112,20 @@ export default async function AchievementsPage() {
                   className={`rounded-lg border border-border/40 bg-card/60 p-3 space-y-2 ${rarity.glow}`}
                 >
                   <div className="flex items-start justify-between gap-2">
-                    {uc.source && ACHIEVEMENT_SLUGS.has(uc.source) ? (
+                    {COSMETIC_ICON_SLUGS.has(uc.cosmetic.slug) ? (
+                      <Image
+                        src={`/cosmetics/${uc.cosmetic.slug}.png`}
+                        alt={uc.cosmetic.name}
+                        width={44}
+                        height={44}
+                        className="shrink-0 object-contain rounded"
+                      />
+                    ) : uc.source && ACHIEVEMENT_SLUGS.has(uc.source) ? (
                       <Image
                         src={`/badges/${uc.source}.png`}
                         alt={uc.source}
-                        width={40}
-                        height={40}
+                        width={44}
+                        height={44}
                         className="shrink-0 object-contain"
                       />
                     ) : (
