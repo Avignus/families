@@ -6,7 +6,7 @@ const DEFAULT_LANG = "portuguese";
 
 const PRICE_CACHE_TTL_MS = 6 * 60 * 60 * 1000; // 6 hours
 const STATIC_CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
-const LIBRARY_CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
+const LIBRARY_CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes
 const WISHLIST_CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
 
 export type SteamAppDetails = {
