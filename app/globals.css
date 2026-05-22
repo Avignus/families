@@ -394,10 +394,7 @@
 
 /* ─── Cover Overlays (standalone, apply over any theme) ────────────────────── */
 
-/* Base: all overlays are position:absolute inset-0, pointer-events:none */
-[class^="cover-overlay-"], [class*=" cover-overlay-"] {
-  position: absolute; inset: 0; pointer-events: none;
-}
+/* Overlay classes — positioning handled by Tailwind in the component */
 
 /* Névoa Rasteira — purple ground fog */
 .cover-overlay-mist::after {

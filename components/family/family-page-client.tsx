@@ -307,15 +307,14 @@ export function FamilyPageClient({
             ) : (
               <FamilyCoverArt familyId={familyId} />
             )}
-
-            {/* Overlay layer — always on top of the base, regardless of theme */}
-            {family.coverOverlay && (() => {
-              const cls = (family.coverOverlay.config as { cssClass?: string }).cssClass;
-              return cls ? <div className={cls} /> : null;
-            })()}
           </div>
-          {/* Longer, softer gradient — image shows more, fades gently at bottom */}
+          {/* Gradient — softens the image edge at the bottom */}
           <div className="absolute inset-0 bg-gradient-to-t from-card via-card/20 to-transparent" />
+          {/* Overlay — rendered AFTER the gradient so effects are visible on top */}
+          {family.coverOverlay && (() => {
+            const cls = (family.coverOverlay.config as { cssClass?: string }).cssClass;
+            return cls ? <div className={`absolute inset-0 pointer-events-none ${cls}`} /> : null;
+          })()}
 
           {/* Chief: change cover button (appears on hover) */}
           {family.isChief && (
