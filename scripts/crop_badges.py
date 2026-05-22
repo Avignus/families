@@ -192,30 +192,40 @@ def main():
             cell = composite.crop((x0, y0, x1, y1))
             badge = remove_background(cell)
             badge = keep_largest_component(badge)
-            badge = autocrop(badge, padding=14)
 
-            # Normalize: all badges to the same height (264px), preserving aspect ratio.
-            # thumbnail() only downscales; resize() handles both up and down uniformly.
-            TARGET_H = 264
-            TARGET_W = 264
-            CANVAS   = 320
-            scale = TARGET_H / badge.height
+            # 1. Tight-crop to ALL non-transparent pixels (glow included, no extra air).
+            bbox = badge.getbbox()
+            if not bbox:
+                skipped += 1
+                continue
+            badge = badge.crop(bbox)
+
+            # 2. Resize content to CONTENT_H=252 preserving aspect ratio.
+            #    Every badge ends up the same visual height — no variable transparent padding.
+            CONTENT_H = 252
+            CONTENT_W = 252
+            CANVAS    = 320
+            MARGIN    = (CANVAS - CONTENT_H) // 2   # 34px fixed top & bottom
+
+            scale = CONTENT_H / badge.height
             new_w = int(badge.width * scale)
-            new_h = TARGET_H
-            if new_w > TARGET_W:          # constrain by width if shield is unusually wide
-                scale = TARGET_W / badge.width
-                new_w = TARGET_W
+            new_h = CONTENT_H
+            if new_w > CONTENT_W:
+                scale = CONTENT_W / badge.width
+                new_w = CONTENT_W
                 new_h = int(badge.height * scale)
             badge = badge.resize((new_w, new_h), Image.LANCZOS)
 
+            # 3. Center on canvas with fixed margins.
             canvas = Image.new("RGBA", (CANVAS, CANVAS), (0, 0, 0, 0))
             offset_x = (CANVAS - new_w) // 2
-            offset_y = (CANVAS - new_h) // 2
+            offset_y = MARGIN                        # always 34px from top
             canvas.paste(badge, (offset_x, offset_y), badge)
 
             out_path = os.path.join(out_dir, f"{slug}.png")
             canvas.save(out_path, "PNG")
-            print(f"  [{row_i},{col_i}] {slug}.png  {new_w}×{new_h}  margins t={offset_y} b={CANVAS-offset_y-new_h}")
+            bx = canvas.getbbox()
+            print(f"  [{row_i},{col_i}] {slug}.png  {new_w}×{new_h}  t={bx[1]} b={CANVAS-bx[3]} l={bx[0]} r={CANVAS-bx[2]}")
             saved += 1
 
     print(f"\nDone: {saved} saved, {skipped} skipped.")
