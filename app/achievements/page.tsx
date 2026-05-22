@@ -5,6 +5,7 @@ import { RARITY_CONFIG } from "@/lib/cosmetics";
 import { Trophy, Lock, Palette, Frame, Tag, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import Image from "next/image";
 
 const CATEGORY_LABELS: Record<string, string> = {
   terror:        "Terror",
@@ -124,13 +125,19 @@ export default async function AchievementsPage() {
                       : "border-border/20 bg-card/20 opacity-50"
                   }`}
                 >
-                  <div className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
-                    unlocked ? `${rarity.bg}` : "bg-muted/30"
-                  }`}>
-                    {unlocked
-                      ? <Trophy className={`h-4 w-4 ${rarity.color}`} />
-                      : <Lock className="h-4 w-4 text-muted-foreground/40" />
-                    }
+                  <div className="mt-0.5 shrink-0 relative h-12 w-12">
+                    <Image
+                      src={`/badges/${a.slug}.png`}
+                      alt={a.title}
+                      width={48}
+                      height={48}
+                      className={`h-12 w-12 object-contain transition-all ${
+                        unlocked ? "" : "grayscale opacity-30"
+                      }`}
+                    />
+                    {!unlocked && (
+                      <Lock className="absolute bottom-0 right-0 h-3.5 w-3.5 text-muted-foreground/60" />
+                    )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">

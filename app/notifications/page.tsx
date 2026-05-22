@@ -9,6 +9,7 @@ import { formatRelativeTime } from "@/lib/utils";
 import { Bell, CheckCheck } from "lucide-react";
 import Link from "next/link";
 import { useLanguage } from "@/lib/i18n/context";
+import Image from "next/image";
 
 export default function NotificationsPage() {
   const { recent, unreadCount, markRead, markAllRead, refetch } = useNotifications();
@@ -63,17 +64,35 @@ export default function NotificationsPage() {
                 }`}
               >
                 <div className="flex items-start justify-between gap-3">
+                  {n.type === "ACHIEVEMENT_UNLOCKED" && payload.achievementSlug && (
+                    <Image
+                      src={`/badges/${payload.achievementSlug}.png`}
+                      alt={payload.title ?? "achievement"}
+                      width={44}
+                      height={44}
+                      className="shrink-0 object-contain"
+                    />
+                  )}
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-medium text-muted-foreground mb-0.5">
                       {(t.notif.types as Record<string, string>)[n.type] ?? n.type}
                     </p>
                     <p className="text-sm">
-                      {payload.gameName && (
-                        <span className="font-medium">{payload.gameName} — </span>
+                      {n.type === "ACHIEVEMENT_UNLOCKED" ? (
+                        <span className="font-medium">{payload.title}</span>
+                      ) : (
+                        <>
+                          {payload.gameName && (
+                            <span className="font-medium">{payload.gameName} — </span>
+                          )}
+                          {payload.personaName && <span>{payload.personaName} </span>}
+                          {payload.familyName && <span className="text-muted-foreground">em {payload.familyName}</span>}
+                        </>
                       )}
-                      {payload.personaName && <span>{payload.personaName} </span>}
-                      {payload.familyName && <span className="text-muted-foreground">em {payload.familyName}</span>}
                     </p>
+                    {n.type === "ACHIEVEMENT_UNLOCKED" && payload.description && (
+                      <p className="text-xs text-muted-foreground mt-0.5">{payload.description}</p>
+                    )}
                     <p className="text-xs text-muted-foreground mt-1">
                       {formatRelativeTime(n.createdAt)}
                     </p>
