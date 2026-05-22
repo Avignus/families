@@ -55,6 +55,11 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
         },
         orderBy: { closesAt: "asc" },
       },
+      activeCoverTheme: { select: { id: true, slug: true, name: true, config: true } },
+      memberPersonalizations: {
+        where: { userId: user.id },
+        select: { coverTheme: { select: { id: true, slug: true, name: true, config: true } } },
+      },
     },
   });
 
@@ -161,6 +166,8 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
           );
         })()
       : [],
+    // Personal theme override > chief's theme > null
+    coverTheme: family.memberPersonalizations?.[0]?.coverTheme ?? family.activeCoverTheme ?? null,
   });
 }
 

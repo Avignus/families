@@ -21,6 +21,7 @@ import { ReputationBadge } from "@/components/reputation-badge";
 import { getTier, TIER_COLORS } from "@/lib/reputation";
 import { MonthlyBudgetForm } from "@/components/family/monthly-budget-form";
 import { FamilyCoverArt } from "@/components/family-cover-art";
+import { CoverTheme } from "@/components/cosmetics/cover-theme";
 import { getMemberColor, formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
 import Link from "next/link";
@@ -75,6 +76,7 @@ type FamilyData = {
   currentUserId: string;
   monthlyBudgetCents: number;
   coverImageUrl: string | null;
+  coverTheme: { id: string; slug: string; name: string; config: Record<string, unknown> } | null;
   familyScore: number;
   memberships: Array<{ user: Member }>;
   pendingMemberships: PendingMember[];
@@ -263,7 +265,16 @@ export function FamilyPageClient({
         {/* Cover art banner */}
         <div className="relative h-44 group/banner">
           <div className="absolute inset-0">
-            {(localCoverUrl ?? family.coverImageUrl) ? (
+            {family.coverTheme ? (
+              <CoverTheme config={family.coverTheme.config} className="w-full h-full">
+                {/* fallback to image if mosaic variant */}
+                {(localCoverUrl ?? family.coverImageUrl) ? (
+                  <img src={localCoverUrl ?? family.coverImageUrl!} alt={family.name} className="w-full h-full object-cover" />
+                ) : (
+                  <FamilyCoverArt familyId={familyId} />
+                )}
+              </CoverTheme>
+            ) : (localCoverUrl ?? family.coverImageUrl) ? (
               <img
                 src={localCoverUrl ?? family.coverImageUrl!}
                 alt={family.name}
