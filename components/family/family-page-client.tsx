@@ -315,6 +315,10 @@ export function FamilyPageClient({
           {family.coverOverlay && (
             <CoverOverlay config={family.coverOverlay.config as { cssClass?: string }} />
           )}
+          {/* DEBUG — remove after verifying */}
+          <div className="absolute top-2 left-2 z-50 bg-black/70 text-white text-[10px] px-2 py-1 rounded font-mono">
+            overlay: {family.coverOverlay ? (family.coverOverlay.config as {cssClass?:string}).cssClass ?? 'no-class' : 'null'}
+          </div>
 
           {/* Chief: change cover button (appears on hover) */}
           {family.isChief && (
