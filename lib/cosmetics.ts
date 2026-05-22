@@ -79,5 +79,6 @@ export const RARITY_CONFIG: Record<string, { label: string; color: string; bg: s
   comum:       { label: "Comum",     color: "text-zinc-400",         bg: "bg-zinc-500/15",     glow: "" },
   incomum:     { label: "Incomum",   color: "text-emerald-400",      bg: "bg-emerald-500/15",  glow: "shadow-[0_0_8px_rgba(52,211,153,0.4)]" },
   raro:        { label: "Raro",      color: "text-blue-400",         bg: "bg-blue-500/15",     glow: "shadow-[0_0_12px_rgba(96,165,250,0.5)]" },
+  epico:       { label: "Épico",     color: "text-violet-400",       bg: "bg-violet-500/15",   glow: "shadow-[0_0_14px_rgba(167,139,250,0.55)]" },
   lendario:    { label: "Lendário",  color: "text-amber-400",        bg: "bg-amber-500/15",    glow: "shadow-[0_0_16px_rgba(251,191,36,0.6)]" },
 };

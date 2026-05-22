@@ -108,6 +108,7 @@ export function CoverThemeSelector({ familyId, isChief, currentUserId }: Props) 
         applyOptimistic({ coverOverlay: overlay });
       }
       if (body.videoId !== undefined) {
+        setOptimisticVideoId(body.videoId);
         const video = body.videoId
           ? (data?.videos ?? []).find(v => v.id === body.videoId) ?? null
           : null;
@@ -119,10 +120,14 @@ export function CoverThemeSelector({ familyId, isChief, currentUserId }: Props) 
     },
     onError: (e) => {
       toast.error(e instanceof Error ? e.message : "Erro");
+      setOptimisticVideoId(undefined);
       qc.invalidateQueries({ queryKey: ["family", familyId] });
       qc.invalidateQueries({ queryKey: ["family-cover-themes", familyId] });
     },
-    onSettled: () => setPendingAction(null),
+    onSettled: () => {
+      setPendingAction(null);
+      setOptimisticVideoId(undefined);
+    },
   });
 
   const setPersonalTheme = useMutation({
@@ -166,6 +171,9 @@ export function CoverThemeSelector({ familyId, isChief, currentUserId }: Props) 
 
   const isBusy = patchFamilyCover.isPending || setPersonalTheme.isPending;
 
+  // Track optimistic video selection so the chip highlights instantly on click
+  const [optimisticVideoId, setOptimisticVideoId] = useState<string | null | undefined>(undefined);
+
   if (!data) return null;
 
   const available       = data.available ?? [];
@@ -176,7 +184,9 @@ export function CoverThemeSelector({ familyId, isChief, currentUserId }: Props) 
   const personalThemeId = personal?.coverTheme?.id ?? null;
   const personalVideoId = personal?.coverVideo?.id ?? null;
   const activeOverlayId = data.activeCoverOverlayId ?? null;
-  const activeVideoId   = data.activeCoverVideoId ?? null;
+  // Use optimistic value while mutation is in-flight; fall back to server value
+  const activeVideoId   = optimisticVideoId !== undefined ? optimisticVideoId : (data.activeCoverVideoId ?? null);
+  const previewVideo    = videos.find(v => v.id === activeVideoId) ?? null;
 
   return (
     <div className="space-y-6 relative">
@@ -256,6 +266,21 @@ export function CoverThemeSelector({ familyId, isChief, currentUserId }: Props) 
           {videos.length > 0 && (
             <div className="space-y-2 pt-2 border-t border-border/30">
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Vídeo de fundo</p>
+
+              {/* Live preview */}
+              {previewVideo && (
+                <div className="relative h-20 rounded-lg overflow-hidden bg-black border border-border/40">
+                  <video
+                    key={(previewVideo.config as { videoPath?: string }).videoPath}
+                    autoPlay muted loop playsInline
+                    className="absolute inset-0 w-full h-full object-cover"
+                  >
+                    <source src={(previewVideo.config as { videoPath?: string }).videoPath} type="video/mp4" />
+                  </video>
+                  <div className="absolute bottom-1 right-2 text-[9px] text-white/70">{previewVideo.name}</div>
+                </div>
+              )}
+
               <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => patchFamilyCover.mutate({ videoId: null, _actionId: "video-none" })}
