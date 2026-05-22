@@ -15,8 +15,7 @@ from collections import deque
 from PIL import Image
 import numpy as np
 
-# ── Grid layout (detected from composite image analysis) ─────────────────────
-# Column boundaries: [x_start, x_end] for each of the 8 columns
+# ── Grid layout ───────────────────────────────────────────────────────────────
 COLS = [
     (23, 230),
     (270, 483),
@@ -28,16 +27,19 @@ COLS = [
     (1774, 1996),
 ]
 
-# Row boundaries: [y_start, y_end] for each of the 3 badge rows
+# Row boundaries extended upward to capture shield glows that start above the
+# detected whitespace boundary.
+#   Row 0: badge starts at y≈10  (was 19, fine)
+#   Row 1: shield glow starts at y≈347 (was 369 → cut 22px off the top!)
+#   Row 2: shield glow starts at y≈762 (was 765 → only 3px off, extended anyway)
 ROWS = [
-    (19, 249),
-    (369, 602),
-    (765, 992),
+    (10, 255),
+    (340, 615),
+    (755, 1000),
 ]
 
 # Slug mapping [row][col] — None = duplicate/skip
 SLUGS = [
-    # Row 0 — Terror (0-3) + Generosidade partial (4-7)
     [
         "colecionador-de-traumas",
         "dormiu-com-a-luz-acesa",
@@ -48,25 +50,23 @@ SLUGS = [
         "compra-tudo-nao-pode",
         "robin-hood-dos-pixels",
     ],
-    # Row 1 — Generosidade continued (0-3, cols 0 and 2 are duplicates) + Co-op (4-7)
     [
-        None,                            # duplicate of robin-hood
+        None,                              # duplicate of robin-hood
         "o-tesouro-de-ganon",
-        None,                            # duplicate of o-tesouro
+        None,                              # duplicate of o-tesouro
         "patrocinador-da-jogatina-alheia",
         "sem-amigos-mas-com-coop",
         "elo-de-guilda",
         "a-familia-que-joga-unida",
         "mestre-da-cooperacao",
     ],
-    # Row 2 — Família (0-3) + Comportamento (4-7, col 5 is duplicate)
     [
         "sem-casa-no-mapa",
         "membro-honroso-do-cla",
         "aquele-que-nao-sai-da-guilda",
         "fundador-de-linhagem",
         "pix-as-2-da-manha",
-        None,                            # duplicate of pix-as-2
+        None,                              # duplicate of pix-as-2
         "sem-volta-agora",
         "confiavel-como-save",
     ],
@@ -74,22 +74,16 @@ SLUGS = [
 
 # ── Background removal via BFS flood fill from corners ───────────────────────
 def remove_background(img: Image.Image, threshold: int = 30) -> Image.Image:
-    """
-    Flood-fills from all 4 corners, making near-white pixels transparent.
-    Stops at shield borders (dark/colored pixels).
-    """
     rgba = img.convert("RGBA")
     data = np.array(rgba)
-    w, h = rgba.size
+    h, w = data.shape[:2]
 
-    # Mark pixels as "background candidate" if they are near white
     r, g, b = data[:, :, 0], data[:, :, 1], data[:, :, 2]
     is_near_white = (r > 255 - threshold) & (g > 255 - threshold) & (b > 255 - threshold)
 
     visited = np.zeros((h, w), dtype=bool)
     queue = deque()
 
-    # Seed from all 4 corners and all edge pixels that are near-white
     for y in range(h):
         for x in [0, w - 1]:
             if is_near_white[y, x] and not visited[y, x]:
@@ -101,7 +95,6 @@ def remove_background(img: Image.Image, threshold: int = 30) -> Image.Image:
                 visited[y, x] = True
                 queue.append((y, x))
 
-    # BFS
     while queue:
         y, x = queue.popleft()
         for dy, dx in ((-1, 0), (1, 0), (0, -1), (0, 1)):
@@ -110,13 +103,57 @@ def remove_background(img: Image.Image, threshold: int = 30) -> Image.Image:
                 visited[ny, nx] = True
                 queue.append((ny, nx))
 
-    # Make background pixels transparent
     data[visited, 3] = 0
     return Image.fromarray(data, "RGBA")
 
 
-def autocrop(img: Image.Image, padding: int = 4) -> Image.Image:
-    """Trims transparent borders, adds small padding."""
+def keep_largest_component(img: Image.Image) -> Image.Image:
+    """
+    Keeps only the largest connected group of non-transparent pixels.
+    Removes stray header-text fragments left after background removal.
+    """
+    arr = np.array(img)
+    alpha = arr[:, :, 3]
+    h, w = alpha.shape
+
+    visited = np.zeros((h, w), dtype=bool)
+    components: list[list[tuple[int, int]]] = []
+
+    for sy in range(h):
+        for sx in range(w):
+            if alpha[sy, sx] > 0 and not visited[sy, sx]:
+                component: list[tuple[int, int]] = []
+                queue: deque[tuple[int, int]] = deque([(sy, sx)])
+                visited[sy, sx] = True
+                while queue:
+                    y, x = queue.popleft()
+                    component.append((y, x))
+                    for dy, dx in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+                        ny, nx = y + dy, x + dx
+                        if 0 <= ny < h and 0 <= nx < w and not visited[ny, nx] and alpha[ny, nx] > 0:
+                            visited[ny, nx] = True
+                            queue.append((ny, nx))
+                components.append(component)
+
+    if not components:
+        return img
+
+    largest = max(components, key=len)
+    # Zero out every non-transparent pixel that isn't in the largest component
+    if len(components) > 1:
+        largest_set = set(largest)
+        result = arr.copy()
+        for comp in components:
+            if comp is not largest:
+                for y, x in comp:
+                    result[y, x, 3] = 0
+        return Image.fromarray(result, "RGBA")
+
+    return img
+
+
+def autocrop(img: Image.Image, padding: int = 14) -> Image.Image:
+    """Trims transparent borders, adds padding so glow/stars aren't clipped."""
     bbox = img.getbbox()
     if not bbox:
         return img
@@ -154,21 +191,22 @@ def main():
 
             cell = composite.crop((x0, y0, x1, y1))
             badge = remove_background(cell)
-            badge = autocrop(badge)
+            badge = keep_largest_component(badge)
+            badge = autocrop(badge, padding=14)
 
-            # Resize to 256×256 for the web (keeps aspect ratio by padding)
-            badge.thumbnail((256, 256), Image.LANCZOS)
-            canvas = Image.new("RGBA", (256, 256), (0, 0, 0, 0))
-            offset_x = (256 - badge.width) // 2
-            offset_y = (256 - badge.height) // 2
+            # 280px content max on a 320px canvas → guaranteed ≥20px margin all sides
+            badge.thumbnail((280, 280), Image.LANCZOS)
+            canvas = Image.new("RGBA", (320, 320), (0, 0, 0, 0))
+            offset_x = (320 - badge.width) // 2
+            offset_y = (320 - badge.height) // 2
             canvas.paste(badge, (offset_x, offset_y), badge)
 
             out_path = os.path.join(out_dir, f"{slug}.png")
             canvas.save(out_path, "PNG")
-            print(f"  [{row_i},{col_i}] {slug}.png → {badge.width}×{badge.height}")
+            print(f"  [{row_i},{col_i}] {slug}.png  content={badge.width}×{badge.height}")
             saved += 1
 
-    print(f"\nDone: {saved} badges saved, {skipped} duplicates skipped.")
+    print(f"\nDone: {saved} saved, {skipped} skipped.")
     print(f"Output: {os.path.abspath(out_dir)}")
 
 
