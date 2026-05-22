@@ -189,15 +189,7 @@ export function CoverThemeSelector({ familyId, isChief, currentUserId }: Props) 
   const previewVideo    = videos.find(v => v.id === activeVideoId) ?? null;
 
   return (
-    <div className="space-y-6 relative">
-      {isBusy && (
-        <div className="absolute inset-0 z-50 bg-background/60 backdrop-blur-sm rounded-lg flex items-center justify-center">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            Aplicando tema...
-          </div>
-        </div>
-      )}
+    <div className={`space-y-6 relative ${isBusy ? "cursor-wait" : ""}`}>
 
       {/* Chief section */}
       {isChief && (
@@ -222,9 +214,9 @@ export function CoverThemeSelector({ familyId, isChief, currentUserId }: Props) 
                     _actionId: `theme-${theme.id}`,
                   })}
                   disabled={isBusy}
-                  className={`relative rounded-lg overflow-hidden border-2 transition-all text-left disabled:opacity-60 ${
+                  className={`relative rounded-lg overflow-hidden border-2 transition-all duration-200 text-left ${
                     isActive ? "border-primary" : "border-border/40 hover:border-border"
-                  }`}
+                  } ${isBusy && !isLoading ? "opacity-50 pointer-events-none" : ""}`}
                 >
                   <div className="h-14 relative overflow-hidden">
                     <CoverTheme config={theme.config as Record<string, unknown>} className="absolute inset-0" />
@@ -237,11 +229,6 @@ export function CoverThemeSelector({ familyId, isChief, currentUserId }: Props) 
                       const ov = overlays.find(o => o.id === activeOverlayId);
                       return ov ? <CoverOverlay config={ov.config as {cssClass?:string}} /> : null;
                     })()}
-                    {isLoading && (
-                      <div className="absolute inset-0 bg-background/50 flex items-center justify-center">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      </div>
-                    )}
                   </div>
                   <div className="px-2 py-1.5 bg-card/80">
                     <p className="text-[11px] font-semibold leading-tight">{theme.name}</p>
@@ -254,9 +241,13 @@ export function CoverThemeSelector({ familyId, isChief, currentUserId }: Props) 
                       )}
                     </div>
                   </div>
-                  {isActive && (
-                    <div className="absolute top-1 right-1 h-2 w-2 rounded-full bg-primary" />
-                  )}
+                  <div className="absolute top-1 right-1">
+                    {isLoading
+                      ? <Loader2 className="h-3 w-3 animate-spin text-primary drop-shadow-[0_0_4px_hsl(var(--primary))]" />
+                      : isActive
+                        ? <div className="h-2 w-2 rounded-full bg-primary" />
+                        : null}
+                  </div>
                 </button>
               );
             })}
@@ -285,9 +276,9 @@ export function CoverThemeSelector({ familyId, isChief, currentUserId }: Props) 
                 <button
                   onClick={() => patchFamilyCover.mutate({ videoId: null, _actionId: "video-none" })}
                   disabled={isBusy}
-                  className={`text-[11px] px-3 py-1.5 rounded-full border transition-all disabled:opacity-60 ${
+                  className={`text-[11px] px-3 py-1.5 rounded-full border transition-all duration-150 ${
                     !activeVideoId ? "border-primary bg-primary/10 text-primary" : "border-border/40 text-muted-foreground hover:border-border"
-                  }`}
+                  } ${isBusy && pendingAction !== "video-none" ? "opacity-40 pointer-events-none" : ""}`}
                 >
                   Nenhum
                 </button>
@@ -301,9 +292,9 @@ export function CoverThemeSelector({ familyId, isChief, currentUserId }: Props) 
                       onClick={() => patchFamilyCover.mutate({ videoId: vid.id, _actionId: `video-${vid.id}` })}
                       disabled={isBusy}
                       title={vid.description ?? vid.name}
-                      className={`text-[11px] px-3 py-1.5 rounded-full border transition-all disabled:opacity-60 flex items-center gap-1.5 ${
+                      className={`text-[11px] px-3 py-1.5 rounded-full border transition-all duration-150 flex items-center gap-1.5 ${
                         isActive ? `border-current ${rarity.color} ${rarity.bg}` : "border-border/40 text-muted-foreground hover:border-border"
-                      }`}
+                      } ${isBusy && !isLoading ? "opacity-40 pointer-events-none" : ""}`}
                     >
                       {isLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Film className="h-3 w-3" />}
                       {vid.name}
@@ -322,9 +313,9 @@ export function CoverThemeSelector({ familyId, isChief, currentUserId }: Props) 
                 <button
                   onClick={() => patchFamilyCover.mutate({ overlayId: null, _actionId: "overlay-none" })}
                   disabled={isBusy}
-                  className={`text-[11px] px-3 py-1.5 rounded-full border transition-all disabled:opacity-60 ${
+                  className={`text-[11px] px-3 py-1.5 rounded-full border transition-all duration-150 ${
                     !activeOverlayId ? "border-primary bg-primary/10 text-primary" : "border-border/40 text-muted-foreground hover:border-border"
-                  }`}
+                  } ${isBusy && pendingAction !== "overlay-none" ? "opacity-40 pointer-events-none" : ""}`}
                 >
                   Nenhuma
                 </button>
@@ -338,9 +329,9 @@ export function CoverThemeSelector({ familyId, isChief, currentUserId }: Props) 
                       onClick={() => patchFamilyCover.mutate({ overlayId: ov.id, _actionId: `overlay-${ov.id}` })}
                       disabled={isBusy}
                       title={ov.description ?? ov.name}
-                      className={`text-[11px] px-3 py-1.5 rounded-full border transition-all disabled:opacity-60 flex items-center gap-1 ${
+                      className={`text-[11px] px-3 py-1.5 rounded-full border transition-all duration-150 flex items-center gap-1 ${
                         isActive ? `border-current ${rarity.color} ${rarity.bg}` : "border-border/40 text-muted-foreground hover:border-border"
-                      }`}
+                      } ${isBusy && !isLoading ? "opacity-40 pointer-events-none" : ""}`}
                     >
                       {isLoading && <Loader2 className="h-3 w-3 animate-spin" />}
                       {ov.name}
@@ -371,9 +362,9 @@ export function CoverThemeSelector({ familyId, isChief, currentUserId }: Props) 
                 <button
                   onClick={() => setPersonalTheme.mutate({ coverVideoId: null, _actionId: "personal-video-none" })}
                   disabled={isBusy}
-                  className={`text-[11px] px-3 py-1.5 rounded-full border transition-all disabled:opacity-60 ${
+                  className={`text-[11px] px-3 py-1.5 rounded-full border transition-all duration-150 ${
                     !personalVideoId ? "border-primary bg-primary/10 text-primary" : "border-border/40 text-muted-foreground hover:border-border"
-                  }`}
+                  } ${isBusy && pendingAction !== "personal-video-none" ? "opacity-40 pointer-events-none" : ""}`}
                 >
                   Nenhum
                 </button>
@@ -387,9 +378,9 @@ export function CoverThemeSelector({ familyId, isChief, currentUserId }: Props) 
                       onClick={() => setPersonalTheme.mutate({ coverVideoId: vid.id, _actionId: `personal-video-${vid.id}` })}
                       disabled={isBusy}
                       title={vid.description ?? vid.name}
-                      className={`text-[11px] px-3 py-1.5 rounded-full border transition-all disabled:opacity-60 flex items-center gap-1.5 ${
+                      className={`text-[11px] px-3 py-1.5 rounded-full border transition-all duration-150 flex items-center gap-1.5 ${
                         isActive ? `border-current ${rarity.color} ${rarity.bg}` : "border-border/40 text-muted-foreground hover:border-border"
-                      }`}
+                      } ${isBusy && !isLoading ? "opacity-40 pointer-events-none" : ""}`}
                     >
                       {isLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Film className="h-3 w-3" />}
                       {vid.name}
@@ -406,9 +397,9 @@ export function CoverThemeSelector({ familyId, isChief, currentUserId }: Props) 
               <button
                 onClick={() => setPersonalTheme.mutate({ coverThemeId: null, _actionId: "personal-default" })}
                 disabled={isBusy}
-                className={`relative rounded-lg overflow-hidden border-2 transition-all text-left disabled:opacity-60 ${
+                className={`relative rounded-lg overflow-hidden border-2 transition-all duration-200 text-left ${
                   !personalThemeId ? "border-primary" : "border-border/40 hover:border-border"
-                }`}
+                } ${isBusy && pendingAction !== "personal-default" ? "opacity-50 pointer-events-none" : ""}`}
               >
                 <div className="h-14 bg-card/40 flex items-center justify-center">
                   <span className="text-[10px] text-muted-foreground">Tema do chief</span>
@@ -428,9 +419,9 @@ export function CoverThemeSelector({ familyId, isChief, currentUserId }: Props) 
                     key={theme.id}
                     onClick={() => setPersonalTheme.mutate({ coverThemeId: theme.id, _actionId: `personal-${theme.id}` })}
                     disabled={isBusy}
-                    className={`relative rounded-lg overflow-hidden border-2 transition-all text-left disabled:opacity-60 ${
+                    className={`relative rounded-lg overflow-hidden border-2 transition-all duration-200 text-left ${
                       isPersonal ? "border-primary" : "border-border/40 hover:border-border"
-                    }`}
+                    } ${isBusy && !isLoading ? "opacity-50 pointer-events-none" : ""}`}
                   >
                     <div className="h-14 relative overflow-hidden">
                       <CoverTheme config={theme.config as Record<string, unknown>} className="absolute inset-0" />
@@ -438,17 +429,18 @@ export function CoverThemeSelector({ familyId, isChief, currentUserId }: Props) 
                         const ov = overlays.find(o => o.id === activeOverlayId);
                         return ov ? <CoverOverlay config={ov.config as {cssClass?:string}} /> : null;
                       })()}
-                      {isLoading && (
-                        <div className="absolute inset-0 bg-background/50 flex items-center justify-center">
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        </div>
-                      )}
                     </div>
                     <div className="px-2 py-1.5 bg-card/80">
                       <p className="text-[11px] font-semibold leading-tight">{theme.name}</p>
                       <span className={`text-[9px] font-medium ${rarity.color}`}>{rarity.label}</span>
                     </div>
-                    {isPersonal && <div className="absolute top-1 right-1 h-2 w-2 rounded-full bg-primary" />}
+                    <div className="absolute top-1 right-1">
+                      {isLoading
+                        ? <Loader2 className="h-3 w-3 animate-spin text-primary drop-shadow-[0_0_4px_hsl(var(--primary))]" />
+                        : isPersonal
+                          ? <div className="h-2 w-2 rounded-full bg-primary" />
+                          : null}
+                    </div>
                   </button>
                 );
               })}
