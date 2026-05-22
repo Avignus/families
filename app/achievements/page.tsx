@@ -81,6 +81,31 @@ const UNLOCK_CONDITIONS: Record<string, string> = {
   "confiavel-como-save":               "Complete 10 pledges sem cancelar nenhum.",
 };
 
+// Maps cosmetic slug → first achievement that grants it (for source-null cosmetics)
+const COSMETIC_TO_ACHIEVEMENT: Record<string, string> = {
+  "etiqueta-olhos-escuridao": "colecionador-de-traumas",
+  "moldura-assombracao":      "dormiu-com-a-luz-acesa",
+  "bg-mansao-sombria":        "nao-pode-assistir-mas-pode-comprar",
+  "efeito-maldicao-ativa":    "senhor-das-trevas",
+  "capa-cripta-ancestral":    "senhor-das-trevas",
+  "etiqueta-moeda-giratoria": "mecenas-da-dungeon",
+  "moldura-coroa-mecenas":    "compra-tudo-nao-pode",
+  "bg-sala-tesouro":          "o-tesouro-de-ganon",
+  "efeito-toque-midas":       "patrocinador-da-jogatina-alheia",
+  "capa-sala-tesouro":        "patrocinador-da-jogatina-alheia",
+  "etiqueta-dois-controles":  "sem-amigos-mas-com-coop",
+  "moldura-corrente-cla":     "elo-de-guilda",
+  "bg-fortaleza-cla":         "a-familia-que-joga-unida",
+  "efeito-sincronizado":      "mestre-da-cooperacao",
+  "capa-fortaleza-cla":       "mestre-da-cooperacao",
+  "etiqueta-escudo-familia":  "sem-casa-no-mapa",
+  "moldura-brasao-real":      "aquele-que-nao-sai-da-guilda",
+  "capa-salao-trono":         "fundador-de-linhagem",
+  "etiqueta-lua-carrinho":    "pix-as-2-da-manha",
+  "moldura-noite-compras":    "pix-as-2-da-manha",
+  "capa-cidade-neon":         "confiavel-como-save",
+};
+
 const CATEGORY_LABELS: Record<string, string> = {
   terror:        "Terror",
   generosidade:  "Generosidade",
@@ -118,7 +143,9 @@ export default async function AchievementsPage() {
   const unlockedMap = new Map(userAchievements.map((ua) => [ua.achievementId, ua.unlockedAt]));
 
   // Map achievement slug → title for cosmetic "source" display
-  const sourceSlugs = [...new Set(userCosmetics.map((uc) => uc.source).filter(Boolean))] as string[];
+  const sourceSlugs = [...new Set(
+    userCosmetics.map((uc) => uc.source ?? COSMETIC_TO_ACHIEVEMENT[uc.cosmetic.slug]).filter(Boolean)
+  )] as string[];
   const sourceAchievements = sourceSlugs.length
     ? await prisma.achievement.findMany({
         where: { slug: { in: sourceSlugs } },
@@ -202,18 +229,23 @@ export default async function AchievementsPage() {
                   </div>
                   <p className="text-xs font-semibold leading-tight">{uc.cosmetic.name}</p>
                   <p className="text-[10px] text-muted-foreground leading-tight">{uc.cosmetic.description}</p>
-                  {uc.source && sourceMap.has(uc.source) && (
-                    <div className="pt-0.5 border-t border-border/20 space-y-1">
-                      <p className="text-[10px] text-muted-foreground/60 leading-tight flex items-center gap-1">
-                        <Trophy className="h-2.5 w-2.5 shrink-0" />
-                        {sourceMap.get(uc.source)}
-                      </p>
-                      {UNLOCK_CONDITIONS[uc.source] && (
-                        <p className="text-[10px] text-muted-foreground/40 leading-snug">
-                          {UNLOCK_CONDITIONS[uc.source]}
+                  {(() => {
+                    const src = uc.source ?? COSMETIC_TO_ACHIEVEMENT[uc.cosmetic.slug];
+                    if (!src || !sourceMap.has(src)) return null;
+                    return (
+                      <div className="pt-0.5 border-t border-border/20 space-y-1">
+                        <p className="text-[10px] text-muted-foreground/60 leading-tight flex items-center gap-1">
+                          <Trophy className="h-2.5 w-2.5 shrink-0" />
+                          {sourceMap.get(src)}
                         </p>
-                      )}
-                    </div>
+                        {UNLOCK_CONDITIONS[src] && (
+                          <p className="text-[10px] text-muted-foreground/40 leading-snug">
+                            {UNLOCK_CONDITIONS[src]}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })()}
                   )}
                 </div>
               );
