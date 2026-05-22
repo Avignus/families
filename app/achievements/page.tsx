@@ -145,6 +145,7 @@ export default async function AchievementsPage() {
                         alt={uc.cosmetic.name}
                         width={44}
                         height={44}
+                        quality={100}
                         className="shrink-0 object-contain rounded"
                       />
                     ) : uc.source && ACHIEVEMENT_SLUGS.has(uc.source) ? (
@@ -153,6 +154,7 @@ export default async function AchievementsPage() {
                         alt={uc.source}
                         width={44}
                         height={44}
+                        quality={100}
                         className="shrink-0 object-contain"
                       />
                     ) : (
