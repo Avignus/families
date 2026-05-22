@@ -162,14 +162,22 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
     .map((c) => (c.payload as { name?: string })?.name)
     .filter(Boolean) as string[];
 
-  const [familyRecs, personalRecs] = await Promise.all([
-    wishlistNames.length > 0
-      ? recommendGamesForFamily(wishlistNames, existingFamilyNames)
-      : Promise.resolve([]),
-    Array.isArray(library) && library.length > 0
-      ? recommendGamesForUser(library, existingPersonalNames)
-      : Promise.resolve([]),
-  ]);
+  let familyRecs: Awaited<ReturnType<typeof recommendGamesForFamily>> = [];
+  let personalRecs: Awaited<ReturnType<typeof recommendGamesForUser>> = [];
+
+  try {
+    [familyRecs, personalRecs] = await Promise.all([
+      wishlistNames.length > 0
+        ? recommendGamesForFamily(wishlistNames, existingFamilyNames)
+        : Promise.resolve([]),
+      Array.isArray(library) && library.length > 0
+        ? recommendGamesForUser(library, existingPersonalNames)
+        : Promise.resolve([]),
+    ]);
+  } catch (e) {
+    console.error("[recommendations] Gemini error:", e);
+    return err("AI_ERROR", "Erro ao gerar recomendações. Tente novamente.", 502);
+  }
 
   const now = new Date();
 

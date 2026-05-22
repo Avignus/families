@@ -5,12 +5,17 @@ const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY ?? "");
 export type RecommendedGame = { name: string; steamAppId: number; reason: string };
 
 function parseJsonResponse(text: string): RecommendedGame[] {
-  const clean = text
-    .trim()
+  // strip markdown fences and any leading prose before the array
+  let clean = text.trim()
     .replace(/^```json\s*/i, "")
     .replace(/^```\s*/i, "")
     .replace(/```\s*$/, "")
     .trim();
+
+  // if the model prepended text before the array, find the first '['
+  const arrayStart = clean.indexOf("[");
+  if (arrayStart > 0) clean = clean.slice(arrayStart);
+
   const parsed = JSON.parse(clean);
   if (!Array.isArray(parsed)) throw new Error("Expected JSON array");
   return parsed.filter(
