@@ -2,7 +2,7 @@ import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { RARITY_CONFIG } from "@/lib/cosmetics";
-import { Trophy, Lock, Palette, Frame, Tag, Sparkles } from "lucide-react";
+import { Trophy, Lock, Palette, Frame, Tag, Sparkles, ChevronDown } from "lucide-react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import Image from "next/image";
@@ -56,6 +56,30 @@ const ACHIEVEMENT_SLUGS = new Set([
   "sem-casa-no-mapa","membro-honroso-do-cla","aquele-que-nao-sai-da-guilda","fundador-de-linhagem",
   "pix-as-2-da-manha","sem-volta-agora","confiavel-como-save",
 ]);
+
+const UNLOCK_CONDITIONS: Record<string, string> = {
+  "colecionador-de-traumas":              "Financie 2 jogos de terror na lista de desejos de alguém.",
+  "dormiu-com-a-luz-acesa":              "Financie 5 jogos de terror na lista de desejos de alguém.",
+  "nao-pode-assistir-mas-pode-comprar":  "Tenha 10 jogos de terror na sua própria lista de desejos.",
+  "senhor-das-trevas":                   "Desbloqueie as 3 insígnias anteriores da categoria Terror.",
+  "mecenas-da-dungeon":                  "Complete seu primeiro pledge (financie 1 jogo de alguém).",
+  "lancador-de-coin":                    "Complete 5 pledges no total.",
+  "compra-tudo-nao-pode":               "Complete 10 pledges no total.",
+  "robin-hood-dos-pixels":              "Contribua com pelo menos R$100 em pledges no total.",
+  "o-tesouro-de-ganon":                 "Contribua com pelo menos R$500 em pledges no total.",
+  "patrocinador-da-jogatina-alheia":    "Desbloqueie todas as 5 insígnias anteriores de Generosidade.",
+  "sem-amigos-mas-com-coop":            "Financie 1 jogo co-op na lista de desejos de alguém.",
+  "elo-de-guilda":                      "Financie 5 jogos co-op na lista de desejos de alguém.",
+  "a-familia-que-joga-unida":           "Todos os membros da sua família têm ao menos um jogo co-op financiado.",
+  "mestre-da-cooperacao":               "Desbloqueie as 3 insígnias anteriores da categoria Co-op.",
+  "sem-casa-no-mapa":                   "Crie uma família.",
+  "membro-honroso-do-cla":             "Fique 30 dias como membro ativo de uma família.",
+  "aquele-que-nao-sai-da-guilda":      "Fique 90 dias como membro ativo de uma família.",
+  "fundador-de-linhagem":              "90 dias como membro ativo de uma família e reputação ≥ 90.",
+  "pix-as-2-da-manha":                 "Pague um pledge via PIX entre meia-noite e 3h da manhã.",
+  "sem-volta-agora":                   "Compre um spot em uma família.",
+  "confiavel-como-save":               "Complete 10 pledges sem cancelar nenhum.",
+};
 
 const CATEGORY_LABELS: Record<string, string> = {
   terror:        "Terror",
@@ -246,6 +270,17 @@ export default async function AchievementsPage() {
                         <Lock className="h-2.5 w-2.5 shrink-0 mt-0.5" />
                         {a.description}
                       </p>
+                    )}
+                    {UNLOCK_CONDITIONS[a.slug] && (
+                      <details className="group mt-1.5">
+                        <summary className="cursor-pointer list-none [&::-webkit-details-marker]:hidden flex items-center gap-1 text-[10px] text-muted-foreground/50 hover:text-muted-foreground/80 transition-colors select-none w-fit">
+                          <ChevronDown className="h-3 w-3 transition-transform duration-200 group-open:rotate-180 shrink-0" />
+                          Como desbloquear
+                        </summary>
+                        <p className="text-[10px] text-muted-foreground/70 mt-1 pl-4 leading-snug">
+                          {UNLOCK_CONDITIONS[a.slug]}
+                        </p>
+                      </details>
                     )}
                   </div>
                 </div>
