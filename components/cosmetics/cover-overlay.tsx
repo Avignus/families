@@ -46,8 +46,10 @@ const OVERLAY_ELEMENTS: Record<string, React.ReactNode> = {
     <div
       className="absolute inset-0 pointer-events-none"
       style={{
-        background: "repeating-linear-gradient(100deg, transparent 0, transparent 2px, rgba(129,140,248,0.20) 2px, rgba(129,140,248,0.20) 3px)",
-        animation: "rain-fall 1.5s linear infinite",
+        backgroundImage: "repeating-linear-gradient(100deg, transparent 0, transparent 2px, rgba(129,140,248,0.22) 2px, rgba(129,140,248,0.22) 3px)",
+        backgroundSize: "4px 8px",
+        // backgroundPosition animation keeps element fixed — no translateY escaping overflow-hidden
+        animation: "rain-bg-scroll 0.3s linear infinite",
       }}
     />
   ),
@@ -81,12 +83,12 @@ const OVERLAY_ELEMENTS: Record<string, React.ReactNode> = {
   ),
   "cover-overlay-scanner": (
     <div
-      className="absolute left-0 right-0 pointer-events-none"
+      className="absolute inset-0 pointer-events-none overflow-hidden"
       style={{
-        top: 0,
-        height: "2px",
-        background: "linear-gradient(90deg, transparent, rgba(99,102,241,1.0), transparent)",
-        animation: "scanner-sweep 3s ease-in-out infinite",
+        // Use a tall gradient stripe + backgroundPosition to scroll it vertically
+        backgroundImage: "linear-gradient(to bottom, transparent 0, transparent 49%, rgba(99,102,241,0.9) 50%, transparent 51%, transparent 100%)",
+        backgroundSize: "100% 200%",
+        animation: "scanner-bg-sweep 2s ease-in-out infinite",
       }}
     />
   ),

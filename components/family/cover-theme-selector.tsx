@@ -126,10 +126,11 @@ export function CoverThemeSelector({ familyId, isChief, currentUserId }: Props) 
                         <span className="text-[10px] text-muted-foreground">Padrão</span>
                       </div>
                     )}
-                    {/* Show active overlay on top of selected theme */}
-                    {activeOverlayId && overlays.find(o => o.id === activeOverlayId) && (
-                      <CoverOverlay config={overlays.find(o => o.id === activeOverlayId)!.config as {cssClass?:string}} />
-                    )}
+                    {/* Overlay preview only on the active theme card */}
+                    {isActive && activeOverlayId && (() => {
+                      const ov = overlays.find(o => o.id === activeOverlayId);
+                      return ov ? <CoverOverlay config={ov.config as {cssClass?:string}} /> : null;
+                    })()}
                   </div>
                   <div className="px-2 py-1.5 bg-card/80">
                     <p className="text-[11px] font-semibold leading-tight">{theme.name}</p>
@@ -223,9 +224,11 @@ export function CoverThemeSelector({ familyId, isChief, currentUserId }: Props) 
                 >
                   <div className="h-14 relative overflow-hidden">
                     <CoverTheme config={theme.config as Record<string, unknown>} className="absolute inset-0" />
-                    {activeOverlayId && overlays.find(o => o.id === activeOverlayId) && (
-                      <CoverOverlay config={overlays.find(o => o.id === activeOverlayId)!.config as {cssClass?:string}} />
-                    )}
+                    {/* Overlay preview only on the selected personal theme card */}
+                    {isPersonal && activeOverlayId && (() => {
+                      const ov = overlays.find(o => o.id === activeOverlayId);
+                      return ov ? <CoverOverlay config={ov.config as {cssClass?:string}} /> : null;
+                    })()}
                   </div>
                   <div className="px-2 py-1.5 bg-card/80">
                     <p className="text-[11px] font-semibold leading-tight">{theme.name}</p>

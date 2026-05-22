@@ -287,8 +287,8 @@ export function FamilyPageClient({
 
     <div className="container py-8 space-y-6">
       <Card className="overflow-hidden">
-        {/* Cover art banner — hero height, overflow-hidden clips overlay to banner bounds */}
-        <div className="relative h-[480px] overflow-hidden group/banner">
+        {/* isolate forces stacking context so overflow-hidden clips transforms */}
+        <div className="relative h-[480px] overflow-hidden isolate group/banner">
           <div className="absolute inset-0">
             {/* Base layer: themed image or fallback */}
             {family.coverTheme ? (

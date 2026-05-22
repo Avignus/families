@@ -472,3 +472,13 @@
   animation: scanner-sweep 3s ease-in-out infinite;
   top: 0;
 }
+
+/* Rain and scanner background-position animations (no translateY — stays within overflow bounds) */
+@keyframes rain-bg-scroll {
+  from { background-position: 0 0; }
+  to   { background-position: 0 8px; }
+}
+@keyframes scanner-bg-sweep {
+  0%   { background-position: 0 -100%; }
+  100% { background-position: 0 100%; }
+}
