@@ -2,7 +2,7 @@ import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { RARITY_CONFIG } from "@/lib/cosmetics";
-import { Trophy, Lock, Palette, Frame, Tag, Sparkles, ChevronDown } from "lucide-react";
+import { Trophy, Lock, Palette, Frame, Tag, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import Image from "next/image";
@@ -203,10 +203,17 @@ export default async function AchievementsPage() {
                   <p className="text-xs font-semibold leading-tight">{uc.cosmetic.name}</p>
                   <p className="text-[10px] text-muted-foreground leading-tight">{uc.cosmetic.description}</p>
                   {uc.source && sourceMap.has(uc.source) && (
-                    <p className="text-[10px] text-muted-foreground/60 leading-tight flex items-center gap-1 pt-0.5 border-t border-border/20">
-                      <Trophy className="h-2.5 w-2.5 shrink-0" />
-                      {sourceMap.get(uc.source)}
-                    </p>
+                    <div className="pt-0.5 border-t border-border/20 space-y-1">
+                      <p className="text-[10px] text-muted-foreground/60 leading-tight flex items-center gap-1">
+                        <Trophy className="h-2.5 w-2.5 shrink-0" />
+                        {sourceMap.get(uc.source)}
+                      </p>
+                      {UNLOCK_CONDITIONS[uc.source] && (
+                        <p className="text-[10px] text-muted-foreground/40 leading-snug">
+                          {UNLOCK_CONDITIONS[uc.source]}
+                        </p>
+                      )}
+                    </div>
                   )}
                 </div>
               );
@@ -272,15 +279,9 @@ export default async function AchievementsPage() {
                       </p>
                     )}
                     {UNLOCK_CONDITIONS[a.slug] && (
-                      <details className="group mt-1.5">
-                        <summary className="cursor-pointer list-none [&::-webkit-details-marker]:hidden flex items-center gap-1 text-[10px] text-muted-foreground/50 hover:text-muted-foreground/80 transition-colors select-none w-fit">
-                          <ChevronDown className="h-3 w-3 transition-transform duration-200 group-open:rotate-180 shrink-0" />
-                          Como desbloquear
-                        </summary>
-                        <p className="text-[10px] text-muted-foreground/70 mt-1 pl-4 leading-snug">
-                          {UNLOCK_CONDITIONS[a.slug]}
-                        </p>
-                      </details>
+                      <p className="text-[10px] text-muted-foreground/50 mt-1 leading-snug">
+                        {UNLOCK_CONDITIONS[a.slug]}
+                      </p>
                     )}
                   </div>
                 </div>
