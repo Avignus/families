@@ -482,3 +482,24 @@
   0%   { background-position: 0 -100%; }
   100% { background-position: 0 100%; }
 }
+
+/* ─── CRT TV Effect ──────────────────────────────────────────────────────── */
+@keyframes crt-beam {
+  from { background-position: 0 -80px; }
+  to   { background-position: 0 80px; }
+}
+@keyframes crt-flicker {
+  0%,100% { opacity: 1; }
+  8%       { opacity: 0.92; }
+  16%      { opacity: 1; }
+  52%      { opacity: 0.96; }
+  56%      { opacity: 1; }
+  84%      { opacity: 0.94; }
+  88%      { opacity: 1; }
+}
+@keyframes crt-glitch {
+  0%,95%,100% { transform: translateX(0); }
+  96%          { transform: translateX(-2px); filter: hue-rotate(90deg); }
+  97%          { transform: translateX(2px);  filter: hue-rotate(-90deg); }
+  98%          { transform: translateX(0);    filter: none; }
+}

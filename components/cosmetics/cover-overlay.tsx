@@ -92,6 +92,51 @@ const OVERLAY_ELEMENTS: Record<string, React.ReactNode> = {
       }}
     />
   ),
+  "cover-overlay-crt": (
+    <>
+      {/* Scanlines — fine horizontal dark stripes every 3px */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          backgroundImage: "repeating-linear-gradient(to bottom, rgba(0,0,0,0) 0px, rgba(0,0,0,0) 2px, rgba(0,0,0,0.20) 2px, rgba(0,0,0,0.20) 3px)",
+          backgroundSize: "100% 3px",
+        }}
+      />
+      {/* Electron beam — bright horizontal line sweeping top-to-bottom */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          backgroundImage: "linear-gradient(to bottom, transparent 0%, transparent 48%, rgba(160,255,180,0.08) 50%, transparent 52%, transparent 100%)",
+          backgroundSize: "100% 80px",
+          animation: "crt-beam 4s linear infinite",
+        }}
+      />
+      {/* Vignette — dark edges, bright center like a tube screen */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background: "radial-gradient(ellipse at 50% 50%, transparent 50%, rgba(0,0,0,0.55) 100%)",
+        }}
+      />
+      {/* Phosphor tint + flicker */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background: "rgba(0, 30, 10, 0.06)",
+          animation: "crt-flicker 5s steps(6) infinite",
+        }}
+      />
+      {/* Occasional glitch — rare color shift */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          animation: "crt-glitch 8s steps(1) infinite",
+          mixBlendMode: "screen",
+          background: "transparent",
+        }}
+      />
+    </>
+  ),
 };
 
 export function CoverOverlay({ config, className = "" }: Props) {
