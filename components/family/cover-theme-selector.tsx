@@ -39,7 +39,7 @@ export function CoverThemeSelector({ familyId, isChief, currentUserId }: Props) 
         activeCoverOverlayId: string | null;
       };
     },
-    staleTime: 60_000,
+    staleTime: 0,
   });
 
   const { data: personal } = useQuery({
@@ -49,7 +49,7 @@ export function CoverThemeSelector({ familyId, isChief, currentUserId }: Props) 
       if (!res.ok) return null;
       return (await res.json()).data as { coverTheme: Cosmetic | null; ownedCoverThemes: Cosmetic[] };
     },
-    staleTime: 60_000,
+    staleTime: 0,
   });
 
   const patchFamilyCover = useMutation({
