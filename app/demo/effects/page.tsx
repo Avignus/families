@@ -1,5 +1,7 @@
 "use client";
 
+export const dynamic = "force-dynamic";
+
 /**
  * COMPARATIVO DE TECNOLOGIAS DE ANIMAÇÃO
  *
@@ -30,9 +32,15 @@ const LOTTIE_URL = "/effects/galaxy.json";         // ou URL do lottie.host
 const SPLINE_URL = "https://prod.spline.design/COLE-SEU-ID-AQUI/scene.splinecode";
 const VIDEO_URL  = "/effects/nebula.mp4";          // ou URL direto do CDN
 
-import { Player } from "@lottiefiles/react-lottie-player";
-import Spline from "@splinetool/react-spline";
+import lazyLoad from "next/dynamic";
 import { useState, Suspense } from "react";
+
+// Both packages use browser-only APIs at module level — must be loaded client-side only
+const Player = lazyLoad(
+  () => import("@lottiefiles/react-lottie-player").then((m) => ({ default: m.Player })),
+  { ssr: false }
+);
+const Spline = lazyLoad(() => import("@splinetool/react-spline"), { ssr: false });
 import { Loader2, ExternalLink } from "lucide-react";
 
 function LoadingState({ label }: { label: string }) {
