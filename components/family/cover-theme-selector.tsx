@@ -6,7 +6,7 @@ import { RARITY_CONFIG } from "@/lib/cosmetics";
 import { CoverTheme } from "@/components/cosmetics/cover-theme";
 import { CoverOverlay } from "@/components/cosmetics/cover-overlay";
 import { toast } from "sonner";
-import { Lock } from "lucide-react";
+import { Lock, Loader2 } from "lucide-react";
 
 type Cosmetic = {
   id: string;
@@ -19,6 +19,14 @@ type Cosmetic = {
   contributor?: { id: string; personaName: string; avatarUrl: string } | null;
 };
 
+type FamilyQueryData = {
+  data: {
+    coverTheme: Cosmetic | null;
+    coverOverlay: Cosmetic | null;
+    [key: string]: unknown;
+  };
+};
+
 type Props = {
   familyId: string;
   isChief: boolean;
@@ -27,6 +35,7 @@ type Props = {
 
 export function CoverThemeSelector({ familyId, isChief, currentUserId }: Props) {
   const qc = useQueryClient();
+  const [pendingAction, setPendingAction] = useState<string | null>(null);
 
   const { data } = useQuery({
     queryKey: ["family-cover-themes", familyId],
@@ -53,25 +62,64 @@ export function CoverThemeSelector({ familyId, isChief, currentUserId }: Props) 
     staleTime: 0,
   });
 
+  // Optimistic update: apply theme change to the family cache immediately,
+  // avoiding a full refetch (which reloads members, wishlist, pledges, etc.)
+  const applyOptimisticTheme = (theme: Cosmetic | null) => {
+    qc.setQueryData<FamilyQueryData>(["family", familyId], (old) => {
+      if (!old) return old;
+      return { ...old, data: { ...old.data, coverTheme: theme } };
+    });
+  };
+
+  const applyOptimisticOverlay = (overlay: Cosmetic | null) => {
+    qc.setQueryData<FamilyQueryData>(["family", familyId], (old) => {
+      if (!old) return old;
+      return { ...old, data: { ...old.data, coverOverlay: overlay } };
+    });
+  };
+
   const patchFamilyCover = useMutation({
-    mutationFn: async (body: { cosmeticId?: string | null; overlayId?: string | null }) => {
+    mutationFn: async (body: { cosmeticId?: string | null; overlayId?: string | null; _actionId?: string }) => {
+      const { _actionId, ...payload } = body;
       const res = await fetch(`/api/families/${familyId}/cover-theme`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error((await res.json()).error?.message ?? "Erro");
     },
-    onSuccess: () => {
-      toast.success("Capa atualizada!");
-      qc.invalidateQueries({ queryKey: ["family-cover-themes", familyId] });
-      qc.invalidateQueries({ queryKey: ["family", familyId] });
+    onMutate: (body) => {
+      setPendingAction(body._actionId ?? "patch");
+
+      // Optimistic update: update the family banner immediately
+      if (body.cosmeticId !== undefined) {
+        const theme = body.cosmeticId
+          ? (data?.available ?? []).find(t => t.id === body.cosmeticId) ?? null
+          : null;
+        applyOptimisticTheme(theme);
+      }
+      if (body.overlayId !== undefined) {
+        const overlay = body.overlayId
+          ? (data?.overlays ?? []).find(o => o.id === body.overlayId) ?? null
+          : null;
+        applyOptimisticOverlay(overlay);
+      }
     },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),
+    onSuccess: () => {
+      // Only invalidate the selector data (lightweight), NOT the full family query
+      qc.invalidateQueries({ queryKey: ["family-cover-themes", familyId] });
+    },
+    onError: (e) => {
+      toast.error(e instanceof Error ? e.message : "Erro");
+      // Rollback: refetch fresh data
+      qc.invalidateQueries({ queryKey: ["family", familyId] });
+      qc.invalidateQueries({ queryKey: ["family-cover-themes", familyId] });
+    },
+    onSettled: () => setPendingAction(null),
   });
 
   const setPersonalTheme = useMutation({
-    mutationFn: async (coverThemeId: string | null) => {
+    mutationFn: async ({ coverThemeId, _actionId }: { coverThemeId: string | null; _actionId: string }) => {
       const res = await fetch(`/api/families/${familyId}/personalization`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -79,13 +127,26 @@ export function CoverThemeSelector({ familyId, isChief, currentUserId }: Props) 
       });
       if (!res.ok) throw new Error((await res.json()).error?.message ?? "Erro");
     },
-    onSuccess: () => {
-      toast.success("Sua visão pessoal foi atualizada!");
-      qc.invalidateQueries({ queryKey: ["family-personalization", familyId] });
-      qc.invalidateQueries({ queryKey: ["family", familyId] });
+    onMutate: ({ coverThemeId, _actionId }) => {
+      setPendingAction(_actionId);
+      // Optimistic update for personal theme
+      const theme = coverThemeId
+        ? (personal?.ownedCoverThemes ?? []).find(t => t.id === coverThemeId) ?? null
+        : null;
+      applyOptimisticTheme(theme);
     },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["family-personalization", familyId] });
+    },
+    onError: (e) => {
+      toast.error(e instanceof Error ? e.message : "Erro");
+      qc.invalidateQueries({ queryKey: ["family", familyId] });
+      qc.invalidateQueries({ queryKey: ["family-personalization", familyId] });
+    },
+    onSettled: () => setPendingAction(null),
   });
+
+  const isBusy = patchFamilyCover.isPending || setPersonalTheme.isPending;
 
   if (!data) return null;
 
@@ -96,7 +157,17 @@ export function CoverThemeSelector({ familyId, isChief, currentUserId }: Props) 
   const activeOverlayId = data.activeCoverOverlayId ?? null;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 relative">
+      {/* Blocking overlay during mutation */}
+      {isBusy && (
+        <div className="absolute inset-0 z-50 bg-background/60 backdrop-blur-sm rounded-lg flex items-center justify-center">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Aplicando tema...
+          </div>
+        </div>
+      )}
+
       {/* Chief section */}
       {isChief && (
         <div className="space-y-3">
@@ -111,11 +182,16 @@ export function CoverThemeSelector({ familyId, isChief, currentUserId }: Props) 
               const rarity = RARITY_CONFIG[theme.rarity] ?? RARITY_CONFIG.comum;
               const isActive = data.activeCoverThemeId === theme.id
                 || (!data.activeCoverThemeId && theme.slug === "capa-mosaico");
+              const isLoading = pendingAction === `theme-${theme.id}`;
               return (
                 <button
                   key={theme.id}
-                  onClick={() => patchFamilyCover.mutate({ cosmeticId: theme.isDefault ? null : theme.id })}
-                  className={`relative rounded-lg overflow-hidden border-2 transition-all text-left ${
+                  onClick={() => patchFamilyCover.mutate({
+                    cosmeticId: theme.isDefault ? null : theme.id,
+                    _actionId: `theme-${theme.id}`,
+                  })}
+                  disabled={isBusy}
+                  className={`relative rounded-lg overflow-hidden border-2 transition-all text-left disabled:opacity-60 ${
                     isActive ? "border-primary" : "border-border/40 hover:border-border"
                   }`}
                 >
@@ -126,11 +202,15 @@ export function CoverThemeSelector({ familyId, isChief, currentUserId }: Props) 
                         <span className="text-[10px] text-muted-foreground">Padrão</span>
                       </div>
                     )}
-                    {/* Overlay preview only on the active theme card */}
                     {isActive && activeOverlayId && (() => {
                       const ov = overlays.find(o => o.id === activeOverlayId);
                       return ov ? <CoverOverlay config={ov.config as {cssClass?:string}} /> : null;
                     })()}
+                    {isLoading && (
+                      <div className="absolute inset-0 bg-background/50 flex items-center justify-center">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      </div>
+                    )}
                   </div>
                   <div className="px-2 py-1.5 bg-card/80">
                     <p className="text-[11px] font-semibold leading-tight">{theme.name}</p>
@@ -151,14 +231,15 @@ export function CoverThemeSelector({ familyId, isChief, currentUserId }: Props) 
             })}
           </div>
 
-          {/* Overlay section — chief picks an overlay on top of any theme */}
+          {/* Overlay chips */}
           {overlays.length > 0 && (
             <div className="space-y-2 pt-2 border-t border-border/30">
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Sobreposição</p>
               <div className="flex flex-wrap gap-2">
                 <button
-                  onClick={() => patchFamilyCover.mutate({ overlayId: null })}
-                  className={`text-[11px] px-3 py-1.5 rounded-full border transition-all ${
+                  onClick={() => patchFamilyCover.mutate({ overlayId: null, _actionId: "overlay-none" })}
+                  disabled={isBusy}
+                  className={`text-[11px] px-3 py-1.5 rounded-full border transition-all disabled:opacity-60 ${
                     !activeOverlayId ? "border-primary bg-primary/10 text-primary" : "border-border/40 text-muted-foreground hover:border-border"
                   }`}
                 >
@@ -167,15 +248,18 @@ export function CoverThemeSelector({ familyId, isChief, currentUserId }: Props) 
                 {overlays.map((ov) => {
                   const rarity = RARITY_CONFIG[ov.rarity] ?? RARITY_CONFIG.comum;
                   const isActive = activeOverlayId === ov.id;
+                  const isLoading = pendingAction === `overlay-${ov.id}`;
                   return (
                     <button
                       key={ov.id}
-                      onClick={() => patchFamilyCover.mutate({ overlayId: ov.id })}
+                      onClick={() => patchFamilyCover.mutate({ overlayId: ov.id, _actionId: `overlay-${ov.id}` })}
+                      disabled={isBusy}
                       title={ov.description ?? ov.name}
-                      className={`text-[11px] px-3 py-1.5 rounded-full border transition-all ${
+                      className={`text-[11px] px-3 py-1.5 rounded-full border transition-all disabled:opacity-60 flex items-center gap-1 ${
                         isActive ? `border-current ${rarity.color} ${rarity.bg}` : "border-border/40 text-muted-foreground hover:border-border"
                       }`}
                     >
+                      {isLoading && <Loader2 className="h-3 w-3 animate-spin" />}
                       {ov.name}
                     </button>
                   );
@@ -186,7 +270,7 @@ export function CoverThemeSelector({ familyId, isChief, currentUserId }: Props) 
         </div>
       )}
 
-      {/* Personal section (all members) */}
+      {/* Personal section */}
       {ownedPersonal.length > 0 && (
         <div className="space-y-3 border-t border-border/40 pt-4">
           <div>
@@ -197,8 +281,9 @@ export function CoverThemeSelector({ familyId, isChief, currentUserId }: Props) 
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             <button
-              onClick={() => setPersonalTheme.mutate(null)}
-              className={`relative rounded-lg overflow-hidden border-2 transition-all text-left ${
+              onClick={() => setPersonalTheme.mutate({ coverThemeId: null, _actionId: "personal-default" })}
+              disabled={isBusy}
+              className={`relative rounded-lg overflow-hidden border-2 transition-all text-left disabled:opacity-60 ${
                 !personalThemeId ? "border-primary" : "border-border/40 hover:border-border"
               }`}
             >
@@ -214,21 +299,27 @@ export function CoverThemeSelector({ familyId, isChief, currentUserId }: Props) 
             {ownedPersonal.map((theme) => {
               const rarity = RARITY_CONFIG[theme.rarity] ?? RARITY_CONFIG.comum;
               const isPersonal = personalThemeId === theme.id;
+              const isLoading = pendingAction === `personal-${theme.id}`;
               return (
                 <button
                   key={theme.id}
-                  onClick={() => setPersonalTheme.mutate(theme.id)}
-                  className={`relative rounded-lg overflow-hidden border-2 transition-all text-left ${
+                  onClick={() => setPersonalTheme.mutate({ coverThemeId: theme.id, _actionId: `personal-${theme.id}` })}
+                  disabled={isBusy}
+                  className={`relative rounded-lg overflow-hidden border-2 transition-all text-left disabled:opacity-60 ${
                     isPersonal ? "border-primary" : "border-border/40 hover:border-border"
                   }`}
                 >
                   <div className="h-14 relative overflow-hidden">
                     <CoverTheme config={theme.config as Record<string, unknown>} className="absolute inset-0" />
-                    {/* Overlay preview only on the selected personal theme card */}
                     {isPersonal && activeOverlayId && (() => {
                       const ov = overlays.find(o => o.id === activeOverlayId);
                       return ov ? <CoverOverlay config={ov.config as {cssClass?:string}} /> : null;
                     })()}
+                    {isLoading && (
+                      <div className="absolute inset-0 bg-background/50 flex items-center justify-center">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      </div>
+                    )}
                   </div>
                   <div className="px-2 py-1.5 bg-card/80">
                     <p className="text-[11px] font-semibold leading-tight">{theme.name}</p>
