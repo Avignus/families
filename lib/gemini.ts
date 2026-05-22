@@ -23,7 +23,8 @@ function parseJsonResponse(text: string): RecommendedGame[] {
 }
 
 export async function recommendGamesForUser(
-  ownedGames: Array<{ name: string; playtimeMinutes: number }>
+  ownedGames: Array<{ name: string; playtimeMinutes: number }>,
+  exclude: string[] = []
 ): Promise<RecommendedGame[]> {
   if (!process.env.GOOGLE_API_KEY) return [];
 
@@ -32,11 +33,15 @@ export async function recommendGamesForUser(
     .slice(0, 30)
     .map((g) => `- ${g.name} (${Math.round(g.playtimeMinutes / 60)}h)`);
 
+  const excludeSection = exclude.length > 0
+    ? `\nDo NOT recommend any of these already-recommended games:\n${exclude.map((n) => `- ${n}`).join("\n")}\n`
+    : "";
+
   const prompt = `You are a Steam game recommendation expert. Given a player's game library with playtime, recommend games they would enjoy that they don't already own.
 
 Player's top games by playtime:
 ${topGames.join("\n")}
-
+${excludeSection}
 Return EXACTLY 8 recommendations as a JSON array with the correct Steam App ID for each game.
 Format: [{"name": "Exact Steam Store Name", "steamAppId": 123456, "reason": "1-2 sentence explanation in Portuguese (pt-BR)"}]
 
@@ -54,15 +59,20 @@ Return ONLY the JSON array, no other text.`;
 }
 
 export async function recommendGamesForFamily(
-  wishlistGames: string[]
+  wishlistGames: string[],
+  exclude: string[] = []
 ): Promise<RecommendedGame[]> {
   if (!process.env.GOOGLE_API_KEY) return [];
+
+  const excludeSection = exclude.length > 0
+    ? `\nDo NOT recommend any of these already-recommended games:\n${exclude.map((n) => `- ${n}`).join("\n")}\n`
+    : "";
 
   const prompt = `You are a Steam game recommendation expert. Given a gaming group's shared wishlist, recommend additional games they would enjoy together.
 
 Family wishlist:
 ${wishlistGames.map((g) => `- ${g}`).join("\n")}
-
+${excludeSection}
 Return EXACTLY 8 recommendations as a JSON array with the correct Steam App ID for each game.
 Format: [{"name": "Exact Steam Store Name", "steamAppId": 123456, "reason": "1-2 sentence explanation in Portuguese (pt-BR)"}]
 

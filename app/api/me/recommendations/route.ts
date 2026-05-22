@@ -9,7 +9,7 @@ export async function GET() {
 
   const recs = await prisma.gameRecommendation.findMany({
     where: { userId: user.id, type: "individual" },
-    orderBy: { rank: "asc" },
+    orderBy: [{ generatedAt: "desc" }, { rank: "asc" }],
   });
 
   const appIds = recs.map((r) => r.steamAppId);

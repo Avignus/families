@@ -222,6 +222,8 @@ model GameRecommendation {
   userId      String?
   familyId    String?
   type        String   // "individual" | "family"
+  source      String   @default("cron") // "cron" | "ondemand"
+  batchId     String?  // groups all records from the same on-demand request
   steamAppId  Int
   gameName    String
   reason      String
@@ -233,6 +235,7 @@ model GameRecommendation {
 
   @@index([userId, generatedAt])
   @@index([familyId, generatedAt])
+  @@index([userId, source, generatedAt])
 }
 
 model SteamPriceHistory {
