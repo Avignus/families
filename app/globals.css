@@ -367,7 +367,7 @@
 /* ─── Card Effects ──────────────────────────────────────────────────────────── */
 @keyframes card-effect-curse {
   0%,100% { box-shadow: 0 0 0 1px rgba(124,58,237,0.4); }
-  50%      { box-shadow: 0 0 16px rgba(124,58,237,0.5), 0 0 32px rgba(124,58,237,0.2); }
+  50%      { box-shadow: 0 0 16px rgba(124,58,237,0.5), 0 0 32px rgba(124,58,237,0.50); }
 }
 @keyframes card-effect-gold {
   0%,100% { box-shadow: 0 0 0 1px rgba(251,191,36,0.4); }
@@ -399,14 +399,14 @@
 /* Névoa Rasteira — purple ground fog */
 .cover-overlay-mist::after {
   content: ""; position: absolute; bottom: 0; left: 0; right: 0; height: 45%;
-  background: linear-gradient(to top, rgba(107,33,168,0.22) 0%, transparent 100%);
+  background: linear-gradient(to top, rgba(107,33,168,0.55) 0%, transparent 100%);
   animation: mist-drift 6s ease-in-out infinite;
 }
 
 /* Shimmer Dourado — diagonal gold light sweep */
 .cover-overlay-shimmer::before {
   content: ""; position: absolute; inset: 0;
-  background: linear-gradient(105deg, transparent 35%, rgba(251,191,36,0.18) 50%, transparent 65%);
+  background: linear-gradient(105deg, transparent 35%, rgba(251,191,36,0.50) 50%, transparent 65%);
   background-size: 200% 100%;
   animation: gold-shimmer 4s linear infinite;
 }
@@ -414,7 +414,7 @@
 /* Bandeiras ao Vento — green oscillating shimmer */
 .cover-overlay-flags::after {
   content: ""; position: absolute; top: 0; left: 0; right: 0; height: 40%;
-  background: linear-gradient(to bottom, rgba(16,185,129,0.15) 0%, transparent 100%);
+  background: linear-gradient(to bottom, rgba(16,185,129,0.45) 0%, transparent 100%);
   animation: flag-wave 3s ease-in-out infinite;
 }
 
@@ -424,7 +424,7 @@
   background: repeating-linear-gradient(
     100deg,
     transparent 0, transparent 2px,
-    rgba(129,140,248,0.07) 2px, rgba(129,140,248,0.07) 3px
+    rgba(129,140,248,0.20) 2px, rgba(129,140,248,0.20) 3px
   );
   animation: rain-fall 1.5s linear infinite;
 }
@@ -436,7 +436,7 @@
 }
 .cover-overlay-radiance::after {
   content: ""; position: absolute; bottom: 0; left: 0; right: 0; height: 55%;
-  background: radial-gradient(ellipse at 50% 110%, rgba(234,179,8,0.3) 0%, transparent 70%);
+  background: radial-gradient(ellipse at 50% 110%, rgba(234,179,8,0.65) 0%, transparent 70%);
   animation: radiance-pulse 2.5s ease-in-out infinite;
 }
 
@@ -448,15 +448,15 @@
 .cover-overlay-flame::before {
   content: ""; position: absolute; inset: 0;
   background:
-    radial-gradient(ellipse at 0% 100%, rgba(124,58,237,0.35) 0%, transparent 40%),
-    radial-gradient(ellipse at 100% 100%, rgba(124,58,237,0.35) 0%, transparent 40%);
+    radial-gradient(ellipse at 0% 100%, rgba(124,58,237,0.70) 0%, transparent 40%),
+    radial-gradient(ellipse at 100% 100%, rgba(124,58,237,0.70) 0%, transparent 40%);
   animation: flame-pulse 2s ease-in-out infinite;
 }
 .cover-overlay-flame::after {
   content: ""; position: absolute; inset: 0;
   background:
-    radial-gradient(ellipse at 0% 0%, rgba(124,58,237,0.2) 0%, transparent 30%),
-    radial-gradient(ellipse at 100% 0%, rgba(124,58,237,0.2) 0%, transparent 30%);
+    radial-gradient(ellipse at 0% 0%, rgba(124,58,237,0.50) 0%, transparent 30%),
+    radial-gradient(ellipse at 100% 0%, rgba(124,58,237,0.50) 0%, transparent 30%);
   animation: flame-pulse 2.5s ease-in-out infinite 0.5s;
 }
 
@@ -468,7 +468,7 @@
 .cover-overlay-scanner::before {
   content: ""; position: absolute; left: 0; right: 0;
   height: 2px;
-  background: linear-gradient(90deg, transparent, rgba(99,102,241,0.8), transparent);
+  background: linear-gradient(90deg, transparent, rgba(99,102,241,1.0), transparent);
   animation: scanner-sweep 3s ease-in-out infinite;
   top: 0;
 }
