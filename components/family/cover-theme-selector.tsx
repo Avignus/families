@@ -37,6 +37,7 @@ type Props = {
 
 export function CoverThemeSelector({ familyId, isChief, currentUserId }: Props) {
   const qc = useQueryClient();
+  const [pendingAction, setPendingAction] = useState<string | null>(null);
 
   const { data } = useQuery({
     queryKey: ["family-cover-themes", familyId],
@@ -82,15 +83,18 @@ export function CoverThemeSelector({ familyId, isChief, currentUserId }: Props) 
       cosmeticId?: string | null;
       overlayId?: string | null;
       videoId?: string | null;
+      _actionId?: string;
     }) => {
+      const { _actionId, ...payload } = body;
       const res = await fetch(`/api/families/${familyId}/cover-theme`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error((await res.json()).error?.message ?? "Erro");
     },
     onMutate: (body) => {
+      setPendingAction(body._actionId ?? "patch");
       if (body.cosmeticId !== undefined) {
         const theme = body.cosmeticId
           ? (data?.available ?? []).find(t => t.id === body.cosmeticId) ?? null
@@ -112,6 +116,7 @@ export function CoverThemeSelector({ familyId, isChief, currentUserId }: Props) 
       }
     },
     onSuccess: () => {
+      toast.success("Tema aplicado!");
       qc.invalidateQueries({ queryKey: ["family-cover-themes", familyId] });
     },
     onError: (e) => {
@@ -121,14 +126,16 @@ export function CoverThemeSelector({ familyId, isChief, currentUserId }: Props) 
       qc.invalidateQueries({ queryKey: ["family-cover-themes", familyId] });
     },
     onSettled: () => {
+      setPendingAction(null);
       setOptimisticVideoId(undefined);
     },
   });
 
   const setPersonalTheme = useMutation({
-    mutationFn: async ({ coverThemeId, coverVideoId }: {
+    mutationFn: async ({ coverThemeId, coverVideoId, _actionId }: {
       coverThemeId?: string | null;
       coverVideoId?: string | null;
+      _actionId?: string;
     }) => {
       const res = await fetch(`/api/families/${familyId}/personalization`, {
         method: "PATCH",
@@ -137,7 +144,8 @@ export function CoverThemeSelector({ familyId, isChief, currentUserId }: Props) 
       });
       if (!res.ok) throw new Error((await res.json()).error?.message ?? "Erro");
     },
-    onMutate: ({ coverThemeId, coverVideoId }) => {
+    onMutate: ({ coverThemeId, coverVideoId, _actionId }) => {
+      setPendingAction(_actionId ?? "personal");
       if (coverThemeId !== undefined) {
         const theme = coverThemeId
           ? (personal?.ownedCoverThemes ?? []).find(t => t.id === coverThemeId) ?? null
@@ -152,6 +160,7 @@ export function CoverThemeSelector({ familyId, isChief, currentUserId }: Props) 
       }
     },
     onSuccess: () => {
+      toast.success("Tema aplicado!");
       qc.invalidateQueries({ queryKey: ["family-personalization", familyId] });
     },
     onError: (e) => {
@@ -159,6 +168,7 @@ export function CoverThemeSelector({ familyId, isChief, currentUserId }: Props) 
       qc.invalidateQueries({ queryKey: ["family", familyId] });
       qc.invalidateQueries({ queryKey: ["family-personalization", familyId] });
     },
+    onSettled: () => setPendingAction(null),
   });
 
   // Track optimistic video selection so the chip highlights instantly on click
@@ -194,15 +204,17 @@ export function CoverThemeSelector({ familyId, isChief, currentUserId }: Props) 
               const rarity = RARITY_CONFIG[theme.rarity] ?? RARITY_CONFIG.comum;
               const isActive = data.activeCoverThemeId === theme.id
                 || (!data.activeCoverThemeId && theme.slug === "capa-mosaico");
+              const isLoading = pendingAction === `theme-${theme.id}`;
               return (
                 <button
                   key={theme.id}
                   onClick={() => patchFamilyCover.mutate({
                     cosmeticId: theme.isDefault ? null : theme.id,
+                    _actionId: `theme-${theme.id}`,
                   })}
                   className={`relative rounded-lg overflow-hidden border-2 transition-all duration-200 text-left ${
                     isActive ? "border-primary" : "border-border/40 hover:border-border"
-                  }`}
+                  } ${isLoading ? "ring-2 ring-primary/50 animate-pulse" : ""}`}
                 >
                   <div className="h-14 relative overflow-hidden">
                     <CoverTheme config={theme.config as Record<string, unknown>} className="absolute inset-0" />
@@ -256,24 +268,25 @@ export function CoverThemeSelector({ familyId, isChief, currentUserId }: Props) 
 
               <div className="flex flex-wrap gap-2">
                 <button
-                  onClick={() => patchFamilyCover.mutate({ videoId: null })}
+                  onClick={() => patchFamilyCover.mutate({ videoId: null, _actionId: "video-none" })}
                   className={`text-[11px] px-3 py-1.5 rounded-full border transition-all duration-150 ${
                     !activeVideoId ? "border-primary bg-primary/10 text-primary" : "border-border/40 text-muted-foreground hover:border-border"
-                  }`}
+                  } ${pendingAction === "video-none" ? "animate-pulse" : ""}`}
                 >
                   Nenhum
                 </button>
                 {videos.map((vid) => {
                   const rarity = RARITY_CONFIG[vid.rarity] ?? RARITY_CONFIG.comum;
                   const isActive = activeVideoId === vid.id;
+                  const isLoading = pendingAction === `video-${vid.id}`;
                   return (
                     <button
                       key={vid.id}
-                      onClick={() => patchFamilyCover.mutate({ videoId: vid.id })}
+                      onClick={() => patchFamilyCover.mutate({ videoId: vid.id, _actionId: `video-${vid.id}` })}
                       title={vid.description ?? vid.name}
                       className={`text-[11px] px-3 py-1.5 rounded-full border transition-all duration-150 flex items-center gap-1.5 ${
                         isActive ? `border-current ${rarity.color} ${rarity.bg}` : "border-border/40 text-muted-foreground hover:border-border"
-                      }`}
+                      } ${isLoading ? "animate-pulse" : ""}`}
                     >
                       <Film className="h-3 w-3" />
                       {vid.name}
@@ -290,24 +303,25 @@ export function CoverThemeSelector({ familyId, isChief, currentUserId }: Props) 
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Sobreposição</p>
               <div className="flex flex-wrap gap-2">
                 <button
-                  onClick={() => patchFamilyCover.mutate({ overlayId: null })}
+                  onClick={() => patchFamilyCover.mutate({ overlayId: null, _actionId: "overlay-none" })}
                   className={`text-[11px] px-3 py-1.5 rounded-full border transition-all duration-150 ${
                     !activeOverlayId ? "border-primary bg-primary/10 text-primary" : "border-border/40 text-muted-foreground hover:border-border"
-                  }`}
+                  } ${pendingAction === "overlay-none" ? "animate-pulse" : ""}`}
                 >
                   Nenhuma
                 </button>
                 {overlays.map((ov) => {
                   const rarity = RARITY_CONFIG[ov.rarity] ?? RARITY_CONFIG.comum;
                   const isActive = activeOverlayId === ov.id;
+                  const isLoading = pendingAction === `overlay-${ov.id}`;
                   return (
                     <button
                       key={ov.id}
-                      onClick={() => patchFamilyCover.mutate({ overlayId: ov.id })}
+                      onClick={() => patchFamilyCover.mutate({ overlayId: ov.id, _actionId: `overlay-${ov.id}` })}
                       title={ov.description ?? ov.name}
                       className={`text-[11px] px-3 py-1.5 rounded-full border transition-all duration-150 ${
                         isActive ? `border-current ${rarity.color} ${rarity.bg}` : "border-border/40 text-muted-foreground hover:border-border"
-                      }`}
+                      } ${isLoading ? "animate-pulse" : ""}`}
                     >
                       {ov.name}
                     </button>
@@ -335,24 +349,25 @@ export function CoverThemeSelector({ familyId, isChief, currentUserId }: Props) 
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Vídeo de fundo</p>
               <div className="flex flex-wrap gap-2">
                 <button
-                  onClick={() => setPersonalTheme.mutate({ coverVideoId: null })}
+                  onClick={() => setPersonalTheme.mutate({ coverVideoId: null, _actionId: "personal-video-none" })}
                   className={`text-[11px] px-3 py-1.5 rounded-full border transition-all duration-150 ${
                     !personalVideoId ? "border-primary bg-primary/10 text-primary" : "border-border/40 text-muted-foreground hover:border-border"
-                  }`}
+                  } ${pendingAction === "personal-video-none" ? "animate-pulse" : ""}`}
                 >
                   Nenhum
                 </button>
                 {ownedPersonalVideos.map((vid) => {
                   const rarity = RARITY_CONFIG[vid.rarity] ?? RARITY_CONFIG.comum;
                   const isActive = personalVideoId === vid.id;
+                  const isLoading = pendingAction === `personal-video-${vid.id}`;
                   return (
                     <button
                       key={vid.id}
-                      onClick={() => setPersonalTheme.mutate({ coverVideoId: vid.id })}
+                      onClick={() => setPersonalTheme.mutate({ coverVideoId: vid.id, _actionId: `personal-video-${vid.id}` })}
                       title={vid.description ?? vid.name}
                       className={`text-[11px] px-3 py-1.5 rounded-full border transition-all duration-150 flex items-center gap-1.5 ${
                         isActive ? `border-current ${rarity.color} ${rarity.bg}` : "border-border/40 text-muted-foreground hover:border-border"
-                      }`}
+                      } ${isLoading ? "animate-pulse" : ""}`}
                     >
                       <Film className="h-3 w-3" />
                       {vid.name}
@@ -367,10 +382,10 @@ export function CoverThemeSelector({ familyId, isChief, currentUserId }: Props) 
           {ownedPersonal.length > 0 && (
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               <button
-                onClick={() => setPersonalTheme.mutate({ coverThemeId: null })}
+                onClick={() => setPersonalTheme.mutate({ coverThemeId: null, _actionId: "personal-default" })}
                 className={`relative rounded-lg overflow-hidden border-2 transition-all duration-200 text-left ${
                   !personalThemeId ? "border-primary" : "border-border/40 hover:border-border"
-                }`}
+                } ${pendingAction === "personal-default" ? "ring-2 ring-primary/50 animate-pulse" : ""}`}
               >
                 <div className="h-14 bg-card/40 flex items-center justify-center">
                   <span className="text-[10px] text-muted-foreground">Tema do chief</span>
@@ -384,13 +399,14 @@ export function CoverThemeSelector({ familyId, isChief, currentUserId }: Props) 
               {ownedPersonal.map((theme) => {
                 const rarity = RARITY_CONFIG[theme.rarity] ?? RARITY_CONFIG.comum;
                 const isPersonal = personalThemeId === theme.id;
+                const isLoading = pendingAction === `personal-${theme.id}`;
                 return (
                   <button
                     key={theme.id}
-                    onClick={() => setPersonalTheme.mutate({ coverThemeId: theme.id })}
+                    onClick={() => setPersonalTheme.mutate({ coverThemeId: theme.id, _actionId: `personal-${theme.id}` })}
                     className={`relative rounded-lg overflow-hidden border-2 transition-all duration-200 text-left ${
                       isPersonal ? "border-primary" : "border-border/40 hover:border-border"
-                    }`}
+                    } ${isLoading ? "ring-2 ring-primary/50 animate-pulse" : ""}`}
                   >
                     <div className="h-14 relative overflow-hidden">
                       <CoverTheme config={theme.config as Record<string, unknown>} className="absolute inset-0" />
