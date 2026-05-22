@@ -172,24 +172,24 @@ export default async function AchievementsPage() {
               return (
                 <div
                   key={a.id}
-                  className={`flex items-start gap-3 rounded-lg border p-3 transition-colors ${
+                  className={`flex items-center gap-3 rounded-lg border p-3 transition-colors ${
                     unlocked
                       ? `border-border/60 bg-card/80 ${rarity.glow}`
                       : "border-border/20 bg-card/20 opacity-50"
                   }`}
                 >
-                  <div className="mt-0.5 shrink-0 relative h-16 w-16">
+                  <div className="shrink-0 relative h-20 w-20 flex items-center justify-center rounded-lg bg-background/60 border border-border/20">
                     <Image
                       src={`/badges/${a.slug}.png`}
                       alt={a.title}
-                      width={64}
-                      height={64}
-                      className={`h-16 w-16 object-contain transition-all ${
+                      width={80}
+                      height={80}
+                      className={`h-20 w-20 object-contain transition-all ${
                         unlocked ? "" : "grayscale opacity-30"
                       }`}
                     />
                     {!unlocked && (
-                      <Lock className="absolute bottom-0 right-0 h-3.5 w-3.5 text-muted-foreground/60" />
+                      <Lock className="absolute bottom-1 right-1 h-3.5 w-3.5 text-muted-foreground/60" />
                     )}
                   </div>
                   <div className="flex-1 min-w-0">

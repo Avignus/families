@@ -200,12 +200,13 @@ def main():
                 continue
             badge = badge.crop(bbox)
 
-            # 2. Resize content to CONTENT_H=252 preserving aspect ratio.
+            # 2. Resize content to CONTENT_H=272 preserving aspect ratio.
             #    Every badge ends up the same visual height — no variable transparent padding.
-            CONTENT_H = 252
-            CONTENT_W = 252
+            #    At 80px display: 272/320*80 = 68px content, 24/320*80 = 6px margin each side.
+            CONTENT_H = 272
+            CONTENT_W = 272
             CANVAS    = 320
-            MARGIN    = (CANVAS - CONTENT_H) // 2   # 34px fixed top & bottom
+            MARGIN    = (CANVAS - CONTENT_H) // 2   # 24px fixed top & bottom
 
             scale = CONTENT_H / badge.height
             new_w = int(badge.width * scale)
