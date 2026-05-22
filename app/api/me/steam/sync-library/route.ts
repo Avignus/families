@@ -12,9 +12,10 @@ export async function POST() {
   });
   if (!dbUser?.steamId) return err("NO_STEAM", "No Steam account linked", 400);
 
-  // Invalidate cached library so getOwnedGames fetches fresh data
-  await prisma.steamUserCache.deleteMany({
+  // Expire the cached library (don't delete — keeps it as fallback if Steam fails)
+  await prisma.steamUserCache.updateMany({
     where: { userId: dbUser.steamId, type: "library" },
+    data: { fetchedAt: new Date(0) },
   });
 
   const result = await getOwnedGames(dbUser.steamId);
