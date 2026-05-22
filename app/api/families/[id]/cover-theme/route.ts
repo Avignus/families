@@ -3,7 +3,10 @@ import { z } from "zod";
 import { requireSession, isApiError, ok, err, parseBody } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 
-const Schema = z.object({ cosmeticId: z.string().nullable() });
+const Schema = z.object({
+  cosmeticId: z.string().nullable().optional(),
+  overlayId:  z.string().nullable().optional(),
+});
 
 // GET — list themes available to this family (unlocked by any active member)
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
@@ -50,7 +53,19 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 
   const family = await prisma.family.findUnique({
     where: { id: params.id },
-    select: { activeCoverThemeId: true },
+    select: { activeCoverThemeId: true, activeCoverOverlayId: true },
+  });
+
+  // Overlays available to this family (owned by any active member)
+  const overlays = await prisma.cosmetic.findMany({
+    where: {
+      type: "cover_overlay",
+      userCosmetics: {
+        some: {
+          user: { memberships: { some: { familyId: params.id, status: "active" } } },
+        },
+      },
+    },
   });
 
   return ok({
@@ -62,7 +77,9 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
         userCosmetics: undefined,
       })),
     ],
+    overlays,
     activeCoverThemeId: family?.activeCoverThemeId ?? null,
+    activeCoverOverlayId: family?.activeCoverOverlayId ?? null,
   });
 }
 
@@ -103,10 +120,26 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     }
   }
 
-  await prisma.family.update({
-    where: { id: params.id },
-    data: { activeCoverThemeId: body.cosmeticId },
-  });
+  // Validate overlay if provided
+  if (body.overlayId) {
+    const overlay = await prisma.cosmetic.findUnique({ where: { id: body.overlayId } });
+    if (!overlay || overlay.type !== "cover_overlay") {
+      return err("INVALID_OVERLAY", "Overlay inválido", 400);
+    }
+    const hasOverlay = await prisma.userCosmetic.findFirst({
+      where: {
+        cosmeticId: body.overlayId,
+        user: { memberships: { some: { familyId: params.id, status: "active" } } },
+      },
+    });
+    if (!hasOverlay) return err("OVERLAY_NOT_IN_POOL", "Nenhum membro possui este overlay", 403);
+  }
+
+  const data: Record<string, string | null> = {};
+  if (body.cosmeticId !== undefined) data.activeCoverThemeId = body.cosmeticId ?? null;
+  if (body.overlayId !== undefined)  data.activeCoverOverlayId = body.overlayId ?? null;
+
+  await prisma.family.update({ where: { id: params.id }, data });
 
   return ok({ updated: true });
 }

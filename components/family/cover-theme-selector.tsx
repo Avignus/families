@@ -11,6 +11,7 @@ type Cosmetic = {
   id: string;
   slug: string;
   name: string;
+  description?: string;
   rarity: string;
   config: Record<string, unknown>;
   isDefault: boolean;
@@ -31,7 +32,12 @@ export function CoverThemeSelector({ familyId, isChief, currentUserId }: Props) 
     queryFn: async () => {
       const res = await fetch(`/api/families/${familyId}/cover-theme`);
       if (!res.ok) return null;
-      return (await res.json()).data as { available: Cosmetic[]; activeCoverThemeId: string | null };
+      return (await res.json()).data as {
+        available: Cosmetic[];
+        overlays: Cosmetic[];
+        activeCoverThemeId: string | null;
+        activeCoverOverlayId: string | null;
+      };
     },
     staleTime: 60_000,
   });
@@ -46,17 +52,17 @@ export function CoverThemeSelector({ familyId, isChief, currentUserId }: Props) 
     staleTime: 60_000,
   });
 
-  const setFamilyTheme = useMutation({
-    mutationFn: async (cosmeticId: string | null) => {
+  const patchFamilyCover = useMutation({
+    mutationFn: async (body: { cosmeticId?: string | null; overlayId?: string | null }) => {
       const res = await fetch(`/api/families/${familyId}/cover-theme`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cosmeticId }),
+        body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error((await res.json()).error?.message ?? "Erro");
     },
     onSuccess: () => {
-      toast.success("Tema da família atualizado!");
+      toast.success("Capa atualizada!");
       qc.invalidateQueries({ queryKey: ["family-cover-themes", familyId] });
       qc.invalidateQueries({ queryKey: ["family", familyId] });
     },
@@ -83,8 +89,10 @@ export function CoverThemeSelector({ familyId, isChief, currentUserId }: Props) 
   if (!data) return null;
 
   const available = data.available ?? [];
+  const overlays = data.overlays ?? [];
   const ownedPersonal = personal?.ownedCoverThemes ?? [];
   const personalThemeId = personal?.coverTheme?.id ?? null;
+  const activeOverlayId = data.activeCoverOverlayId ?? null;
 
   return (
     <div className="space-y-6">
@@ -105,7 +113,7 @@ export function CoverThemeSelector({ familyId, isChief, currentUserId }: Props) 
               return (
                 <button
                   key={theme.id}
-                  onClick={() => setFamilyTheme.mutate(theme.isDefault ? null : theme.id)}
+                  onClick={() => patchFamilyCover.mutate({ cosmeticId: theme.isDefault ? null : theme.id })}
                   className={`relative rounded-lg overflow-hidden border-2 transition-all text-left ${
                     isActive ? "border-primary" : "border-border/40 hover:border-border"
                   }`}
@@ -136,6 +144,39 @@ export function CoverThemeSelector({ familyId, isChief, currentUserId }: Props) 
               );
             })}
           </div>
+
+          {/* Overlay section — chief picks an overlay on top of any theme */}
+          {overlays.length > 0 && (
+            <div className="space-y-2 pt-2 border-t border-border/30">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Sobreposição</p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => patchFamilyCover.mutate({ overlayId: null })}
+                  className={`text-[11px] px-3 py-1.5 rounded-full border transition-all ${
+                    !activeOverlayId ? "border-primary bg-primary/10 text-primary" : "border-border/40 text-muted-foreground hover:border-border"
+                  }`}
+                >
+                  Nenhuma
+                </button>
+                {overlays.map((ov) => {
+                  const rarity = RARITY_CONFIG[ov.rarity] ?? RARITY_CONFIG.comum;
+                  const isActive = activeOverlayId === ov.id;
+                  return (
+                    <button
+                      key={ov.id}
+                      onClick={() => patchFamilyCover.mutate({ overlayId: ov.id })}
+                      title={ov.description ?? ov.name}
+                      className={`text-[11px] px-3 py-1.5 rounded-full border transition-all ${
+                        isActive ? `border-current ${rarity.color} ${rarity.bg}` : "border-border/40 text-muted-foreground hover:border-border"
+                      }`}
+                    >
+                      {ov.name}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       )}
 

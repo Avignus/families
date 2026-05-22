@@ -64,8 +64,10 @@ model Family {
   familyScore   Int     @default(0)
   autoApprove   Boolean @default(false)
 
-  activeCoverThemeId String?
-  activeCoverTheme   Cosmetic? @relation("FamilyActiveCoverTheme", fields: [activeCoverThemeId], references: [id])
+  activeCoverThemeId   String?
+  activeCoverTheme     Cosmetic? @relation("FamilyActiveCoverTheme", fields: [activeCoverThemeId], references: [id])
+  activeCoverOverlayId String?
+  activeCoverOverlay   Cosmetic? @relation("FamilyActiveCoverOverlay", fields: [activeCoverOverlayId], references: [id])
 
   memberships            FamilyMembership[]
   wishlistItems          WishlistItem[]
@@ -348,7 +350,9 @@ model Cosmetic {
   equippedNameTag        EquippedCosmetics[]         @relation("EquippedNameTag")
   equippedCardEffect     EquippedCosmetics[]         @relation("EquippedCardEffect")
   activeFamilyCover      Family[]                    @relation("FamilyActiveCoverTheme")
-  personalCover          FamilyMemberPersonalization[]
+  activeFamilyOverlay    Family[]                    @relation("FamilyActiveCoverOverlay")
+  personalCover          FamilyMemberPersonalization[] @relation("PersonalCoverTheme")
+  personalOverlay        FamilyMemberPersonalization[] @relation("PersonalCoverOverlay")
 }
 
 model UserCosmetic {
@@ -377,12 +381,14 @@ model EquippedCosmetics {
 }
 
 model FamilyMemberPersonalization {
-  userId       String
-  familyId     String
-  coverThemeId String?
-  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  family       Family    @relation(fields: [familyId], references: [id], onDelete: Cascade)
-  coverTheme   Cosmetic? @relation(fields: [coverThemeId], references: [id])
+  userId         String
+  familyId       String
+  coverThemeId   String?
+  coverOverlayId String?
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  family         Family    @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  coverTheme     Cosmetic? @relation("PersonalCoverTheme", fields: [coverThemeId], references: [id])
+  coverOverlay   Cosmetic? @relation("PersonalCoverOverlay", fields: [coverOverlayId], references: [id])
   @@id([userId, familyId])
 }
 

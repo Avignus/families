@@ -3,7 +3,10 @@ import { z } from "zod";
 import { requireSession, isApiError, ok, err, parseBody } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 
-const Schema = z.object({ coverThemeId: z.string().nullable() });
+const Schema = z.object({
+  coverThemeId:   z.string().nullable().optional(),
+  coverOverlayId: z.string().nullable().optional(),
+});
 
 // GET — member's personal theme for this family
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
@@ -58,8 +61,16 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
   await prisma.familyMemberPersonalization.upsert({
     where: { userId_familyId: { userId: user.id, familyId: params.id } },
-    update: { coverThemeId: body.coverThemeId },
-    create: { userId: user.id, familyId: params.id, coverThemeId: body.coverThemeId },
+    update: {
+      ...(body.coverThemeId !== undefined   && { coverThemeId:   body.coverThemeId }),
+      ...(body.coverOverlayId !== undefined && { coverOverlayId: body.coverOverlayId }),
+    },
+    create: {
+      userId: user.id,
+      familyId: params.id,
+      coverThemeId:   body.coverThemeId   ?? null,
+      coverOverlayId: body.coverOverlayId ?? null,
+    },
   });
 
   return ok({ updated: true });

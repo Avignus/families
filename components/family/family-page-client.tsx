@@ -77,7 +77,8 @@ type FamilyData = {
   currentUserId: string;
   monthlyBudgetCents: number;
   coverImageUrl: string | null;
-  coverTheme: { id: string; slug: string; name: string; config: Record<string, unknown> } | null;
+  coverTheme:   { id: string; slug: string; name: string; config: Record<string, unknown> } | null;
+  coverOverlay: { id: string; slug: string; name: string; config: Record<string, unknown> } | null;
   familyScore: number;
   memberships: Array<{ user: Member }>;
   pendingMemberships: PendingMember[];
@@ -289,7 +290,7 @@ export function FamilyPageClient({
         <div className="relative h-[480px] group/banner">
           <div className="absolute inset-0">
             {family.coverTheme ? (
-              <CoverTheme config={family.coverTheme.config} className="w-full h-full">
+              <CoverTheme config={family.coverTheme.config} overlayConfig={family.coverOverlay?.config ?? null} className="w-full h-full">
                 {(localCoverUrl ?? family.coverImageUrl) ? (
                   <img src={localCoverUrl ?? family.coverImageUrl!} alt={family.name} className="w-full h-full object-cover" />
                 ) : (

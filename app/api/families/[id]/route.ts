@@ -55,10 +55,14 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
         },
         orderBy: { closesAt: "asc" },
       },
-      activeCoverTheme: { select: { id: true, slug: true, name: true, config: true } },
+      activeCoverTheme:   { select: { id: true, slug: true, name: true, config: true } },
+      activeCoverOverlay: { select: { id: true, slug: true, name: true, config: true } },
       memberPersonalizations: {
         where: { userId: user.id },
-        select: { coverTheme: { select: { id: true, slug: true, name: true, config: true } } },
+        select: {
+          coverTheme:   { select: { id: true, slug: true, name: true, config: true } },
+          coverOverlay: { select: { id: true, slug: true, name: true, config: true } },
+        },
       },
     },
   });
@@ -166,8 +170,8 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
           );
         })()
       : [],
-    // Personal theme override > chief's theme > null
-    coverTheme: family.memberPersonalizations?.[0]?.coverTheme ?? family.activeCoverTheme ?? null,
+    coverTheme:   family.memberPersonalizations?.[0]?.coverTheme   ?? family.activeCoverTheme   ?? null,
+    coverOverlay: family.memberPersonalizations?.[0]?.coverOverlay ?? family.activeCoverOverlay ?? null,
   });
 }
 

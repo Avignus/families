@@ -391,3 +391,87 @@
   background-size: 200% 100%;
   animation: achievement-shine 2s linear infinite;
 }
+
+/* ─── Cover Overlays (standalone, apply over any theme) ────────────────────── */
+
+/* Base: all overlays are position:absolute inset-0, pointer-events:none */
+[class^="cover-overlay-"], [class*=" cover-overlay-"] {
+  position: absolute; inset: 0; pointer-events: none;
+}
+
+/* Névoa Rasteira — purple ground fog */
+.cover-overlay-mist::after {
+  content: ""; position: absolute; bottom: 0; left: 0; right: 0; height: 45%;
+  background: linear-gradient(to top, rgba(107,33,168,0.22) 0%, transparent 100%);
+  animation: mist-drift 6s ease-in-out infinite;
+}
+
+/* Shimmer Dourado — diagonal gold light sweep */
+.cover-overlay-shimmer::before {
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(105deg, transparent 35%, rgba(251,191,36,0.18) 50%, transparent 65%);
+  background-size: 200% 100%;
+  animation: gold-shimmer 4s linear infinite;
+}
+
+/* Bandeiras ao Vento — green oscillating shimmer */
+.cover-overlay-flags::after {
+  content: ""; position: absolute; top: 0; left: 0; right: 0; height: 40%;
+  background: linear-gradient(to bottom, rgba(16,185,129,0.15) 0%, transparent 100%);
+  animation: flag-wave 3s ease-in-out infinite;
+}
+
+/* Chuva Neon — purple rain streaks */
+.cover-overlay-rain::before {
+  content: ""; position: absolute; inset: 0;
+  background: repeating-linear-gradient(
+    100deg,
+    transparent 0, transparent 2px,
+    rgba(129,140,248,0.07) 2px, rgba(129,140,248,0.07) 3px
+  );
+  animation: rain-fall 1.5s linear infinite;
+}
+
+/* Radiância Real — golden light pulse from below */
+@keyframes radiance-pulse {
+  0%,100% { opacity: 0.4; transform: scaleX(1); }
+  50%      { opacity: 0.75; transform: scaleX(1.04); }
+}
+.cover-overlay-radiance::after {
+  content: ""; position: absolute; bottom: 0; left: 0; right: 0; height: 55%;
+  background: radial-gradient(ellipse at 50% 110%, rgba(234,179,8,0.3) 0%, transparent 70%);
+  animation: radiance-pulse 2.5s ease-in-out infinite;
+}
+
+/* Chama Violeta — violet flames on edges */
+@keyframes flame-pulse {
+  0%,100% { opacity: 0.5; filter: blur(4px); }
+  50%      { opacity: 0.9; filter: blur(6px); }
+}
+.cover-overlay-flame::before {
+  content: ""; position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse at 0% 100%, rgba(124,58,237,0.35) 0%, transparent 40%),
+    radial-gradient(ellipse at 100% 100%, rgba(124,58,237,0.35) 0%, transparent 40%);
+  animation: flame-pulse 2s ease-in-out infinite;
+}
+.cover-overlay-flame::after {
+  content: ""; position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse at 0% 0%, rgba(124,58,237,0.2) 0%, transparent 30%),
+    radial-gradient(ellipse at 100% 0%, rgba(124,58,237,0.2) 0%, transparent 30%);
+  animation: flame-pulse 2.5s ease-in-out infinite 0.5s;
+}
+
+/* Scanner — horizontal scan line */
+@keyframes scanner-sweep {
+  0%   { transform: translateY(-100%); opacity: 0.6; }
+  100% { transform: translateY(600%); opacity: 0; }
+}
+.cover-overlay-scanner::before {
+  content: ""; position: absolute; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(99,102,241,0.8), transparent);
+  animation: scanner-sweep 3s ease-in-out infinite;
+  top: 0;
+}
