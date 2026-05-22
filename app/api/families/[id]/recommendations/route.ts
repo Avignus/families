@@ -6,7 +6,9 @@ import { recommendGamesForFamily, recommendGamesForUser } from "@/lib/gemini";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-const DAILY_ONDEMAND_LIMIT = 3;
+const DAILY_ONDEMAND_LIMIT = process.env.RECOMMENDATION_DAILY_LIMIT
+  ? parseInt(process.env.RECOMMENDATION_DAILY_LIMIT, 10)
+  : 3;
 
 async function resolveAppId(aiName: string, aiAppId: number): Promise<number> {
   const normalize = (s: string) =>

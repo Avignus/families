@@ -323,7 +323,7 @@ export function RecommendationsSection({ familyId, currentUserId }: Props) {
             )}
 
             {isEmpty && !isLoading && (
-              <EmptyState label="Nenhuma recomendação disponível ainda. As recomendações são geradas semanalmente." />
+              <EmptyState label={quota && quota.remaining > 0 ? "Nenhuma recomendação ainda. Clique em \"Descobrir mais\" para gerar agora." : "Nenhuma recomendação disponível. O limite diário foi atingido — tente amanhã."} />
             )}
 
             {!isLoading && familyRecs.length > 0 && (
