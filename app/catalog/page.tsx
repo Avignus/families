@@ -455,6 +455,7 @@ export default async function CatalogPage({
     <CatalogClient
       families={items}
       isLoggedIn={!!currentUserId}
+      currentUserId={currentUserId}
       total={total}
       page={page}
       pageSize={PAGE_SIZE}

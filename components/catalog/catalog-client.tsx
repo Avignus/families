@@ -111,6 +111,7 @@ type Filters = {
 type Props = {
   families: Family[];
   isLoggedIn: boolean;
+  currentUserId: string | null;
   total: number;
   page: number;
   pageSize: number;
@@ -119,7 +120,7 @@ type Props = {
   selectedGenres: string[];
 };
 
-export function CatalogClient({ families, isLoggedIn, total, page, pageSize, query, filters, selectedGenres }: Props) {
+export function CatalogClient({ families, isLoggedIn, currentUserId, total, page, pageSize, query, filters, selectedGenres }: Props) {
   const { t } = useLanguage();
   const router = useRouter();
   const pathname = usePathname();
@@ -428,6 +429,7 @@ export function CatalogClient({ families, isLoggedIn, total, page, pageSize, que
                 loading={loading === family.id}
                 myStatus={localStatus[family.id] ?? family.myStatus}
                 isLoggedIn={isLoggedIn}
+                isOwn={!!currentUserId && family.chief.id === currentUserId}
                 onJoin={handleJoin}
               />
             ))}
@@ -472,12 +474,13 @@ export function CatalogClient({ families, isLoggedIn, total, page, pageSize, que
 }
 
 function FamilyCard({
-  family, loading, myStatus, isLoggedIn, onJoin,
+  family, loading, myStatus, isLoggedIn, isOwn, onJoin,
 }: {
   family: Family;
   loading: boolean;
   myStatus: string | null;
   isLoggedIn: boolean;
+  isOwn: boolean;
   onJoin: (f: Family) => void;
 }) {
   const { t } = useLanguage();
@@ -518,8 +521,8 @@ function FamilyCard({
 
   return (
     <div className="relative rounded-xl border border-border/50 bg-card overflow-hidden flex flex-col hover:border-primary/30 transition-colors">
-      {/* Full-card link overlay */}
-      <Link href={`/catalog/${family.id}`} className="absolute inset-0 z-0" aria-label={family.name} />
+      {/* Full-card link overlay — own family goes to management page */}
+      <Link href={isOwn ? `/families/${family.id}` : `/catalog/${family.id}`} className="absolute inset-0 z-0" aria-label={family.name} />
 
       <div className="h-20 overflow-hidden bg-secondary pointer-events-none relative isolate">
         {family.coverVideo ? (
