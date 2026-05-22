@@ -289,8 +289,9 @@ export function FamilyPageClient({
         {/* Cover art banner — hero height */}
         <div className="relative h-[480px] group/banner">
           <div className="absolute inset-0">
+            {/* Base layer: themed image or fallback */}
             {family.coverTheme ? (
-              <CoverTheme config={family.coverTheme.config} overlayConfig={family.coverOverlay?.config ?? null} className="w-full h-full">
+              <CoverTheme config={family.coverTheme.config} className="w-full h-full">
                 {(localCoverUrl ?? family.coverImageUrl) ? (
                   <img src={localCoverUrl ?? family.coverImageUrl!} alt={family.name} className="w-full h-full object-cover" />
                 ) : (
@@ -306,6 +307,12 @@ export function FamilyPageClient({
             ) : (
               <FamilyCoverArt familyId={familyId} />
             )}
+
+            {/* Overlay layer — always on top of the base, regardless of theme */}
+            {family.coverOverlay && (() => {
+              const cls = (family.coverOverlay.config as { cssClass?: string }).cssClass;
+              return cls ? <div className={cls} /> : null;
+            })()}
           </div>
           {/* Longer, softer gradient — image shows more, fades gently at bottom */}
           <div className="absolute inset-0 bg-gradient-to-t from-card via-card/20 to-transparent" />
