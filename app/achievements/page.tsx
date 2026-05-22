@@ -93,6 +93,16 @@ export default async function AchievementsPage() {
 
   const unlockedMap = new Map(userAchievements.map((ua) => [ua.achievementId, ua.unlockedAt]));
 
+  // Map achievement slug → title for cosmetic "source" display
+  const sourceSlugs = [...new Set(userCosmetics.map((uc) => uc.source).filter(Boolean))] as string[];
+  const sourceAchievements = sourceSlugs.length
+    ? await prisma.achievement.findMany({
+        where: { slug: { in: sourceSlugs } },
+        select: { slug: true, title: true },
+      })
+    : [];
+  const sourceMap = new Map(sourceAchievements.map((a) => [a.slug, a.title]));
+
   const byCategory = allAchievements.reduce<Record<string, typeof allAchievements>>((acc, a) => {
     if (!acc[a.category]) acc[a.category] = [];
     acc[a.category].push(a);
@@ -168,6 +178,12 @@ export default async function AchievementsPage() {
                   </div>
                   <p className="text-xs font-semibold leading-tight">{uc.cosmetic.name}</p>
                   <p className="text-[10px] text-muted-foreground leading-tight">{uc.cosmetic.description}</p>
+                  {uc.source && sourceMap.has(uc.source) && (
+                    <p className="text-[10px] text-muted-foreground/60 leading-tight flex items-center gap-1 pt-0.5 border-t border-border/20">
+                      <Trophy className="h-2.5 w-2.5 shrink-0" />
+                      {sourceMap.get(uc.source)}
+                    </p>
+                  )}
                 </div>
               );
             })}
@@ -216,10 +232,19 @@ export default async function AchievementsPage() {
                         {rarity.label}
                       </span>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-0.5">{a.description}</p>
-                    {unlocked && unlockedAt && (
-                      <p className="text-[10px] text-muted-foreground/60 mt-1">
-                        Desbloqueada em {new Date(unlockedAt).toLocaleDateString("pt-BR")}
+                    {unlocked ? (
+                      <>
+                        <p className="text-xs text-muted-foreground mt-0.5">{a.description}</p>
+                        {unlockedAt && (
+                          <p className="text-[10px] text-muted-foreground/60 mt-1">
+                            Desbloqueada em {new Date(unlockedAt).toLocaleDateString("pt-BR")}
+                          </p>
+                        )}
+                      </>
+                    ) : (
+                      <p className="text-[10px] text-amber-500/60 mt-1 flex items-start gap-1 leading-snug">
+                        <Lock className="h-2.5 w-2.5 shrink-0 mt-0.5" />
+                        {a.description}
                       </p>
                     )}
                   </div>
