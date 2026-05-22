@@ -91,6 +91,7 @@ const UNLOCK_CONDITIONS: Record<string, string> = {
   "noturno-inveterado":                "Faça 3 pagamentos PIX entre meia-noite e 6h da manhã.",
   "reliquia-retro":                    "Fique 60 dias como membro ativo de uma família.",
   "singularidade":                     "Desbloqueie todas as outras 21 insígnias.",
+  "explorador-das-estrelas":           "Complete 20 pledges no total.",
 };
 
 // Maps cosmetic slug → first achievement that grants it (for source-null cosmetics)
@@ -126,6 +127,7 @@ const COSMETIC_TO_ACHIEVEMENT: Record<string, string> = {
   "overlay-chuva-neon":       "noturno-inveterado",
   "overlay-crt":              "reliquia-retro",
   "overlay-blackhole":        "singularidade",
+  "video-nebula":             "explorador-das-estrelas",
 };
 
 // Padrao cosmetics are free — no achievement required
@@ -172,7 +174,11 @@ export default async function AchievementsPage() {
 
   // Map achievement slug → title for cosmetic "source" display
   const sourceSlugs = [...new Set(
-    userCosmetics.map((uc) => uc.source ?? COSMETIC_TO_ACHIEVEMENT[uc.cosmetic.slug]).filter(Boolean)
+    userCosmetics.map((uc) => {
+      const raw = uc.source;
+      const valid = raw && raw !== "admin-unlock" && UNLOCK_CONDITIONS[raw];
+      return valid ? raw : COSMETIC_TO_ACHIEVEMENT[uc.cosmetic.slug];
+    }).filter(Boolean)
   )] as string[];
   const sourceAchievements = sourceSlugs.length
     ? await prisma.achievement.findMany({
@@ -264,31 +270,28 @@ export default async function AchievementsPage() {
                   <p className="text-xs font-semibold leading-tight">{uc.cosmetic.name}</p>
                   <p className="text-[10px] text-muted-foreground leading-tight">{uc.cosmetic.description}</p>
                   {(() => {
-                    const src = uc.source ?? COSMETIC_TO_ACHIEVEMENT[uc.cosmetic.slug];
-                    if (src && sourceMap.has(src)) {
-                      return (
-                        <div className="pt-0.5 border-t border-border/20 space-y-1">
+                    const raw = uc.source;
+                    const src = (raw && raw !== "admin-unlock" && UNLOCK_CONDITIONS[raw])
+                      ? raw
+                      : COSMETIC_TO_ACHIEVEMENT[uc.cosmetic.slug];
+                    const condition = src
+                      ? UNLOCK_CONDITIONS[src]
+                      : COSMETIC_FREE_CONDITION[uc.cosmetic.slug];
+                    if (!condition) return null;
+                    const achievementTitle = src ? sourceMap.get(src) : undefined;
+                    return (
+                      <div className="pt-0.5 border-t border-border/20 space-y-1">
+                        {achievementTitle && (
                           <p className="text-[10px] text-muted-foreground/60 leading-tight flex items-center gap-1">
                             <Trophy className="h-2.5 w-2.5 shrink-0" />
-                            {sourceMap.get(src)}
+                            {achievementTitle}
                           </p>
-                          {UNLOCK_CONDITIONS[src] && (
-                            <p className="text-[10px] text-muted-foreground/40 leading-snug">
-                              {UNLOCK_CONDITIONS[src]}
-                            </p>
-                          )}
-                        </div>
-                      );
-                    }
-                    const freeCondition = COSMETIC_FREE_CONDITION[uc.cosmetic.slug];
-                    if (freeCondition) {
-                      return (
-                        <p className="text-[10px] text-muted-foreground/40 pt-0.5 border-t border-border/20 leading-snug">
-                          {freeCondition}
+                        )}
+                        <p className="text-[10px] text-muted-foreground/40 leading-snug">
+                          {condition}
                         </p>
-                      );
-                    }
-                    return null;
+                      </div>
+                    );
                   })()}
                 </div>
               );

@@ -44,6 +44,7 @@ const ACHIEVEMENT_COSMETICS: Record<string, string[]> = {
   "noturno-inveterado":                 ["overlay-chuva-neon"],
   "reliquia-retro":                     ["overlay-crt"],
   "singularidade":                      ["overlay-blackhole"],
+  "explorador-das-estrelas":            ["video-nebula"],
 };
 
 // ─── Condition checkers ────────────────────────────────────────────────────────
@@ -249,6 +250,7 @@ async function checkCondition(userId: string, slug: string): Promise<boolean> {
       return nightCount >= 3;
     }
     case "reliquia-retro": return (await membershipDays(userId)) >= 60;
+    case "explorador-das-estrelas": return (await countCompletedPledges(userId)) >= 20;
     case "singularidade": {
       const all21 = [
         "colecionador-de-traumas","dormiu-com-a-luz-acesa","nao-pode-assistir-mas-pode-comprar","senhor-das-trevas",
@@ -323,7 +325,8 @@ export async function checkAchievements(userId: string, trigger: AchievementTrig
                 "mecenas-da-dungeon","lancador-de-coin","compra-tudo-nao-pode","robin-hood-dos-pixels","o-tesouro-de-ganon","patrocinador-da-jogatina-alheia",
                 "sem-amigos-mas-com-coop","elo-de-guilda","a-familia-que-joga-unida","mestre-da-cooperacao",
                 "pix-as-2-da-manha","confiavel-como-save",
-                "chama-das-sombras","brilho-do-mecenas","cacador-de-coop","noturno-inveterado","singularidade"];
+                "chama-das-sombras","brilho-do-mecenas","cacador-de-coop","noturno-inveterado",
+                "explorador-das-estrelas","singularidade"];
       case "wishlist_added":
         return ["nao-pode-assistir-mas-pode-comprar","senhor-das-trevas","olhos-nas-trevas","singularidade"];
       case "family_created":
