@@ -58,6 +58,7 @@ export function CoverThemeSelector({ familyId, isChief, currentUserId }: Props) 
     onSuccess: () => {
       toast.success("Tema da família atualizado!");
       qc.invalidateQueries({ queryKey: ["family-cover-themes", familyId] });
+      qc.invalidateQueries({ queryKey: ["family", familyId] });
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),
   });
@@ -74,6 +75,7 @@ export function CoverThemeSelector({ familyId, isChief, currentUserId }: Props) 
     onSuccess: () => {
       toast.success("Sua visão pessoal foi atualizada!");
       qc.invalidateQueries({ queryKey: ["family-personalization", familyId] });
+      qc.invalidateQueries({ queryKey: ["family", familyId] });
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erro"),
   });
