@@ -92,6 +92,55 @@ const OVERLAY_ELEMENTS: Record<string, React.ReactNode> = {
       }}
     />
   ),
+  "cover-overlay-blackhole": (
+    <>
+      {/* Outer nebula swirl — blurred rotating conic gradient */}
+      <div className="absolute inset-0 pointer-events-none" style={{
+        background: "conic-gradient(from 0deg at 50% 50%, rgba(180,120,255,0.45) 0deg, rgba(255,255,255,0.35) 80deg, rgba(120,80,200,0.45) 180deg, rgba(220,180,255,0.25) 260deg, rgba(180,120,255,0.45) 360deg)",
+        filter: "blur(18px)",
+        animation: "bh-spin 22s linear infinite",
+      }} />
+      {/* Inner swirl arm — opposite spin, tighter */}
+      <div className="absolute inset-0 pointer-events-none" style={{
+        background: "conic-gradient(from 120deg at 50% 50%, rgba(255,200,100,0.3) 0deg, transparent 60deg, rgba(200,100,255,0.35) 130deg, transparent 200deg, rgba(255,180,80,0.2) 280deg, transparent 340deg, rgba(255,200,100,0.3) 360deg)",
+        filter: "blur(10px)",
+        animation: "bh-spin-reverse 14s linear infinite",
+      }} />
+      {/* Accretion disk — warm ring around the horizon */}
+      <div className="absolute inset-0 pointer-events-none" style={{
+        background: "radial-gradient(circle at 50% 50%, transparent 12%, rgba(255,200,80,0.65) 18%, rgba(220,80,255,0.5) 26%, rgba(140,60,220,0.3) 34%, transparent 42%)",
+        animation: "bh-pulse 3s ease-in-out infinite",
+      }} />
+      {/* Central white-hot light */}
+      <div className="absolute inset-0 pointer-events-none" style={{
+        background: "radial-gradient(circle at 50% 50%, rgba(255,255,255,0.95) 0%, rgba(255,230,180,0.8) 5%, rgba(220,150,255,0.4) 12%, transparent 22%)",
+        filter: "blur(6px)",
+        animation: "bh-pulse 2.5s ease-in-out infinite 0.5s",
+      }} />
+      {/* Event horizon — the dark absolute center */}
+      <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+        <div style={{
+          width: "10%",
+          aspectRatio: "1",
+          borderRadius: "50%",
+          background: "radial-gradient(circle, #000 50%, rgba(0,0,0,0.6) 100%)",
+          animation: "bh-breathe 4s ease-in-out infinite",
+        }} />
+      </div>
+      {/* Star particles */}
+      <div className="absolute inset-0 pointer-events-none" style={{
+        backgroundImage: [
+          "radial-gradient(circle at 25% 35%, rgba(255,255,255,0.9) 0%, transparent 0.4%)",
+          "radial-gradient(circle at 72% 28%, rgba(255,255,255,0.8) 0%, transparent 0.4%)",
+          "radial-gradient(circle at 40% 70%, rgba(255,255,255,0.7) 0%, transparent 0.3%)",
+          "radial-gradient(circle at 80% 65%, rgba(255,255,255,0.85) 0%, transparent 0.4%)",
+          "radial-gradient(circle at 15% 58%, rgba(255,255,255,0.6) 0%, transparent 0.3%)",
+          "radial-gradient(circle at 60% 15%, rgba(255,255,255,0.75) 0%, transparent 0.35%)",
+        ].join(", "),
+        animation: "bh-twinkle 4s ease-in-out infinite",
+      }} />
+    </>
+  ),
   "cover-overlay-crt": (
     <>
       {/* Scanlines — fine horizontal dark stripes every 3px */}

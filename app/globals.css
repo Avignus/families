@@ -503,3 +503,25 @@
   97%          { transform: translateX(2px);  filter: hue-rotate(-90deg); }
   98%          { transform: translateX(0);    filter: none; }
 }
+
+/* ─── Black Hole Effect ──────────────────────────────────────────────────── */
+@keyframes bh-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+@keyframes bh-spin-reverse {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(-360deg); }
+}
+@keyframes bh-pulse {
+  0%,100% { opacity: 0.75; transform: scale(1); }
+  50%      { opacity: 1;    transform: scale(1.08); }
+}
+@keyframes bh-breathe {
+  0%,100% { transform: scale(1); box-shadow: 0 0 40px 20px rgba(0,0,0,0.9); }
+  50%      { transform: scale(1.06); box-shadow: 0 0 55px 30px rgba(0,0,0,0.95); }
+}
+@keyframes bh-twinkle {
+  0%,100% { opacity: 0.4; }
+  50%      { opacity: 0.9; }
+}

@@ -71,7 +71,8 @@ export default async function CatalogPage({
     include: {
       chief: { select: { id: true, personaName: true, avatarUrl: true, avatarMedium: true } },
       _count: { select: { memberships: { where: { status: "active" } } } },
-      activeCoverTheme: { select: { config: true } },
+      activeCoverTheme:   { select: { config: true } },
+      activeCoverOverlay: { select: { config: true } },
       ...(currentUserId
         ? { memberships: { where: { userId: currentUserId }, select: { status: true, mpPaymentId: true, feePaidAt: true } } }
         : {}),
@@ -431,7 +432,8 @@ export default async function CatalogPage({
         gameNamesLabel: gameNameAppIdsPerFamily.get(f.id)?.label ?? "library",
         topGenres: familyTopGenresMap.get(f.id) ?? [],
         // Personal theme overrides family theme for the current user
-        coverTheme: f.activeCoverTheme as { config: Record<string, unknown> } | null,
+        coverTheme:   f.activeCoverTheme   as { config: Record<string, unknown> } | null,
+        coverOverlay: f.activeCoverOverlay as { config: Record<string, unknown> } | null,
       };
     })
   );
