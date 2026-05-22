@@ -7,6 +7,15 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import Image from "next/image";
 
+const ACHIEVEMENT_SLUGS = new Set([
+  "colecionador-de-traumas","dormiu-com-a-luz-acesa","nao-pode-assistir-mas-pode-comprar","senhor-das-trevas",
+  "mecenas-da-dungeon","lancador-de-coin","compra-tudo-nao-pode","robin-hood-dos-pixels",
+  "o-tesouro-de-ganon","patrocinador-da-jogatina-alheia",
+  "sem-amigos-mas-com-coop","elo-de-guilda","a-familia-que-joga-unida","mestre-da-cooperacao",
+  "sem-casa-no-mapa","membro-honroso-do-cla","aquele-que-nao-sai-da-guilda","fundador-de-linhagem",
+  "pix-as-2-da-manha","sem-volta-agora","confiavel-como-save",
+]);
+
 const CATEGORY_LABELS: Record<string, string> = {
   terror:        "Terror",
   generosidade:  "Generosidade",
@@ -89,7 +98,7 @@ export default async function AchievementsPage() {
                   className={`rounded-lg border border-border/40 bg-card/60 p-3 space-y-2 ${rarity.glow}`}
                 >
                   <div className="flex items-start justify-between gap-2">
-                    {uc.source ? (
+                    {uc.source && ACHIEVEMENT_SLUGS.has(uc.source) ? (
                       <Image
                         src={`/badges/${uc.source}.png`}
                         alt={uc.source}
