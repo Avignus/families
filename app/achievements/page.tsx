@@ -144,13 +144,13 @@ export default async function AchievementsPage() {
                       : "border-border/20 bg-card/20 opacity-50"
                   }`}
                 >
-                  <div className="mt-0.5 shrink-0 relative h-12 w-12">
+                  <div className="mt-0.5 shrink-0 relative h-16 w-16">
                     <Image
                       src={`/badges/${a.slug}.png`}
                       alt={a.title}
-                      width={48}
-                      height={48}
-                      className={`h-12 w-12 object-contain transition-all ${
+                      width={64}
+                      height={64}
+                      className={`h-16 w-16 object-contain transition-all ${
                         unlocked ? "" : "grayscale opacity-30"
                       }`}
                     />
