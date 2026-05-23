@@ -660,7 +660,7 @@ function FamilyCard({
             </span>
             {family.spotsLeft !== null && family.spotsLeft > 0 && (
               <span className="text-primary font-medium">
-                · {family.spotsLeft} {family.spotsLeft === 1 ? "spot" : "spots"} disponível
+                · {family.spotsLeft} {family.spotsLeft === 1 ? "spot disponível" : "spots disponíveis"}
               </span>
             )}
           </div>
