@@ -515,7 +515,7 @@ function FamilyCard({
     },
     staleTime: 5 * 60_000,
   });
-  const badges = badgesData?.data?.badges ?? [];
+  const badges = (badgesData?.data?.badges ?? []).filter((b) => b.category === "familia");
 
   const handleButtonClick = async () => {
     if (!isLoggedIn) { toast.error(t.catalog.loginToJoin); return; }

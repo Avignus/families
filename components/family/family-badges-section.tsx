@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Loader2, Shield } from "lucide-react";
+import { Loader2, Shield, Users } from "lucide-react";
 import { RARITY_CONFIG } from "@/lib/cosmetics";
 import { useLanguage } from "@/lib/i18n/context";
 
@@ -25,7 +25,7 @@ type Badge = {
 
 type Props = {
   familyId: string;
-  compact?: boolean; // catalog card: show fewer badges, smaller
+  compact?: boolean;
 };
 
 export function FamilyBadgesSection({ familyId, compact = false }: Props) {
@@ -58,13 +58,48 @@ export function FamilyBadgesSection({ familyId, compact = false }: Props) {
     );
   }
 
-  const displayed = compact ? badges.slice(0, 6) : badges;
+  if (compact) {
+    return (
+      <div className="grid grid-cols-3 gap-2">
+        {badges.slice(0, 6).map((badge) => (
+          <BadgeCard key={badge.achievementId} badge={badge} compact />
+        ))}
+      </div>
+    );
+  }
+
+  const familyBadges = badges.filter((b) => b.category === "familia");
+  const memberBadges = badges.filter((b) => b.category !== "familia");
 
   return (
-    <div className={`grid gap-3 ${compact ? "grid-cols-3" : "grid-cols-2 sm:grid-cols-3"}`}>
-      {displayed.map((badge) => (
-        <BadgeCard key={badge.achievementId} badge={badge} compact={compact} />
-      ))}
+    <div className="space-y-6">
+      {familyBadges.length > 0 && (
+        <div className="space-y-3">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+            <Shield className="h-3.5 w-3.5" />
+            Insígnias da família
+          </p>
+          <div className="grid gap-3 grid-cols-2 sm:grid-cols-3">
+            {familyBadges.map((badge) => (
+              <BadgeCard key={badge.achievementId} badge={badge} compact={false} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {memberBadges.length > 0 && (
+        <div className="space-y-3">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+            <Users className="h-3.5 w-3.5" />
+            Conquistas dos membros
+          </p>
+          <div className="grid gap-3 grid-cols-2 sm:grid-cols-3">
+            {memberBadges.map((badge) => (
+              <BadgeCard key={badge.achievementId} badge={badge} compact={false} />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -80,7 +115,6 @@ function BadgeCard({ badge, compact }: { badge: Badge; compact: boolean }) {
       className={`rounded-xl border bg-card flex flex-col items-center text-center transition-all ${cfg.glow} ${compact ? "p-2 gap-1" : "p-4 gap-3"}`}
       style={{ borderColor: rarityBorderColor(badge.rarity) }}
     >
-      {/* Badge image */}
       <div className={`group relative flex items-center justify-center rounded-full ${cfg.bg} ${compact ? "w-12 h-12" : "w-24 h-24"}`}>
         {!imgError ? (
           <img
@@ -97,17 +131,14 @@ function BadgeCard({ badge, compact }: { badge: Badge; compact: boolean }) {
         </span>
       </div>
 
-      {/* Title */}
       <p className={`font-semibold leading-tight line-clamp-2 ${compact ? "text-[10px]" : "text-sm"}`}>
         {title}
       </p>
 
-      {/* Rarity label */}
       <span className={`uppercase tracking-wide font-bold ${compact ? "text-[8px]" : "text-[11px]"} ${cfg.color}`}>
         {cfg.label}
       </span>
 
-      {/* Member avatars */}
       <div className="flex -space-x-1.5 justify-center">
         {badge.members.slice(0, compact ? 3 : 5).map((m) => (
           <Avatar key={m.userId} className={`ring-1 ring-background ${compact ? "h-4 w-4" : "h-6 w-6"}`} title={m.personaName}>
