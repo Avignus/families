@@ -113,8 +113,8 @@ type MembershipWithFamily = {
   id: string;
   userId: string;
   familyId: string;
-  mpPaymentId: string | null;
-  mpStatus: string | null;
+  pixPaymentId: string | null;
+  pixStatus: string | null;
   feePaidAt: Date | null;
   feeChargedCents: number | null;
   feeRefundedAt: Date | null;
@@ -125,7 +125,7 @@ type MembershipWithFamily = {
 async function handleMembershipPayment(membership: MembershipWithFamily, status: string, paymentId: string) {
   await prisma.familyMembership.update({
     where: { id: membership.id },
-    data: { mpStatus: status },
+    data: { pixStatus: status },
   });
 
   if (status === "approved" && !membership.feePaidAt) {
@@ -136,9 +136,9 @@ async function handleMembershipPayment(membership: MembershipWithFamily, status:
     });
     if (otherActive) {
       let refunded = false;
-      if (membership.mpPaymentId && membership.feeChargedCents && !membership.feeRefundedAt) {
+      if (membership.pixPaymentId && membership.feeChargedCents && !membership.feeRefundedAt) {
         try {
-          await refundPayment(membership.mpPaymentId, membership.feeChargedCents);
+          await refundPayment(membership.pixPaymentId, membership.feeChargedCents);
           refunded = true;
         } catch (refundErr) {
           console.error("Auto-refund error (single-family rule):", refundErr);
@@ -150,7 +150,7 @@ async function handleMembershipPayment(membership: MembershipWithFamily, status:
           where: { id: membership.id },
           data: {
             status: "rejected",
-            mpStatus: "rejected",
+            pixStatus: "rejected",
             ...(refunded ? { feeRefundedAt: new Date() } : {}),
           },
         });
@@ -278,7 +278,7 @@ const SPOT_COMMISSION_RATE = 0.12; // platform keeps 12%, chief receives 88%
 async function handleSpotPayment(membership: MembershipWithFamily, status: string, _paymentId: string) {
   await prisma.familyMembership.update({
     where: { id: membership.id },
-    data: { mpStatus: status },
+    data: { pixStatus: status },
   });
 
   if (status === "approved" && !membership.feePaidAt) {
@@ -288,9 +288,9 @@ async function handleSpotPayment(membership: MembershipWithFamily, status: strin
     });
     if (otherActive) {
       let refunded = false;
-      if (membership.mpPaymentId && membership.feeChargedCents && !membership.feeRefundedAt) {
+      if (membership.pixPaymentId && membership.feeChargedCents && !membership.feeRefundedAt) {
         try {
-          await refundPayment(membership.mpPaymentId, membership.feeChargedCents);
+          await refundPayment(membership.pixPaymentId, membership.feeChargedCents);
           refunded = true;
         } catch (refundErr) {
           console.error("Auto-refund error (single-family rule, spot):", refundErr);
@@ -301,7 +301,7 @@ async function handleSpotPayment(membership: MembershipWithFamily, status: strin
           where: { id: membership.id },
           data: {
             status: "rejected",
-            mpStatus: "rejected",
+            pixStatus: "rejected",
             ...(refunded ? { feeRefundedAt: new Date() } : {}),
           },
         });
@@ -410,7 +410,7 @@ async function handlePledgePayment(pledgeId: string, paymentId: string, status: 
   if (!pledge) return;
 
   await prisma.$transaction(async (tx) => {
-    const updates: Record<string, unknown> = { mpStatus: status };
+    const updates: Record<string, unknown> = { pixStatus: status };
 
     if (status === "approved" && !pledge.paidAt) {
       updates.paidAt = new Date();

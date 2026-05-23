@@ -16,8 +16,8 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
   if (membership.feePaidAt) return err("ALREADY_PAID", "Cannot cancel after fee is confirmed", 409);
 
   // Attempt refund if a PIX was generated but not yet confirmed
-  if (membership.mpPaymentId && membership.feeChargedCents && !membership.feeRefundedAt) {
-    await refundPayment(membership.mpPaymentId, membership.feeChargedCents).catch(() => {});
+  if (membership.pixPaymentId && membership.feeChargedCents && !membership.feeRefundedAt) {
+    await refundPayment(membership.pixPaymentId, membership.feeChargedCents).catch(() => {});
   }
 
   await prisma.familyMembership.delete({ where: { id: membership.id } });

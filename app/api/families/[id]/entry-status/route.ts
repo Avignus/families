@@ -10,12 +10,12 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 
   const membership = await prisma.familyMembership.findUnique({
     where: { userId_familyId: { userId: user.id, familyId: params.id } },
-    select: { status: true, feePaidAt: true, mpStatus: true },
+    select: { status: true, feePaidAt: true, pixStatus: true },
   });
 
   return ok({
     membershipStatus: membership?.status ?? null,
     paid: membership?.feePaidAt !== null && membership?.feePaidAt !== undefined,
-    mpStatus: membership?.mpStatus ?? null,
+    pixStatus: membership?.pixStatus ?? null,
   });
 }

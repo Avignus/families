@@ -45,7 +45,7 @@ async function main() {
     process.exit(1);
   }
 
-  const fakePaymentId = pledge.mpPaymentId ?? `fake_pay_${Date.now()}`;
+  const fakePaymentId = pledge.pixPaymentId ?? `fake_pay_${Date.now()}`;
 
   const payload = {
     event: eventStatus === "CONFIRMED" || eventStatus === "APPROVED" ? "PAYMENT_CONFIRMED" : "PAYMENT_REPROVED",

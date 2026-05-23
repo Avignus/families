@@ -69,7 +69,7 @@ export async function autoDistributeCredits(userId: string, budgetCents: number)
           pledgerUserId: userId,
           amountCents: allocate,
           status: "active",
-          mpStatus: "approved",
+          pixStatus: "approved",
           creditsCentsUsed: allocate,
           paidAt: new Date(),
         },

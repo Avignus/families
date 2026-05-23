@@ -69,7 +69,7 @@ export async function DELETE(
     // Credit removed member's wallet: PIX already paid + credits used
     for (const pledge of pledges) {
       const creditAmount =
-        (pledge.paidAt ? (pledge.mpAmountCents ?? 0) : 0) + pledge.creditsCentsUsed;
+        (pledge.paidAt ? (pledge.pixAmountCents ?? 0) : 0) + pledge.creditsCentsUsed;
       if (creditAmount > 0) {
         await creditWallet(tx, params.userId, creditAmount, "member_removed", pledge.id);
       }

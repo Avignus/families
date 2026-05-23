@@ -29,9 +29,9 @@ export async function POST(
   // Refund whatever was charged if payment was already confirmed
   let refunded = false;
   const refundAmountCents = membership.feeChargedCents ?? family.entryFeeCents;
-  if (membership.feePaidAt && membership.mpPaymentId && !membership.feeRefundedAt && refundAmountCents > 0) {
+  if (membership.feePaidAt && membership.pixPaymentId && !membership.feeRefundedAt && refundAmountCents > 0) {
     try {
-      await refundPayment(membership.mpPaymentId, refundAmountCents);
+      await refundPayment(membership.pixPaymentId, refundAmountCents);
       refunded = true;
     } catch (refundErr) {
       console.error("Refund error:", refundErr);

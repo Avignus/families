@@ -64,7 +64,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
           currency: family.currency,
           status: "open",
           disbursedAt: null,
-          disbursementMpId: null,
+          disbursementId: null,
         },
         include: { owner: { select: { id: true, personaName: true, avatarUrl: true } } },
       })

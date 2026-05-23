@@ -33,8 +33,8 @@ export async function POST(req: NextRequest) {
     const item = await prisma.wishlistItem.findFirst({
       where: {
         OR: [
-          { disbursementMpId: transferId },
-          { disbursementMpId: { startsWith: "pending:" } },
+          { disbursementId: transferId },
+          { disbursementId: { startsWith: "pending:" } },
         ],
       },
     });

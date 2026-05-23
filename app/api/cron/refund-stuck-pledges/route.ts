@@ -30,8 +30,8 @@ export async function GET(req: NextRequest) {
           id: true,
           pledgerUserId: true,
           amountCents: true,
-          mpPaymentId: true,
-          mpAmountCents: true,
+          pixPaymentId: true,
+          pixAmountCents: true,
           creditsCentsUsed: true,
           paidAt: true,
         },
@@ -112,14 +112,14 @@ export async function GET(req: NextRequest) {
     const refundErrors: string[] = [];
 
     for (const pledge of paidPledges) {
-      const hasPixCharge = pledge.mpPaymentId && pledge.mpAmountCents;
+      const hasPixCharge = pledge.pixPaymentId && pledge.pixAmountCents;
       const hasCredits = pledge.creditsCentsUsed > 0;
 
       if (!hasPixCharge && !hasCredits) continue;
 
       if (hasPixCharge) {
         try {
-          await refundPayment(pledge.mpPaymentId!, pledge.mpAmountCents!);
+          await refundPayment(pledge.pixPaymentId!, pledge.pixAmountCents!);
           refundedCount++;
         } catch (err) {
           console.error(`Refund failed for pledge ${pledge.id}:`, err);
@@ -133,7 +133,7 @@ export async function GET(req: NextRequest) {
 
     const successfulPledgeIds = paidPledges
       .filter((p) => {
-        const hasPixCharge = p.mpPaymentId && p.mpAmountCents;
+        const hasPixCharge = p.pixPaymentId && p.pixAmountCents;
         const hasCredits = p.creditsCentsUsed > 0;
         if (!hasPixCharge && !hasCredits) return false;
         return !refundErrors.includes(p.id);
@@ -160,7 +160,7 @@ export async function GET(req: NextRequest) {
             });
           }
 
-          const totalRefundCents = (pledge.mpAmountCents ?? 0) + pledge.creditsCentsUsed;
+          const totalRefundCents = (pledge.pixAmountCents ?? 0) + pledge.creditsCentsUsed;
           const refundAmountFormatted = formatCurrency(totalRefundCents, item.family.currency);
           await createNotification(tx, {
             recipientUserId: pledge.pledgerUserId,

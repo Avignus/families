@@ -54,8 +54,8 @@ export async function DELETE(_req: NextRequest, { params }: { params: { itemId: 
     // Credit each pledger's wallet — full refund (PIX portion + credits used + service fee)
     // since this is a platform-initiated cancellation, not the pledger's choice
     for (const pledge of item.pledges) {
-      const paidViaPix = pledge.paidAt && pledge.mpAmountCents;
-      const creditAmount = (paidViaPix ? (pledge.mpAmountCents ?? 0) : 0) + pledge.creditsCentsUsed;
+      const paidViaPix = pledge.paidAt && pledge.pixAmountCents;
+      const creditAmount = (paidViaPix ? (pledge.pixAmountCents ?? 0) : 0) + pledge.creditsCentsUsed;
       if (creditAmount > 0) {
         await creditWallet(tx, pledge.pledgerUserId, creditAmount, "item_cancelled", pledge.id);
       }

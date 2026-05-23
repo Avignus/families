@@ -83,7 +83,7 @@ export async function GET(req: NextRequest) {
           pledgerUserId: userId,
           amountCents: allocate,
           status: "active",
-          mpStatus: "pending",
+          pixStatus: "pending",
         },
       });
 

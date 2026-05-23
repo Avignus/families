@@ -97,7 +97,7 @@ async function simulatePaid(pledgeId: string) {
     console.log(`\n→ Marcando pledge como pago...`);
     await prisma.pledge.update({
       where: { id: pledgeId },
-      data: { paidAt: new Date(), mpStatus: "approved" },
+      data: { paidAt: new Date(), pixStatus: "approved" },
     });
     console.log(`  ✓ paidAt definido`);
   } else {
@@ -159,21 +159,21 @@ async function simulatePaid(pledgeId: string) {
 
   const updated = await prisma.wishlistItem.findUnique({
     where: { id: item.id },
-    select: { disbursedAt: true, disbursementMpId: true },
+    select: { disbursedAt: true, disbursementId: true },
   });
 
-  if (!updated?.disbursementMpId) {
+  if (!updated?.disbursementId) {
     console.log(`  ✗ Repasse não registrado — verifique o erro acima.`);
     return;
   }
 
-  console.log(`  ✓ Repasse enviado! ID Asaas: ${updated.disbursementMpId}`);
+  console.log(`  ✓ Repasse enviado! ID Asaas: ${updated.disbursementId}`);
   console.log(`  ✓ disbursedAt: ${updated.disbursedAt}`);
 
   // Consulta o status do transfer no Asaas
   console.log(`\n→ Consultando status no Asaas...`);
   try {
-    const transfer = await getTransferStatus(updated.disbursementMpId);
+    const transfer = await getTransferStatus(updated.disbursementId);
     console.log(`\n━━━ Resultado Asaas ━━━━━━━━━━━━━━━━━━━━━━━━━`);
     console.log(`  Transfer ID : ${transfer.id}`);
     console.log(`  Status      : ${transfer.status}`);

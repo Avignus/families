@@ -79,8 +79,8 @@ export async function POST(req: NextRequest, { params }: { params: { itemId: str
 
       // Validate PIX minimum before doing anything irreversible
       if (pixPortion > 0) {
-        const mpAmountCents = Math.ceil(pixPortion * (1 + SERVICE_FEE_RATE));
-        if (mpAmountCents < ASAAS_MIN_CHARGE_CENTS) {
+        const pixAmountCents = Math.ceil(pixPortion * (1 + SERVICE_FEE_RATE));
+        if (pixAmountCents < ASAAS_MIN_CHARGE_CENTS) {
           const minPledge = Math.ceil(ASAAS_MIN_CHARGE_CENTS / (1 + SERVICE_FEE_RATE));
           throw Object.assign(
             new Error(`Contribuição mínima via PIX é R$ ${(minPledge / 100).toFixed(2).replace(".", ",")}${creditsUsed > 0 ? ` (você tem R$ ${(creditsUsed / 100).toFixed(2)} em créditos já aplicados)` : ""}`),
@@ -96,7 +96,7 @@ export async function POST(req: NextRequest, { params }: { params: { itemId: str
           amountCents: body.amountCents,
           creditsCentsUsed: creditsUsed,
           status: "active",
-          mpStatus: pixPortion === 0 ? "approved" : "pending",
+          pixStatus: pixPortion === 0 ? "approved" : "pending",
           paidAt: pixPortion === 0 ? new Date() : null,
         },
       });
@@ -149,11 +149,11 @@ export async function POST(req: NextRequest, { params }: { params: { itemId: str
 
     // Create PIX payment for the remaining portion (outside transaction)
     const baseUrl = getAppBaseUrl(req);
-    const mpAmountCents = Math.ceil(result.pixPortion * (1 + SERVICE_FEE_RATE));
+    const pixAmountCents = Math.ceil(result.pixPortion * (1 + SERVICE_FEE_RATE));
 
     try {
       const pix = await createPixPayment({
-        amountCents: mpAmountCents,
+        amountCents: pixAmountCents,
         description: `Families — ${result.gameName}`,
         payerSteamId: user.steamId,
         payerName: user.personaName,
@@ -164,12 +164,12 @@ export async function POST(req: NextRequest, { params }: { params: { itemId: str
       await prisma.pledge.update({
         where: { id: result.pledge.id },
         data: {
-          mpPaymentId: pix.paymentId,
-          mpAmountCents,
-          mpStatus: pix.status,
-          mpQrCode: pix.qrCode,
-          mpQrCodeBase64: pix.qrCodeBase64,
-          mpTicketUrl: pix.ticketUrl,
+          pixPaymentId: pix.paymentId,
+          pixAmountCents,
+          pixStatus: pix.status,
+          pixQrCode: pix.qrCode,
+          pixQrCodeBase64: pix.qrCodeBase64,
+          pixTicketUrl: pix.ticketUrl,
         },
       });
 

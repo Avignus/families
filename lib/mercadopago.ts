@@ -68,10 +68,10 @@ export async function createPixPayment(params: {
 }
 
 
-export async function getPaymentStatus(mpPaymentId: string): Promise<string | null> {
+export async function getPaymentStatus(pixPaymentId: string): Promise<string | null> {
   try {
     const payment = new Payment(getClient());
-    const result = await payment.get({ id: Number(mpPaymentId) });
+    const result = await payment.get({ id: Number(pixPaymentId) });
     return result.status ?? null;
   } catch {
     return null;
@@ -79,9 +79,9 @@ export async function getPaymentStatus(mpPaymentId: string): Promise<string | nu
 }
 
 // Partial refund — refunds only entryFeeCents, platform keeps service fee
-export async function refundEntryFee(mpPaymentId: string, entryFeeCents: number): Promise<void> {
+export async function refundEntryFee(pixPaymentId: string, entryFeeCents: number): Promise<void> {
   const amount = entryFeeCents / 100;
-  const res = await fetch(`https://api.mercadopago.com/v1/payments/${mpPaymentId}/refunds`, {
+  const res = await fetch(`https://api.mercadopago.com/v1/payments/${pixPaymentId}/refunds`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${process.env.MERCADOPAGO_ACCESS_TOKEN}`,

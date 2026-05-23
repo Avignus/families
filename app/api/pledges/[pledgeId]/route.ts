@@ -87,7 +87,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: { pledgeId
       }
     } else {
       // Owner-initiated removal: full refund to pledger wallet (money stays on platform)
-      const creditAmount = (pledge.paidAt ? (pledge.mpAmountCents ?? 0) : 0) + pledge.creditsCentsUsed;
+      const creditAmount = (pledge.paidAt ? (pledge.pixAmountCents ?? 0) : 0) + pledge.creditsCentsUsed;
       if (creditAmount > 0) {
         await creditWallet(tx, pledge.pledgerUserId, creditAmount, "pledge_removed_by_owner", pledge.id);
       }
@@ -115,9 +115,9 @@ export async function DELETE(_req: NextRequest, { params }: { params: { pledgeId
   // PIX bank refund only for voluntary pledger withdrawal (keep service fee)
   if (isPledger) {
     const pixPortion = pledge.amountCents - pledge.creditsCentsUsed;
-    if (pledge.paidAt && pledge.mpPaymentId && pixPortion > 0) {
+    if (pledge.paidAt && pledge.pixPaymentId && pixPortion > 0) {
       try {
-        await refundPayment(pledge.mpPaymentId, pixPortion);
+        await refundPayment(pledge.pixPaymentId, pixPortion);
       } catch (e) {
         console.error("Refund error on pledge withdrawal:", e);
       }

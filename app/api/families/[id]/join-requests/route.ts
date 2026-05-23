@@ -78,15 +78,15 @@ async function handlePost(req: NextRequest, params: { id: string }) {
     if (existing.status === "active") return err("ALREADY_MEMBER", "Already a member of this family");
     if (existing.status === "pending") {
       // Already has a valid pending PIX — return it
-      if (existing.mpPaymentId && !existing.feePaidAt) {
+      if (existing.pixPaymentId && !existing.feePaidAt) {
         return ok({
           message: "Join request pending payment",
           pendingPayment: true,
           pix: {
-            qrCode: existing.mpQrCode,
-            qrCodeBase64: existing.mpQrCodeBase64,
-            ticketUrl: existing.mpTicketUrl,
-            paymentId: existing.mpPaymentId,
+            qrCode: existing.pixQrCode,
+            qrCodeBase64: existing.pixQrCodeBase64,
+            ticketUrl: existing.pixTicketUrl,
+            paymentId: existing.pixPaymentId,
             expiresAt: new Date(existing.joinedAt.getTime() + 24 * 60 * 60 * 1000).toISOString(),
           },
         });
@@ -144,16 +144,16 @@ async function handlePost(req: NextRequest, params: { id: string }) {
     }
 
     // Resume existing pending spot payment
-    if (existing?.status === "pending" && existing.mpPaymentId && !existing.feePaidAt) {
+    if (existing?.status === "pending" && existing.pixPaymentId && !existing.feePaidAt) {
       return ok({
         message: "Spot payment pending",
         pendingPayment: true,
         spotPriceCents,
         pix: {
-          qrCode: existing.mpQrCode,
-          qrCodeBase64: existing.mpQrCodeBase64,
-          ticketUrl: existing.mpTicketUrl,
-          paymentId: existing.mpPaymentId,
+          qrCode: existing.pixQrCode,
+          qrCodeBase64: existing.pixQrCodeBase64,
+          ticketUrl: existing.pixTicketUrl,
+          paymentId: existing.pixPaymentId,
           expiresAt: new Date(existing.joinedAt.getTime() + 24 * 60 * 60 * 1000).toISOString(),
         },
       });
@@ -188,11 +188,11 @@ async function handlePost(req: NextRequest, params: { id: string }) {
     await prisma.familyMembership.update({
       where: { id: membership.id },
       data: {
-        mpPaymentId: pix.paymentId,
-        mpStatus: pix.status,
-        mpQrCode: pix.qrCode,
-        mpQrCodeBase64: pix.qrCodeBase64,
-        mpTicketUrl: pix.ticketUrl,
+        pixPaymentId: pix.paymentId,
+        pixStatus: pix.status,
+        pixQrCode: pix.qrCode,
+        pixQrCodeBase64: pix.qrCodeBase64,
+        pixTicketUrl: pix.ticketUrl,
       },
     });
 
@@ -293,11 +293,11 @@ async function handlePost(req: NextRequest, params: { id: string }) {
   await prisma.familyMembership.update({
     where: { id: membership.id },
     data: {
-      mpPaymentId: pix.paymentId,
-      mpStatus: pix.status,
-      mpQrCode: pix.qrCode,
-      mpQrCodeBase64: pix.qrCodeBase64,
-      mpTicketUrl: pix.ticketUrl,
+      pixPaymentId: pix.paymentId,
+      pixStatus: pix.status,
+      pixQrCode: pix.qrCode,
+      pixQrCodeBase64: pix.qrCodeBase64,
+      pixTicketUrl: pix.ticketUrl,
     },
   });
 

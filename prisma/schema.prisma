@@ -88,11 +88,11 @@ model FamilyMembership {
   joinedAt DateTime         @default(now())
 
   // Entry fee payment tracking (used when family.entryFeeCents > 0)
-  mpPaymentId       String?  @unique
-  mpStatus          String?
-  mpQrCode          String?
-  mpQrCodeBase64    String?
-  mpTicketUrl       String?
+  pixPaymentId      String?  @unique
+  pixStatus         String?
+  pixQrCode         String?
+  pixQrCodeBase64   String?
+  pixTicketUrl      String?
   feePaidAt         DateTime?
   feeChargedCents   Int?     // total charged (entry fee + service fee)
   feeRefundedAt     DateTime?
@@ -123,7 +123,7 @@ model WishlistItem {
   status           WishlistStatus @default(open)
   createdAt        DateTime       @default(now())
   disbursedAt          DateTime?
-  disbursementMpId     String?
+  disbursementId       String?
   pixKeyReminderLevel  Int       @default(0)
 
   family  Family  @relation(fields: [familyId], references: [id])
@@ -145,20 +145,20 @@ model Pledge {
   creditsCentsUsed Int           @default(0)
 
   // Payment tracking
-  mpPaymentId    String?       @unique
-  mpAmountCents  Int?          // actual PIX charged amount (pixPortion + service fee)
-  mpStatus       String?       // pending, approved, rejected, cancelled
-  mpQrCode       String?       // PIX QR code (copy & paste)
-  mpQrCodeBase64 String?       // QR code image
-  mpTicketUrl    String?       // payment link
-  paidAt         DateTime?
+  pixPaymentId    String?      @unique
+  pixAmountCents  Int?         // actual PIX charged amount (pixPortion + service fee)
+  pixStatus       String?      // pending, approved, rejected, cancelled
+  pixQrCode       String?      // PIX QR code (copy & paste)
+  pixQrCodeBase64 String?      // QR code image
+  pixTicketUrl    String?      // payment link
+  paidAt          DateTime?
 
   wishlistItem WishlistItem @relation(fields: [wishlistItemId], references: [id])
   pledger      User         @relation(fields: [pledgerUserId], references: [id])
 
   @@index([wishlistItemId, status])
   @@index([pledgerUserId])
-  @@index([mpPaymentId])
+  @@index([pixPaymentId])
 }
 
 model Vote {

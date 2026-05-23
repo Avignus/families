@@ -223,8 +223,8 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
             select: {
               id: true,
               pledgerUserId: true,
-              mpPaymentId: true,
-              mpAmountCents: true,
+              pixPaymentId: true,
+              pixAmountCents: true,
               amountCents: true,
               creditsCentsUsed: true,
               wishlistItem: { select: { steamAppId: true } },
@@ -235,7 +235,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
       // Paid entry fees not yet refunded → need refund
       memberships: {
         where: { feePaidAt: { not: null }, feeRefundedAt: null, userId: { not: user.id } },
-        select: { id: true, userId: true, mpPaymentId: true, feeChargedCents: true },
+        select: { id: true, userId: true, pixPaymentId: true, feeChargedCents: true },
       },
     },
   });
@@ -254,13 +254,13 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
 
   for (const pledge of paidPledges) {
     if (!pledge.pledgerUserId) continue;
-    const pixCents = pledge.mpAmountCents ?? 0;
+    const pixCents = pledge.pixAmountCents ?? 0;
     const walletCents = pledge.creditsCentsUsed ?? 0;
     let viaWallet = false;
 
-    if (pixCents > 0 && pledge.mpPaymentId) {
+    if (pixCents > 0 && pledge.pixPaymentId) {
       try {
-        await refundPayment(pledge.mpPaymentId, pixCents);
+        await refundPayment(pledge.pixPaymentId, pixCents);
       } catch {
         // Asaas failed (expired window, etc.) → credit wallet instead
         viaWallet = true;
@@ -282,9 +282,9 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
 
   for (const membership of paidMemberships) {
     let refunded = false;
-    if (membership.mpPaymentId && membership.feeChargedCents) {
+    if (membership.pixPaymentId && membership.feeChargedCents) {
       try {
-        await refundPayment(membership.mpPaymentId, membership.feeChargedCents);
+        await refundPayment(membership.pixPaymentId, membership.feeChargedCents);
         refunded = true;
       } catch {
         console.error(`Entry fee refund failed for membership ${membership.id} on family deletion`);
@@ -315,7 +315,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
     for (const r of pledgeRefunds) {
       if (r.viaWallet && r.refundCents > 0) {
         await creditWallet(tx, r.pledgerUserId, r.refundCents, "item_cancelled", r.pledgeId);
-      } else if ((r.refundCents - (paidPledges.find((p) => p.id === r.pledgeId)?.mpAmountCents ?? 0)) > 0) {
+      } else if ((r.refundCents - (paidPledges.find((p) => p.id === r.pledgeId)?.pixAmountCents ?? 0)) > 0) {
         // Re-credit the wallet-credits portion even when PIX refund succeeded
         const walletPortion = paidPledges.find((p) => p.id === r.pledgeId)?.creditsCentsUsed ?? 0;
         if (walletPortion > 0) {

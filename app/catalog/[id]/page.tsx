@@ -52,10 +52,10 @@ export default async function CatalogFamilyPage({ params }: { params: { id: stri
         where: { userId_familyId: { userId: currentUserId, familyId: params.id } },
         select: {
           status: true,
-          mpPaymentId: true,
-          mpQrCode: true,
-          mpQrCodeBase64: true,
-          mpTicketUrl: true,
+          pixPaymentId: true,
+          pixQrCode: true,
+          pixQrCodeBase64: true,
+          pixTicketUrl: true,
           feePaidAt: true,
         },
       })
@@ -64,7 +64,7 @@ export default async function CatalogFamilyPage({ params }: { params: { id: stri
   const isMember = myMembership?.status === "active";
   const hasPendingPayment =
     myMembership?.status === "pending" &&
-    !!myMembership.mpPaymentId &&
+    !!myMembership.pixPaymentId &&
     !myMembership.feePaidAt;
 
   // Calculate personalized spot price for logged-in non-members
@@ -268,11 +268,11 @@ export default async function CatalogFamilyPage({ params }: { params: { id: stri
                 initialStatus={myMembership?.status ?? null}
                 spotPriceCents={family.spotPricingEnabled ? spotPriceCents : null}
                 large
-                pendingPix={hasPendingPayment && myMembership?.mpQrCode ? {
-                  qrCode: myMembership.mpQrCode,
-                  qrCodeBase64: myMembership.mpQrCodeBase64 ?? "",
-                  ticketUrl: myMembership.mpTicketUrl ?? "",
-                  paymentId: myMembership.mpPaymentId!,
+                pendingPix={hasPendingPayment && myMembership?.pixQrCode ? {
+                  qrCode: myMembership.pixQrCode,
+                  qrCodeBase64: myMembership.pixQrCodeBase64 ?? "",
+                  ticketUrl: myMembership.pixTicketUrl ?? "",
+                  paymentId: myMembership.pixPaymentId!,
                 } : null}
               />
             </div>
