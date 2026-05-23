@@ -93,11 +93,16 @@ export function PledgeModal({
       }
 
       setConfirmedAmount(amountCents);
-      setPixData(data.data?.pix ?? null);
+      const pixResult = data.data?.pix ?? null;
+      setPixData(pixResult);
       setPledgeId(data.data?.pledge?.id ?? null);
       onOpenChange(false);
       setInputStr("");
-      setPixOpen(true);
+      if (pixResult) {
+        setPixOpen(true);
+      } else {
+        toast.success(t.pledge.fullyByBalance);
+      }
       onSuccess();
     } finally {
       setLoading(false);
