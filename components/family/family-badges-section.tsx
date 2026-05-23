@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Loader2, Shield } from "lucide-react";
 import { RARITY_CONFIG } from "@/lib/cosmetics";
+import { useLanguage } from "@/lib/i18n/context";
 
 type BadgeMember = {
   userId: string;
@@ -69,8 +70,10 @@ export function FamilyBadgesSection({ familyId, compact = false }: Props) {
 }
 
 function BadgeCard({ badge, compact }: { badge: Badge; compact: boolean }) {
+  const { t } = useLanguage();
   const cfg = RARITY_CONFIG[badge.rarity] ?? RARITY_CONFIG.comum;
   const [imgError, setImgError] = useState(false);
+  const title = t.achievements[badge.slug] ?? badge.title;
 
   return (
     <div
@@ -82,7 +85,7 @@ function BadgeCard({ badge, compact }: { badge: Badge; compact: boolean }) {
         {!imgError ? (
           <img
             src={`/badges/${badge.slug}.png`}
-            alt={badge.title}
+            alt={title}
             className={`object-contain ${compact ? "w-10 h-10" : "w-20 h-20"}`}
             onError={() => setImgError(true)}
           />
@@ -90,13 +93,13 @@ function BadgeCard({ badge, compact }: { badge: Badge; compact: boolean }) {
           <Shield className={`${compact ? "h-6 w-6" : "h-12 w-12"} ${cfg.color}`} />
         )}
         <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 whitespace-nowrap text-[11px] bg-popover border border-border rounded px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-md text-foreground">
-          {badge.title}
+          {title}
         </span>
       </div>
 
       {/* Title */}
       <p className={`font-semibold leading-tight line-clamp-2 ${compact ? "text-[10px]" : "text-sm"}`}>
-        {badge.title}
+        {title}
       </p>
 
       {/* Rarity label */}

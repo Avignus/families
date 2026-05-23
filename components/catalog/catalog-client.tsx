@@ -711,18 +711,19 @@ function FamilyCard({
           <div className="flex items-center gap-1 flex-wrap">
             {badges.slice(0, 6).map((b) => {
               const cfg = RARITY_CONFIG[b.rarity] ?? RARITY_CONFIG.comum;
+              const badgeTitle = t.achievements[b.slug] ?? b.title;
               return (
                 <span key={b.slug} className="relative group cursor-default">
                   <span className={`flex items-center justify-center w-7 h-7 rounded-full ${cfg.bg}`}>
                     <img
                       src={`/badges/${b.slug}.png`}
-                      alt={b.title}
+                      alt={badgeTitle}
                       className="w-5 h-5 object-contain"
                       onError={(e) => { e.currentTarget.style.visibility = "hidden"; }}
                     />
                   </span>
                   <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 whitespace-nowrap text-[10px] bg-popover border border-border rounded px-1.5 py-0.5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-md text-foreground">
-                    {b.title}
+                    {badgeTitle}
                   </span>
                 </span>
               );
