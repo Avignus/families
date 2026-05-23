@@ -8,6 +8,7 @@ import { maybeDisburseFunds } from "@/lib/disbursement";
 import { creditWallet } from "@/lib/wallet";
 import { autoDistributeCredits } from "@/lib/auto-distribute";
 import { computeAndSaveFamilyReputation } from "@/lib/family-reputation";
+import { getOwnedGames } from "@/lib/steam";
 import { checkAchievements } from "@/lib/achievements";
 
 export const dynamic = "force-dynamic";
@@ -46,7 +47,7 @@ export async function POST(req: NextRequest) {
       where: { id: membershipId },
       include: {
         family: { select: { id: true, name: true, chiefId: true, entryFeeCents: true, currency: true, autoApprove: true } },
-        user: { select: { id: true, personaName: true } },
+        user: { select: { id: true, personaName: true, steamId: true } },
       },
     });
     if (membership) await handleMembershipPayment(membership, status, paymentId);
@@ -59,7 +60,7 @@ export async function POST(req: NextRequest) {
       where: { id: membershipId },
       include: {
         family: { select: { id: true, name: true, chiefId: true, entryFeeCents: true, currency: true, autoApprove: true } },
-        user: { select: { id: true, personaName: true } },
+        user: { select: { id: true, personaName: true, steamId: true } },
       },
     });
     if (membership) await handleSpotPayment(membership, status, paymentId);
@@ -119,7 +120,7 @@ type MembershipWithFamily = {
   feeChargedCents: number | null;
   feeRefundedAt: Date | null;
   family: { id: string; name: string; chiefId: string; entryFeeCents: number; currency: string; autoApprove: boolean };
-  user: { id: string; personaName: string };
+  user: { id: string; personaName: string; steamId: string };
 };
 
 async function handleMembershipPayment(membership: MembershipWithFamily, status: string, paymentId: string) {
@@ -203,6 +204,9 @@ async function handleMembershipPayment(membership: MembershipWithFamily, status:
         select: { feePaidAt: true },
       });
       if (!activated?.feePaidAt) return;
+
+      // Sync new member's Steam library immediately so family stats are accurate
+      getOwnedGames(membership.user.steamId).catch(() => {});
 
       // Disburse entry fee to chief — or hold in wallet if chief has no PIX key
       const chief = await prisma.user.findUnique({
@@ -351,6 +355,9 @@ async function handleSpotPayment(membership: MembershipWithFamily, status: strin
         select: { feePaidAt: true },
       });
       if (!activated?.feePaidAt) return;
+
+      // Sync new member's Steam library immediately so family stats are accurate
+      getOwnedGames(membership.user.steamId).catch(() => {});
 
       // Credit 88% to chief's spot earnings balance
       if (membership.feeChargedCents && membership.feeChargedCents > 0) {

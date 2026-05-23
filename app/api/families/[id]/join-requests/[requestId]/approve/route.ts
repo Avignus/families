@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { requireSession, isApiError, ok, err } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { createNotification } from "@/lib/notifications/service";
+import { getOwnedGames } from "@/lib/steam";
 
 export async function POST(
   _req: NextRequest,
@@ -52,6 +53,9 @@ export async function POST(
       payload: { familyId: family.id, familyName: family.name },
     });
   });
+
+  // Sync new member's Steam library so family stats are accurate immediately
+  getOwnedGames(membership.user.steamId).catch(() => {});
 
   return ok({ message: "Request approved" });
 }
