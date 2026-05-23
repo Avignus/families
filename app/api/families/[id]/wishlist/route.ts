@@ -43,6 +43,14 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     return err("STEAM_APP_NOT_FOUND", "Game not found on Steam", 404);
   }
 
+  if (!steamData.isFree && steamData.priceCents < 2000) {
+    return err(
+      "PRICE_TOO_LOW",
+      `Este jogo custa R$ ${(steamData.priceCents / 100).toFixed(2).replace(".", ",")} — o valor mínimo para repasse via PIX é R$ 20,00.`,
+      422
+    );
+  }
+
   const family = await prisma.family.findUnique({ where: { id: params.id } });
   if (!family) return err("NOT_FOUND", "Family not found", 404);
 
