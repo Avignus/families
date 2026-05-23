@@ -403,14 +403,6 @@
   animation: mist-drift 6s ease-in-out infinite;
 }
 
-/* Shimmer Dourado — diagonal gold light sweep */
-.cover-overlay-shimmer::before {
-  content: ""; position: absolute; inset: 0;
-  background: linear-gradient(105deg, transparent 35%, rgba(251,191,36,0.50) 50%, transparent 65%);
-  background-size: 200% 100%;
-  animation: gold-shimmer 4s linear infinite;
-}
-
 /* Bandeiras ao Vento — green oscillating shimmer */
 .cover-overlay-flags::after {
   content: ""; position: absolute; top: 0; left: 0; right: 0; height: 40%;
@@ -429,10 +421,16 @@
   animation: rain-fall 1.5s linear infinite;
 }
 
+/* Shimmer Dourado — static gold glow at bottom, opacity only */
+@keyframes shimmer-glow {
+  0%,100% { opacity: 0.55; }
+  50%      { opacity: 1; }
+}
+
 /* Radiância Real — golden light pulse from below */
 @keyframes radiance-pulse {
-  0%,100% { opacity: 0.4; transform: scaleX(1); }
-  50%      { opacity: 0.75; transform: scaleX(1.04); }
+  0%,100% { opacity: 0.4; }
+  50%      { opacity: 0.75; }
 }
 .cover-overlay-radiance::after {
   content: ""; position: absolute; bottom: 0; left: 0; right: 0; height: 55%;

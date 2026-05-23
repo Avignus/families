@@ -24,11 +24,11 @@ const OVERLAY_ELEMENTS: Record<string, React.ReactNode> = {
   ),
   "cover-overlay-shimmer": (
     <div
-      className="absolute inset-0 pointer-events-none"
+      className="absolute bottom-0 left-0 right-0 pointer-events-none"
       style={{
-        background: "linear-gradient(105deg, transparent 35%, rgba(251,191,36,0.5) 50%, transparent 65%)",
-        backgroundSize: "200% 100%",
-        animation: "gold-shimmer 4s linear infinite",
+        height: "60%",
+        background: "radial-gradient(ellipse at 50% 110%, rgba(251,191,36,0.7) 0%, rgba(251,160,0,0.3) 40%, transparent 70%)",
+        animation: "shimmer-glow 3s ease-in-out infinite",
       }}
     />
   ),
