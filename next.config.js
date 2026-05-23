@@ -1,3 +1,5 @@
+const { withSentryConfig } = require("@sentry/nextjs");
+
 /** @type {import('next').NextConfig} */
 const securityHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },
@@ -19,7 +21,7 @@ const securityHeaders = [
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob: https://*.steamstatic.com https://store.steampowered.com https://*.public.blob.vercel-storage.com",
       "font-src 'self'",
-      "connect-src 'self' https://steamcommunity.com https://api.steampowered.com",
+      "connect-src 'self' https://steamcommunity.com https://api.steampowered.com https://*.sentry.io https://*.ingest.sentry.io",
       "frame-src https://my.spline.design",
       "frame-ancestors 'none'",
       "form-action 'self' https://steamcommunity.com",
@@ -52,4 +54,12 @@ const nextConfig = {
   },
 };
 
-module.exports = nextConfig;
+module.exports = withSentryConfig(nextConfig, {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  silent: true,          // sem output no build
+  disableLogger: true,
+  widenClientFileUpload: true,
+  hideSourceMaps: true,  // não expõe source maps no bundle do cliente
+});
