@@ -25,11 +25,14 @@ export async function debitWallet(
   reason: string,
   pledgeId?: string
 ): Promise<void> {
+  const result = await tx.user.updateMany({
+    where: { id: userId, creditsCents: { gte: amountCents } },
+    data: { creditsCents: { decrement: amountCents } },
+  });
+  if (result.count === 0) {
+    throw Object.assign(new Error("Saldo insuficiente"), { code: "INSUFFICIENT_CREDITS", status: 400 });
+  }
   await tx.walletTransaction.create({
     data: { userId, amountCents, type: "debit", reason, pledgeId: pledgeId ?? null },
-  });
-  await tx.user.update({
-    where: { id: userId },
-    data: { creditsCents: { decrement: amountCents } },
   });
 }
