@@ -706,18 +706,23 @@ export function SteamLibraryPanel({ familyId, currentUserId, memberColors, share
   async function handleSync() {
     setSyncing(true);
     try {
-      const endpoint = tab === "library" ? "/api/me/steam/sync-library" : "/api/me/steam/sync-wishlist";
-      const res = await fetch(endpoint, { method: "POST" });
-      if (res.ok) {
-        toast.success(tab === "library" ? "Biblioteca sincronizada" : "Wishlist sincronizada");
+      if (tab === "library") {
+        // Sync only the current user's library
+        const res = await fetch("/api/me/steam/sync-library", { method: "POST" });
+        if (res.ok) {
+          toast.success("Biblioteca sincronizada");
+        } else {
+          const data = await res.json();
+          const code = data.error?.code;
+          const msg =
+            code === "STEAM_PRIVATE" ? "Perfil Steam privado — biblioteca indisponível."
+            : "Erro ao sincronizar biblioteca.";
+          toast.error(msg);
+        }
       } else {
-        const data = await res.json();
-        const code = data.error?.code;
-        const msg =
-          code === "RATE_LIMITED" ? "Steam limitando requisições, tente em alguns segundos."
-          : code === "STEAM_PRIVATE" ? `Perfil Steam privado — ${tab === "library" ? "biblioteca" : "wishlist"} indisponível.`
-          : `Erro ao sincronizar ${tab === "library" ? "biblioteca" : "wishlist"}.`;
-        toast.error(msg);
+        // Invalidate wishlist cache for ALL members, then re-fetch
+        await fetch(`/api/families/${familyId}/steam-library`, { method: "POST" });
+        toast.success("Wishlist de todos os membros atualizada");
       }
     } catch {
       toast.error(`Erro ao sincronizar ${tab === "library" ? "biblioteca" : "wishlist"}.`);

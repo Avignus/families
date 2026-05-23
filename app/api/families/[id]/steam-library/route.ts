@@ -101,3 +101,33 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 
   return ok({ members: enrichedMembers, steamKeyInvalid });
 }
+
+// POST — invalidates wishlist cache for all active members so the next GET fetches fresh data.
+// Any active member can trigger this; it's a soft invalidation (sets fetchedAt=0, not delete).
+export async function POST(_req: NextRequest, { params }: { params: { id: string } }) {
+  const user = await requireSession();
+  if (isApiError(user)) return user;
+
+  const membership = await prisma.familyMembership.findUnique({
+    where: { userId_familyId: { userId: user.id, familyId: params.id } },
+    select: { status: true },
+  });
+  if (!membership || membership.status !== "active") {
+    return err("FORBIDDEN", "Not an active member", 403);
+  }
+
+  const memberships = await prisma.familyMembership.findMany({
+    where: { familyId: params.id, status: "active" },
+    include: { user: { select: { steamId: true } } },
+  });
+
+  const steamIds = memberships.map((m) => m.user.steamId).filter(Boolean);
+
+  // Expire wishlist caches so the next GET fetches fresh data from Steam
+  await prisma.steamUserCache.updateMany({
+    where: { userId: { in: steamIds }, type: "wishlist" },
+    data: { fetchedAt: new Date(0) },
+  });
+
+  return ok({ invalidated: steamIds.length });
+}
