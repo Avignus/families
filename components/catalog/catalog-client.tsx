@@ -549,13 +549,13 @@ function FamilyCard({
 
   return (
     <div
-      className="relative rounded-xl border border-border/50 bg-card overflow-hidden flex flex-col hover:border-primary/30 transition-colors"
+      className="relative rounded-xl border border-border/50 bg-card flex flex-col hover:border-primary/30 transition-colors"
       style={familyCardStyle(family)}
     >
       {/* Full-card link overlay — own family goes to management page */}
       <Link href={isOwn ? `/families/${family.id}` : `/catalog/${family.id}`} className="absolute inset-0 z-0" aria-label={family.name} />
 
-      <div className="h-20 overflow-hidden bg-secondary pointer-events-none relative isolate">
+      <div className="h-20 overflow-hidden bg-secondary pointer-events-none relative isolate rounded-t-xl">
         {family.coverVideo ? (
           <CoverVideo config={family.coverVideo.config as { videoPath?: string }} />
         ) : family.coverTheme ? (
