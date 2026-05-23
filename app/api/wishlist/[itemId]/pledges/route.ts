@@ -117,43 +117,29 @@ export async function POST(req: NextRequest, { params }: { params: { itemId: str
       const gameName = steamData?.name ?? `App #${wishlistItem.steamAppId}`;
       const percent = Math.round((body.amountCents / wishlistItem.targetPriceCents) * 100);
 
-      if (wishlistItem.ownerUserId && wishlistItem.ownerUserId !== user.id) {
-        await createNotification(tx, {
-          recipientUserId: wishlistItem.ownerUserId,
-          type: "PLEDGE_RECEIVED",
-          payload: {
-            pledgeId: pledge.id,
-            itemId: params.itemId,
-            familyId: wishlistItem.familyId,
-            familyName: wishlistItem.family.name,
-            ownerUserId: wishlistItem.ownerUserId,
-            gameName,
-            pledgerId: user.id,
-            personaName: user.personaName,
-            amountCents: body.amountCents,
-            currency: wishlistItem.currency,
-            percent,
-          },
-        });
-      }
-
-      if (isFunded && wishlistItem.ownerUserId) {
-        await createNotification(tx, {
-          recipientUserId: wishlistItem.ownerUserId,
-          type: "ITEM_FUNDED",
-          payload: {
-            itemId: params.itemId,
-            familyId: wishlistItem.familyId,
-            familyName: wishlistItem.family.name,
-            ownerUserId: wishlistItem.ownerUserId,
-            gameName,
-            currency: wishlistItem.currency,
-          },
-        });
-      }
-
       return { pledge, isFunded, newTotal, percent, gameName, wishlistItem, creditsUsed, pixPortion };
-    });
+    }, { timeout: 15000 });
+
+    // Send notifications outside the transaction (avoid tx timeout)
+    const notifPayloadBase = {
+      pledgeId: result.pledge.id,
+      itemId: params.itemId,
+      familyId: result.wishlistItem.familyId,
+      familyName: result.wishlistItem.family.name,
+      ownerUserId: result.wishlistItem.ownerUserId ?? "",
+      gameName: result.gameName,
+      pledgerId: user.id,
+      personaName: user.personaName,
+      amountCents: body.amountCents,
+      currency: result.wishlistItem.currency,
+      percent: result.percent,
+    };
+    if (result.wishlistItem.ownerUserId && result.wishlistItem.ownerUserId !== user.id) {
+      createNotification(prisma, { recipientUserId: result.wishlistItem.ownerUserId, type: "PLEDGE_RECEIVED", payload: notifPayloadBase }).catch(() => {});
+    }
+    if (result.isFunded && result.wishlistItem.ownerUserId) {
+      createNotification(prisma, { recipientUserId: result.wishlistItem.ownerUserId, type: "ITEM_FUNDED", payload: { itemId: params.itemId, familyId: result.wishlistItem.familyId, familyName: result.wishlistItem.family.name, ownerUserId: result.wishlistItem.ownerUserId, gameName: result.gameName, currency: result.wishlistItem.currency } }).catch(() => {});
+    }
 
     // Fully covered by credits — no PIX charge needed
     if (result.pixPortion === 0) {
