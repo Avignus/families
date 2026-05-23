@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/utils";
-import { ArrowLeft, Crown, Users, Lock, Unlock, Gamepad2, ShoppingCart, TrendingUp, Library, Trophy, Zap } from "lucide-react";
+import { ArrowLeft, Crown, Users, Lock, Unlock, Gamepad2, ShoppingCart, TrendingUp, Library, Trophy, Zap, Medal } from "lucide-react";
 import { FamilyCoverArt } from "@/components/family-cover-art";
 import Link from "next/link";
 import { CatalogJoinButton } from "@/components/catalog/catalog-join-button";
@@ -14,6 +14,7 @@ import { CatalogWishlistItem } from "@/components/catalog/catalog-wishlist-item"
 import { CatalogSteamPanel } from "@/components/catalog/catalog-steam-panel";
 import { getServerTranslations } from "@/lib/i18n/server";
 import { FamilyTierBadge } from "@/components/family-tier-badge";
+import { FamilyBadgesSection } from "@/components/family/family-badges-section";
 
 export const dynamic = "force-dynamic";
 
@@ -322,6 +323,15 @@ export default async function CatalogFamilyPage({ params }: { params: { id: stri
           </div>
         </div>
       )}
+
+      {/* Family badges */}
+      <div className="space-y-3">
+        <h2 className="font-semibold flex items-center gap-2 text-sm">
+          <Medal className="h-4 w-4 text-amber-400" />
+          Insígnias da família
+        </h2>
+        <FamilyBadgesSection familyId={params.id} />
+      </div>
 
       {/* Recently purchased */}
       {purchasedWithSteam.length > 0 && (

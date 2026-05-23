@@ -14,8 +14,9 @@ import { GameSearchModal } from "@/components/wishlist/game-search-modal";
 import { VotesPanel } from "@/components/votes/votes-panel";
 import { SteamLibraryPanel } from "@/components/family/steam-library-panel";
 import { MemberActions } from "@/components/family/member-actions";
-import { Plus, ChevronDown, ChevronUp, Settings, Copy, LogIn, Gamepad2, Check, X, Camera, AlertTriangle, Library, Share2, Wallet, ShoppingCart } from "lucide-react";
+import { Plus, ChevronDown, ChevronUp, Settings, Copy, LogIn, Gamepad2, Check, X, Camera, AlertTriangle, Library, Share2, Wallet, ShoppingCart, Medal } from "lucide-react";
 import { RecommendationsSection } from "@/components/recommendations/recommendations-section";
+import { FamilyBadgesSection } from "@/components/family/family-badges-section";
 import { FamilyTierBadge } from "@/components/family-tier-badge";
 import { ReputationBadge } from "@/components/reputation-badge";
 import { getTier, TIER_COLORS } from "@/lib/reputation";
@@ -674,6 +675,16 @@ export function FamilyPageClient({
               </div>
             </>
           )}
+
+          {/* Family badges */}
+          <Separator />
+          <div>
+            <h3 className="font-semibold mb-3 flex items-center gap-2 text-sm">
+              <Medal className="h-4 w-4 text-amber-400" />
+              Insígnias da família
+            </h3>
+            <FamilyBadgesSection familyId={familyId} />
+          </div>
 
           {/* AI recommendations */}
           <RecommendationsSection
