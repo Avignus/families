@@ -28,6 +28,15 @@ export async function POST(req: NextRequest, { params }: { params: { itemId: str
   const body = await parseBody(req, PledgeSchema);
   if (isApiError(body)) return body;
 
+  // Fetch Steam data before transaction — external API call, cannot be inside a tx
+  const wishlistItemForSteam = await prisma.wishlistItem.findUnique({
+    where: { id: params.itemId },
+    select: { steamAppId: true },
+  });
+  const steamData = wishlistItemForSteam
+    ? await getAppDetails(wishlistItemForSteam.steamAppId)
+    : null;
+
   try {
     const result = await prisma.$transaction(async (tx) => {
       const wishlistItem = await tx.wishlistItem.findUnique({
@@ -103,7 +112,6 @@ export async function POST(req: NextRequest, { params }: { params: { itemId: str
         await tx.wishlistItem.update({ where: { id: params.itemId }, data: { status: "funded" } });
       }
 
-      const steamData = await getAppDetails(wishlistItem.steamAppId);
       const gameName = steamData?.name ?? `App #${wishlistItem.steamAppId}`;
       const percent = Math.round((body.amountCents / wishlistItem.targetPriceCents) * 100);
 
