@@ -32,6 +32,8 @@ type Props = {
   initialAmountCents?: number;
 };
 
+const QUICK_PCTS = [25, 50, 75, 100] as const;
+
 export function PledgeModal({
   open, onOpenChange, itemId, gameName,
   targetPriceCents, totalPledgedCents, currency, userCreditsCents, onSuccess, initialAmountCents,
@@ -39,13 +41,6 @@ export function PledgeModal({
   const { t } = useLanguage();
   const [mode, setMode] = useState<"amount" | "percent">("amount");
   const [inputStr, setInputStr] = useState("");
-
-  useEffect(() => {
-    if (open && initialAmountCents && initialAmountCents > 0) {
-      setMode("amount");
-      setInputStr((initialAmountCents / 100).toFixed(2));
-    }
-  }, [open, initialAmountCents]);
   const [loading, setLoading] = useState(false);
   const [pixOpen, setPixOpen] = useState(false);
   const [pixData, setPixData] = useState<PixData | null>(null);
@@ -53,21 +48,40 @@ export function PledgeModal({
   const [pledgeId, setPledgeId] = useState<string | null>(null);
 
   const remaining = targetPriceCents - totalPledgedCents;
+
+  useEffect(() => {
+    if (open && initialAmountCents && initialAmountCents > 0) {
+      setMode("amount");
+      setInputStr((initialAmountCents / 100).toFixed(2));
+    }
+  }, [open, initialAmountCents]);
+
   const inputNum = parseFloat(inputStr.replace(",", ".")) || 0;
+
+  // % mode is always relative to remaining (100% = fill the gap)
   const amountCents = mode === "amount"
     ? Math.round(inputNum * 100)
-    : Math.round((inputNum / 100) * targetPriceCents);
-  const percent = targetPriceCents > 0 ? Math.round((amountCents / targetPriceCents) * 100) : 0;
+    : Math.min(remaining, Math.round((inputNum / 100) * remaining));
+
+  const percent = targetPriceCents > 0
+    ? Math.round((amountCents / targetPriceCents) * 100)
+    : 0;
+
   const isValid = amountCents > 0 && amountCents <= remaining;
 
-  // Credits vs PIX split (mirrors backend logic)
   const creditsUsed = Math.min(userCreditsCents, amountCents);
   const pixPortion = amountCents - creditsUsed;
+
+  const fillAmount = (cents: number) => {
+    setMode("amount");
+    setInputStr((cents / 100).toFixed(2));
+  };
 
   const switchMode = (next: "amount" | "percent") => {
     if (next === mode) return;
     if (next === "percent") {
-      setInputStr(amountCents > 0 ? String(percent) : "");
+      const pct = remaining > 0 ? Math.round((amountCents / remaining) * 100) : 0;
+      setInputStr(amountCents > 0 ? String(pct) : "");
     } else {
       setInputStr(amountCents > 0 ? (amountCents / 100).toFixed(2) : "");
     }
@@ -117,19 +131,31 @@ export function PledgeModal({
             <DialogTitle>{t.pledge.title(gameName)}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
+
+            {/* Stats — clicking fills the input */}
             <div className="grid grid-cols-3 gap-2 text-sm">
-              <div className="rounded-lg bg-secondary/50 p-2.5 text-center">
+              <button
+                type="button"
+                onClick={() => fillAmount(targetPriceCents)}
+                className="rounded-lg bg-secondary/50 hover:bg-secondary/80 transition-colors p-2.5 text-center cursor-pointer"
+                title="Preencher com preço alvo"
+              >
                 <p className="text-xs text-muted-foreground mb-0.5">{t.pledge.targetPrice}</p>
                 <p className="font-semibold">{formatCurrency(targetPriceCents, currency)}</p>
-              </div>
+              </button>
               <div className="rounded-lg bg-secondary/50 p-2.5 text-center">
                 <p className="text-xs text-muted-foreground mb-0.5">{t.pledge.contributed}</p>
                 <p className="font-semibold">{formatCurrency(totalPledgedCents, currency)}</p>
               </div>
-              <div className="rounded-lg bg-primary/10 border border-primary/20 p-2.5 text-center">
+              <button
+                type="button"
+                onClick={() => fillAmount(remaining)}
+                className="rounded-lg bg-primary/10 border border-primary/20 hover:bg-primary/20 transition-colors p-2.5 text-center cursor-pointer"
+                title="Preencher com valor restante"
+              >
                 <p className="text-xs text-muted-foreground mb-0.5">{t.pledge.remaining}</p>
                 <p className="font-semibold text-primary">{formatCurrency(remaining, currency)}</p>
-              </div>
+              </button>
             </div>
 
             <div>
@@ -154,6 +180,7 @@ export function PledgeModal({
                   ))}
                 </div>
               </div>
+
               <div className="relative">
                 <Input
                   type="number"
@@ -171,6 +198,24 @@ export function PledgeModal({
                   {mode === "percent" ? "%" : currency}
                 </span>
               </div>
+
+              {/* Quick percentage buttons */}
+              <div className="flex gap-1.5 mt-2">
+                {QUICK_PCTS.map((pct) => {
+                  const cents = pct === 100 ? remaining : Math.round((pct / 100) * remaining);
+                  return (
+                    <button
+                      key={pct}
+                      type="button"
+                      onClick={() => fillAmount(cents)}
+                      className="flex-1 text-xs py-1 rounded border border-border/50 text-muted-foreground hover:border-primary/50 hover:text-primary hover:bg-primary/5 transition-colors"
+                    >
+                      {pct}%
+                    </button>
+                  );
+                })}
+              </div>
+
               {amountCents > 0 && (
                 <p className={`text-xs mt-1.5 ${isValid ? "text-primary" : "text-destructive"}`}>
                   {isValid
