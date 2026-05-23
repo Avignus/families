@@ -44,6 +44,7 @@ type Props = {
     targetPriceCents: number;
     currency: string;
     status: string;
+    disbursedAt: string | null;
     ownerUserId: string | null;
     owner: { id: string; personaName: string; avatarUrl: string; avatarMedium: string } | null;
     totalPledgedCents: number;
@@ -405,7 +406,7 @@ export function WishlistItemCard({ item, familyId, currentUserId, memberColors, 
                       {!pledge.paidAt && (
                         <span title="Pagamento pendente"><Clock className="h-2.5 w-2.5 text-amber-400/70 flex-shrink-0" /></span>
                       )}
-                      {isMyPledge && (item.status === "open" || item.status === "funded") && (
+                      {isMyPledge && (item.status === "open" || item.status === "funded") && !item.disbursedAt && (
                         <button
                           onClick={() => handleWithdrawPledge(pledge.id)}
                           className="text-muted-foreground/50 hover:text-destructive transition-colors ml-0.5"
@@ -414,7 +415,7 @@ export function WishlistItemCard({ item, familyId, currentUserId, memberColors, 
                           <Minus className="h-3 w-3" />
                         </button>
                       )}
-                      {!isMyPledge && isOwner && (item.status === "open" || item.status === "funded") && (
+                      {!isMyPledge && isOwner && (item.status === "open" || item.status === "funded") && !item.disbursedAt && (
                         <button
                           onClick={() => handleRemovePledge(pledge.id)}
                           className="text-muted-foreground/50 hover:text-destructive transition-colors ml-0.5"

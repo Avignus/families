@@ -45,6 +45,7 @@ type WishlistItem = {
   targetPriceCents: number;
   currency: string;
   status: string;
+  disbursedAt: string | null;
   ownerUserId: string | null;
   owner: Member | null;
   totalPledgedCents: number;
