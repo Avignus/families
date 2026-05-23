@@ -675,7 +675,11 @@ export function FamilyPageClient({
           )}
 
           {/* AI recommendations */}
-          <RecommendationsSection familyId={familyId} currentUserId={userId} />
+          <RecommendationsSection
+            familyId={familyId}
+            currentUserId={userId}
+            wishlistAppIds={new Set(family?.wishlistItems.filter(i => i.status !== "cancelled").map(i => i.steamAppId) ?? [])}
+          />
 
           {/* Steam — games & unified wishlist */}
           <Separator />

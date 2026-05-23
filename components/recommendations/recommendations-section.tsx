@@ -38,16 +38,17 @@ type Quota = {
 type Props = {
   familyId: string;
   currentUserId: string;
+  wishlistAppIds: Set<number>;
 };
 
-function RecommendationCard({ rec, familyId }: { rec: Recommendation; familyId: string }) {
+function RecommendationCard({ rec, familyId, wishlistAppIds }: { rec: Recommendation; familyId: string; wishlistAppIds: Set<number> }) {
   const qc = useQueryClient();
   const cardRef = useRef<HTMLAnchorElement>(null);
   const reasonRef = useRef<HTMLParagraphElement>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [tooltipRect, setTooltipRect] = useState<DOMRect | null>(null);
   const [adding, setAdding] = useState(false);
-  const [added, setAdded] = useState(false);
+  const added = wishlistAppIds.has(rec.steamAppId);
 
   const openTooltip = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
@@ -93,7 +94,6 @@ function RecommendationCard({ rec, familyId }: { rec: Recommendation; familyId: 
         toast.error(code === "GAME_ALREADY_IN_FAMILY" ? "Jogo já está na lista" : (data.error?.message ?? "Erro ao adicionar"));
         return;
       }
-      setAdded(true);
       toast.success("Adicionado à lista", { description: rec.steamData?.name ?? rec.gameName });
       qc.invalidateQueries({ queryKey: ["family", familyId] });
     } finally {
@@ -185,7 +185,7 @@ function EmptyState({ label }: { label: string }) {
   return <p className="text-xs text-muted-foreground py-1">{label}</p>;
 }
 
-export function RecommendationsSection({ familyId, currentUserId }: Props) {
+export function RecommendationsSection({ familyId, currentUserId, wishlistAppIds }: Props) {
   const [expanded, setExpanded] = useState(true);
 
   const familyQuery = useQuery<{ recs: Recommendation[]; quota: Quota }>({
@@ -327,7 +327,7 @@ export function RecommendationsSection({ familyId, currentUserId }: Props) {
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Para a família</p>
                 <div className="flex gap-3 overflow-x-auto pb-2">
                   {familyRecs.map((rec) => (
-                    <RecommendationCard key={rec.id} rec={rec} familyId={familyId} />
+                    <RecommendationCard key={rec.id} rec={rec} familyId={familyId} wishlistAppIds={wishlistAppIds} />
                   ))}
                 </div>
               </div>
@@ -338,7 +338,7 @@ export function RecommendationsSection({ familyId, currentUserId }: Props) {
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Para você</p>
                 <div className="flex gap-3 overflow-x-auto pb-2">
                   {personalRecs.map((rec) => (
-                    <RecommendationCard key={rec.id} rec={rec} familyId={familyId} />
+                    <RecommendationCard key={rec.id} rec={rec} familyId={familyId} wishlistAppIds={wishlistAppIds} />
                   ))}
                 </div>
               </div>
