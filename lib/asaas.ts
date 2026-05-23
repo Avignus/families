@@ -197,6 +197,8 @@ export async function sendPixDisbursement(params: {
       pixAddressKey: key,
       pixAddressKeyType: type,
       description: params.description,
+      operationType: "PIX",
+      authorized: true,
     }),
   });
   return String(data.id);
