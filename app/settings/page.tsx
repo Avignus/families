@@ -17,12 +17,23 @@ import { validatePixKey } from "@/lib/pix-key";
 import { toast } from "sonner";
 import { useLanguage } from "@/lib/i18n/context";
 
+function maskPixKey(key: string): string {
+  if (key.includes("@")) {
+    const [local, domain] = key.split("@");
+    return local.slice(0, 2) + "•".repeat(Math.max(local.length - 2, 3)) + "@" + domain;
+  }
+  if (key.length <= 6) return "•".repeat(key.length);
+  return "•".repeat(key.length - 4) + key.slice(-4);
+}
+
 export default function SettingsPage() {
   const { data: session } = useSession();
   const { t } = useLanguage();
   const queryClient = useQueryClient();
   const sessionUser = session?.user as { personaName?: string; avatarMedium?: string; image?: string } | undefined;
   const [pixKey, setPixKey] = useState("");
+  const [savedPixKey, setSavedPixKey] = useState<string | null>(null);
+  const [editingPix, setEditingPix] = useState(false);
   const [email, setEmail] = useState("");
   const [emailPending, setEmailPending] = useState<string | null>(null);
   const [reputationScore, setReputationScore] = useState<number | null>(null);
@@ -61,7 +72,9 @@ export default function SettingsPage() {
     fetch("/api/me")
       .then((r) => r.json())
       .then((d) => {
-        setPixKey(d.data?.pixKey ?? "");
+        const key = d.data?.pixKey ?? "";
+        setSavedPixKey(key || null);
+        setPixKey("");
         setEmail(d.data?.email ?? "");
         setEmailPending(d.data?.emailPending ?? null);
         setReputationScore(d.data?.reputationScore ?? 0);
@@ -88,6 +101,10 @@ export default function SettingsPage() {
       toast.error(data.error?.message ?? t.settings.pixSaveError);
       return;
     }
+    const newKey = pixKey.trim() || null;
+    setSavedPixKey(newKey);
+    setPixKey("");
+    setEditingPix(false);
     setSaved(true);
     toast.success(t.settings.pixSaved);
   }
@@ -393,39 +410,52 @@ export default function SettingsPage() {
             <form onSubmit={handleSave} className="space-y-4">
               <div className="space-y-2">
                 <label htmlFor="pixKey" className="text-sm font-medium">{t.settings.pixKey}</label>
-                <Input
-                  id="pixKey"
-                  placeholder={t.settings.pixPlaceholder}
-                  value={pixKey}
-                  onChange={(e) => { setPixKey(e.target.value); setSaved(false); }}
-                  className={
-                    validation
-                      ? validation.valid
-                        ? "border-emerald-500/60 focus-visible:ring-emerald-500/30"
-                        : "border-destructive/60 focus-visible:ring-destructive/30"
-                      : ""
-                  }
-                />
 
-                {/* Live feedback */}
-                {validation && (
-                  <div className={`flex items-center gap-1.5 text-xs ${validation.valid ? "text-emerald-400" : "text-destructive"}`}>
-                    {validation.valid ? (
-                      <><CheckCircle2 className="h-3.5 w-3.5" /> {validation.label} detectado</>
-                    ) : (
-                      <><XCircle className="h-3.5 w-3.5" /> {validation.error}</>
-                    )}
+                {/* Saved key — show masked, offer edit */}
+                {savedPixKey && !editingPix ? (
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 flex items-center gap-2 px-3 py-2 rounded-md border border-border/60 bg-secondary/30 text-sm font-mono text-muted-foreground">
+                      <KeyRound className="h-3.5 w-3.5 shrink-0" />
+                      {maskPixKey(savedPixKey)}
+                    </div>
+                    <Button type="button" variant="outline" size="sm" onClick={() => { setEditingPix(true); setPixKey(""); }}>
+                      Alterar
+                    </Button>
                   </div>
-                )}
-
-                {!validation && (
-                  <p className="text-xs text-muted-foreground">
-                    {t.settings.pixHint}
-                  </p>
+                ) : (
+                  <>
+                    <Input
+                      id="pixKey"
+                      placeholder={t.settings.pixPlaceholder}
+                      value={pixKey}
+                      onChange={(e) => { setPixKey(e.target.value); setSaved(false); }}
+                      autoFocus={editingPix}
+                      className={
+                        validation
+                          ? validation.valid
+                            ? "border-emerald-500/60 focus-visible:ring-emerald-500/30"
+                            : "border-destructive/60 focus-visible:ring-destructive/30"
+                          : ""
+                      }
+                    />
+                    {/* Live feedback */}
+                    {validation && (
+                      <div className={`flex items-center gap-1.5 text-xs ${validation.valid ? "text-emerald-400" : "text-destructive"}`}>
+                        {validation.valid ? (
+                          <><CheckCircle2 className="h-3.5 w-3.5" /> {validation.label} detectado</>
+                        ) : (
+                          <><XCircle className="h-3.5 w-3.5" /> {validation.error}</>
+                        )}
+                      </div>
+                    )}
+                    {!validation && (
+                      <p className="text-xs text-muted-foreground">{t.settings.pixHint}</p>
+                    )}
+                  </>
                 )}
               </div>
 
-              <div className="flex items-center gap-3">
+              {(!savedPixKey || editingPix) && <div className="flex items-center gap-3">
                 <Button
                   type="submit"
                   disabled={loading || (!!pixKey.trim() && !!validation && !validation.valid)}
@@ -439,7 +469,7 @@ export default function SettingsPage() {
                     {t.settings.saved}
                   </span>
                 )}
-              </div>
+              </div>}
             </form>
           )}
         </CardContent>

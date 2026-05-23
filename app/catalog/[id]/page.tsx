@@ -15,8 +15,55 @@ import { CatalogSteamPanel } from "@/components/catalog/catalog-steam-panel";
 import { getServerTranslations } from "@/lib/i18n/server";
 import { FamilyTierBadge } from "@/components/family-tier-badge";
 import { FamilyBadgesSection } from "@/components/family/family-badges-section";
+import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
+  const family = await prisma.family.findUnique({
+    where: { id: params.id },
+    select: {
+      name: true,
+      description: true,
+      wishlistItems: {
+        where: { status: { not: "cancelled" } },
+        select: { steamAppId: true },
+        take: 1,
+        orderBy: { createdAt: "desc" },
+      },
+    },
+  });
+  if (!family) return {};
+
+  const title = `${family.name} — Families`;
+  const description = family.description ?? "Financie jogos da Steam com amigos nesta família.";
+
+  let ogImage = "/images/thumb-sharing-image.jpg";
+  if (family.wishlistItems[0]) {
+    const steam = await getAppDetails(family.wishlistItems[0].steamAppId).catch(() => null);
+    if (steam?.headerImage) ogImage = steam.headerImage;
+  }
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? process.env.APP_BASE_URL ?? "";
+
+  return {
+    title,
+    description,
+    openGraph: {
+      type: "website",
+      url: `${appUrl}/catalog/${params.id}`,
+      title,
+      description,
+      images: [{ url: ogImage, width: 460, height: 215 }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [ogImage],
+    },
+  };
+}
 
 export default async function CatalogFamilyPage({ params }: { params: { id: string } }) {
   const session = await getSession();

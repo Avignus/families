@@ -30,6 +30,13 @@ export default async function CatalogPage({
   const currentUserId = (session?.user as { id?: string })?.id ?? null;
   const currentSteamId = (session?.user as { steamId?: string })?.steamId ?? null;
 
+  const hasActiveFamily = currentUserId
+    ? !!(await prisma.familyMembership.findFirst({
+        where: { userId: currentUserId, status: "active" },
+        select: { id: true },
+      }))
+    : false;
+
   const q = searchParams.q?.trim() ?? "";
   const page = Math.max(1, parseInt(searchParams.page ?? "1"));
   const genreFilter = searchParams.genre
@@ -456,6 +463,7 @@ export default async function CatalogPage({
       families={items}
       isLoggedIn={!!currentUserId}
       currentUserId={currentUserId}
+      hasActiveFamily={hasActiveFamily}
       total={total}
       page={page}
       pageSize={PAGE_SIZE}

@@ -7,7 +7,7 @@ import { RARITY_CONFIG } from "@/lib/cosmetics";
 import { formatCurrency } from "@/lib/utils";
 import {
   Users, Lock, Unlock, Crown, Search, ChevronLeft, ChevronRight,
-  SlidersHorizontal, X, Gamepad2, CheckCircle2, PlusCircle, Zap, HelpCircle,
+  SlidersHorizontal, X, Gamepad2, CheckCircle2, PlusCircle, Zap, HelpCircle, Info,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -129,6 +129,7 @@ type Props = {
   families: Family[];
   isLoggedIn: boolean;
   currentUserId: string | null;
+  hasActiveFamily: boolean;
   total: number;
   page: number;
   pageSize: number;
@@ -137,7 +138,7 @@ type Props = {
   selectedGenres: string[];
 };
 
-export function CatalogClient({ families, isLoggedIn, currentUserId, total, page, pageSize, query, filters, selectedGenres }: Props) {
+export function CatalogClient({ families, isLoggedIn, currentUserId, hasActiveFamily, total, page, pageSize, query, filters, selectedGenres }: Props) {
   const { t } = useLanguage();
   const router = useRouter();
   const pathname = usePathname();
@@ -433,6 +434,16 @@ export function CatalogClient({ families, isLoggedIn, currentUserId, total, page
           )}
         </form>
 
+        {hasActiveFamily && (
+          <div className="flex items-start gap-2.5 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3.5 py-3 text-sm text-amber-300">
+            <Info className="h-4 w-4 mt-0.5 shrink-0" />
+            <span>
+              Você já faz parte de uma família ativa. Só é possível pertencer a uma família por vez —
+              para entrar em outra, primeiro saia da atual.
+            </span>
+          </div>
+        )}
+
         {families.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-16">
             {t.catalog.noFamilies(query)}
@@ -447,6 +458,7 @@ export function CatalogClient({ families, isLoggedIn, currentUserId, total, page
                 myStatus={localStatus[family.id] ?? family.myStatus}
                 isLoggedIn={isLoggedIn}
                 isOwn={!!currentUserId && family.chief.id === currentUserId}
+                hasActiveFamily={hasActiveFamily}
                 onJoin={handleJoin}
               />
             ))}
@@ -491,13 +503,14 @@ export function CatalogClient({ families, isLoggedIn, currentUserId, total, page
 }
 
 function FamilyCard({
-  family, loading, myStatus, isLoggedIn, isOwn, onJoin,
+  family, loading, myStatus, isLoggedIn, isOwn, hasActiveFamily, onJoin,
 }: {
   family: Family;
   loading: boolean;
   myStatus: string | null;
   isLoggedIn: boolean;
   isOwn: boolean;
+  hasActiveFamily: boolean;
   onJoin: (f: Family) => void;
 }) {
   const { t } = useLanguage();
@@ -749,6 +762,10 @@ function FamilyCard({
           ) : family.isFull ? (
             <div className="flex items-center gap-1 text-xs text-muted-foreground">
               <Lock className="h-3.5 w-3.5" /> {t.catalog.noSlots}
+            </div>
+          ) : hasActiveFamily ? (
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <Lock className="h-3.5 w-3.5" /> Você já está em uma família
             </div>
           ) : (
             <button

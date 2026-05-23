@@ -27,7 +27,7 @@ export async function getPlayerSummaries(steamIds: string[]): Promise<SteamPlaye
   if (steamIds.length === 0) return [];
   const ids = steamIds.join(",");
   const url = `https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key=${STEAM_API_KEY}&steamids=${ids}`;
-  const res = await fetch(url, { next: { revalidate: 300 } });
+  const res = await fetch(url, { next: { revalidate: 300 }, signal: AbortSignal.timeout(8000) });
   if (!res.ok) throw new Error(`Steam API error: ${res.status}`);
   const data = await res.json();
   return data.response?.players ?? [];
@@ -58,7 +58,7 @@ export async function getAppDetails(appId: number, country = DEFAULT_COUNTRY): P
   // Fetch from Steam
   try {
     const url = `https://store.steampowered.com/api/appdetails?appids=${appId}&cc=${country}&l=${DEFAULT_LANG}`;
-    const res = await fetch(url, { next: { revalidate: 0 } });
+    const res = await fetch(url, { next: { revalidate: 0 }, signal: AbortSignal.timeout(8000) });
     if (!res.ok) return null;
     const data = await res.json();
     const appData = data[String(appId)];
@@ -181,7 +181,7 @@ export async function getOwnedGames(steamId: string): Promise<OwnedGame[] | null
 
   try {
     const url = `https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/?key=${STEAM_API_KEY}&steamid=${steamId}&include_appinfo=true&include_played_free_games=true`;
-    const res = await fetch(url, { next: { revalidate: 0 } });
+    const res = await fetch(url, { next: { revalidate: 0 }, signal: AbortSignal.timeout(10000) });
 
     // Fall back to stale cache rather than returning an error when key is invalid
     if (res.status === 401 || res.status === 403) {
@@ -228,7 +228,7 @@ export async function getSteamWishlist(steamId: string): Promise<SteamWishlistGa
   try {
     // Official API endpoint — requires a valid key and respects profile privacy settings
     const url = `https://api.steampowered.com/IWishlistService/GetWishlist/v1/?key=${STEAM_API_KEY}&steamid=${steamId}`;
-    const res = await fetch(url, { next: { revalidate: 0 } });
+    const res = await fetch(url, { next: { revalidate: 0 }, signal: AbortSignal.timeout(10000) });
 
     if (res.status === 401 || res.status === 403) {
       return cached ? (cached.payload as unknown as SteamWishlistGame[]) : STEAM_KEY_ERROR;
