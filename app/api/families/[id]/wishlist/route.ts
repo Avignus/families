@@ -54,19 +54,31 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const family = await prisma.family.findUnique({ where: { id: params.id } });
   if (!family) return err("NOT_FOUND", "Family not found", 404);
 
-  const item = await prisma.wishlistItem.create({
-    data: {
-      familyId: params.id,
-      ownerUserId: user.id,
-      steamAppId: body.steamAppId,
-      targetPriceCents: steamData.priceCents,
-      currency: family.currency,
-      status: "open",
-    },
-    include: {
-      owner: { select: { id: true, personaName: true, avatarUrl: true } },
-    },
-  });
+  // If a cancelled record exists, reactivate it instead of creating a duplicate
+  const item = existing
+    ? await prisma.wishlistItem.update({
+        where: { id: existing.id },
+        data: {
+          ownerUserId: user.id,
+          targetPriceCents: steamData.priceCents,
+          currency: family.currency,
+          status: "open",
+          disbursedAt: null,
+          disbursementMpId: null,
+        },
+        include: { owner: { select: { id: true, personaName: true, avatarUrl: true } } },
+      })
+    : await prisma.wishlistItem.create({
+        data: {
+          familyId: params.id,
+          ownerUserId: user.id,
+          steamAppId: body.steamAppId,
+          targetPriceCents: steamData.priceCents,
+          currency: family.currency,
+          status: "open",
+        },
+        include: { owner: { select: { id: true, personaName: true, avatarUrl: true } } },
+      });
 
   return ok({ ...item, steamData }, 201);
 }
