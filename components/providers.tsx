@@ -23,11 +23,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
         <QueryClientProvider client={queryClient}>
           <NotificationProvider>
             {children}
-            <Toaster
-              position="bottom-right"
-              theme="dark"
-              richColors
-            />
+            <Toaster position="bottom-right" theme="dark" richColors />
+            <Toaster position="top-center" theme="dark" />
           </NotificationProvider>
         </QueryClientProvider>
       </SessionProvider>
