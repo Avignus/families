@@ -2,6 +2,8 @@
 
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useState, useTransition } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { RARITY_CONFIG } from "@/lib/cosmetics";
 import { formatCurrency } from "@/lib/utils";
 import {
   Users, Lock, Unlock, Crown, Search, ChevronLeft, ChevronRight,
@@ -504,6 +506,17 @@ function FamilyCard({
   const [spotPrice, setSpotPrice] = useState<number | null>(family.spotPriceCents);
   const [spotPriceLoading, setSpotPriceLoading] = useState(false);
 
+  const { data: badgesData } = useQuery<{ data: { badges: Array<{ slug: string; title: string; rarity: string }> } }>({
+    queryKey: ["family-badges", family.id],
+    queryFn: async () => {
+      const r = await fetch(`/api/families/${family.id}/badges`);
+      if (!r.ok) throw new Error("failed");
+      return r.json();
+    },
+    staleTime: 5 * 60_000,
+  });
+  const badges = badgesData?.data?.badges ?? [];
+
   const handleButtonClick = async () => {
     if (!isLoggedIn) { toast.error(t.catalog.loginToJoin); return; }
     if (family.spotPricingEnabled && spotPrice === null) {
@@ -692,6 +705,33 @@ function FamilyCard({
             </span>
           )}
         </div>
+
+        {/* Badge strip */}
+        {badges.length > 0 && (
+          <div className="flex items-center gap-1 flex-wrap">
+            {badges.slice(0, 6).map((b) => {
+              const cfg = RARITY_CONFIG[b.rarity] ?? RARITY_CONFIG.comum;
+              return (
+                <span key={b.slug} className="relative group cursor-default">
+                  <span className={`flex items-center justify-center w-7 h-7 rounded-full ${cfg.bg}`}>
+                    <img
+                      src={`/badges/${b.slug}.png`}
+                      alt={b.title}
+                      className="w-5 h-5 object-contain"
+                      onError={(e) => { e.currentTarget.style.visibility = "hidden"; }}
+                    />
+                  </span>
+                  <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 whitespace-nowrap text-[10px] bg-popover border border-border rounded px-1.5 py-0.5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-md text-foreground">
+                    {b.title}
+                  </span>
+                </span>
+              );
+            })}
+            {badges.length > 6 && (
+              <span className="text-[10px] text-muted-foreground">+{badges.length - 6}</span>
+            )}
+          </div>
+        )}
 
         <div className="mt-auto relative z-10">
           {myStatus === "active" ? (

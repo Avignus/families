@@ -60,7 +60,7 @@ export function FamilyBadgesSection({ familyId, compact = false }: Props) {
   const displayed = compact ? badges.slice(0, 6) : badges;
 
   return (
-    <div className={`grid gap-2 ${compact ? "grid-cols-3" : "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4"}`}>
+    <div className={`grid gap-3 ${compact ? "grid-cols-3" : "grid-cols-2 sm:grid-cols-3"}`}>
       {displayed.map((badge) => (
         <BadgeCard key={badge.achievementId} badge={badge} compact={compact} />
       ))}
@@ -74,44 +74,46 @@ function BadgeCard({ badge, compact }: { badge: Badge; compact: boolean }) {
 
   return (
     <div
-      title={`${badge.title} — ${badge.description}`}
-      className={`rounded-xl border bg-card flex flex-col items-center text-center transition-all ${cfg.glow} ${compact ? "p-2 gap-1" : "p-3 gap-2"}`}
+      className={`rounded-xl border bg-card flex flex-col items-center text-center transition-all ${cfg.glow} ${compact ? "p-2 gap-1" : "p-4 gap-3"}`}
       style={{ borderColor: rarityBorderColor(badge.rarity) }}
     >
       {/* Badge image */}
-      <div className={`relative flex items-center justify-center rounded-full ${cfg.bg} ${compact ? "w-12 h-12" : "w-16 h-16"}`}>
+      <div className={`group relative flex items-center justify-center rounded-full ${cfg.bg} ${compact ? "w-12 h-12" : "w-24 h-24"}`}>
         {!imgError ? (
           <img
             src={`/badges/${badge.slug}.png`}
             alt={badge.title}
-            className={`object-contain ${compact ? "w-10 h-10" : "w-14 h-14"}`}
+            className={`object-contain ${compact ? "w-10 h-10" : "w-20 h-20"}`}
             onError={() => setImgError(true)}
           />
         ) : (
-          <Shield className={`${compact ? "h-6 w-6" : "h-8 w-8"} ${cfg.color}`} />
+          <Shield className={`${compact ? "h-6 w-6" : "h-12 w-12"} ${cfg.color}`} />
         )}
+        <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 whitespace-nowrap text-[11px] bg-popover border border-border rounded px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-md text-foreground">
+          {badge.title}
+        </span>
       </div>
 
       {/* Title */}
-      <p className={`font-semibold leading-tight line-clamp-2 ${compact ? "text-[10px]" : "text-xs"}`}>
+      <p className={`font-semibold leading-tight line-clamp-2 ${compact ? "text-[10px]" : "text-sm"}`}>
         {badge.title}
       </p>
 
       {/* Rarity label */}
-      <span className={`uppercase tracking-wide font-bold ${compact ? "text-[8px]" : "text-[10px]"} ${cfg.color}`}>
+      <span className={`uppercase tracking-wide font-bold ${compact ? "text-[8px]" : "text-[11px]"} ${cfg.color}`}>
         {cfg.label}
       </span>
 
       {/* Member avatars */}
       <div className="flex -space-x-1.5 justify-center">
         {badge.members.slice(0, compact ? 3 : 5).map((m) => (
-          <Avatar key={m.userId} className={`ring-1 ring-background ${compact ? "h-4 w-4" : "h-5 w-5"}`} title={m.personaName}>
+          <Avatar key={m.userId} className={`ring-1 ring-background ${compact ? "h-4 w-4" : "h-6 w-6"}`} title={m.personaName}>
             <AvatarImage src={m.avatarMedium} />
             <AvatarFallback className="text-[7px]">{m.personaName[0]}</AvatarFallback>
           </Avatar>
         ))}
         {badge.members.length > (compact ? 3 : 5) && (
-          <div className={`rounded-full ring-1 ring-background bg-secondary flex items-center justify-center text-muted-foreground ${compact ? "h-4 w-4 text-[7px]" : "h-5 w-5 text-[8px]"}`}>
+          <div className={`rounded-full ring-1 ring-background bg-secondary flex items-center justify-center text-muted-foreground ${compact ? "h-4 w-4 text-[7px]" : "h-6 w-6 text-[9px]"}`}>
             +{badge.members.length - (compact ? 3 : 5)}
           </div>
         )}
