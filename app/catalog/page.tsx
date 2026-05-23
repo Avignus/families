@@ -97,6 +97,8 @@ export default async function CatalogPage({
   // Hoisted so the game-names section below can reference it
   const userAppIds = new Set<number>();
 
+  let needsLibrarySync = false;
+
   if (currentSteamId || hasGameFilters) {
     if (currentSteamId) {
       const userCache = await prisma.steamUserCache.findUnique({
@@ -106,6 +108,8 @@ export default async function CatalogPage({
       if (userCache) {
         const games = userCache.payload as Array<{ appId: number }>;
         if (Array.isArray(games)) games.forEach((g) => userAppIds.add(g.appId));
+      } else {
+        needsLibrarySync = true;
       }
     }
 
@@ -464,6 +468,7 @@ export default async function CatalogPage({
       isLoggedIn={!!currentUserId}
       currentUserId={currentUserId}
       hasActiveFamily={hasActiveFamily}
+      needsLibrarySync={needsLibrarySync}
       total={total}
       page={page}
       pageSize={PAGE_SIZE}

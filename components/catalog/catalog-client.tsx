@@ -7,7 +7,7 @@ import { RARITY_CONFIG } from "@/lib/cosmetics";
 import { formatCurrency } from "@/lib/utils";
 import {
   Users, Lock, Unlock, Crown, Search, ChevronLeft, ChevronRight,
-  SlidersHorizontal, X, Gamepad2, CheckCircle2, PlusCircle, Zap, HelpCircle, Info,
+  SlidersHorizontal, X, Gamepad2, CheckCircle2, PlusCircle, Zap, HelpCircle, Info, RefreshCw,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,7 @@ import { CoverOverlay } from "@/components/cosmetics/cover-overlay";
 import { CoverVideo } from "@/components/cosmetics/cover-video";
 import { useLanguage } from "@/lib/i18n/context";
 import { FamilyTierBadge } from "@/components/family-tier-badge";
+import { CreateFamilyDialog } from "@/components/family/create-family-dialog";
 
 type LibraryStats = { totalGames: number; ownedGames: number; missingGames: number };
 
@@ -130,6 +131,7 @@ type Props = {
   isLoggedIn: boolean;
   currentUserId: string | null;
   hasActiveFamily: boolean;
+  needsLibrarySync: boolean;
   total: number;
   page: number;
   pageSize: number;
@@ -138,7 +140,7 @@ type Props = {
   selectedGenres: string[];
 };
 
-export function CatalogClient({ families, isLoggedIn, currentUserId, hasActiveFamily, total, page, pageSize, query, filters, selectedGenres }: Props) {
+export function CatalogClient({ families, isLoggedIn, currentUserId, hasActiveFamily, needsLibrarySync, total, page, pageSize, query, filters, selectedGenres }: Props) {
   const { t } = useLanguage();
   const router = useRouter();
   const pathname = usePathname();
@@ -151,6 +153,19 @@ export function CatalogClient({ families, isLoggedIn, currentUserId, hasActiveFa
   const [filtersOpen, setFiltersOpen] = useState(() => {
     return Object.values(filters).some((v) => v !== "");
   });
+  const [syncingLibrary, setSyncingLibrary] = useState(false);
+  const [librarySynced, setLibrarySynced] = useState(false);
+
+  const handleSyncLibrary = async () => {
+    setSyncingLibrary(true);
+    try {
+      await fetch("/api/me/steam/sync-library", { method: "POST" });
+      setLibrarySynced(true);
+      startTransition(() => router.refresh());
+    } finally {
+      setSyncingLibrary(false);
+    }
+  };
 
   const [minPrice, setMinPrice] = useState(filters.minPrice);
   const [maxPrice, setMaxPrice] = useState(filters.maxPrice);
@@ -282,6 +297,7 @@ export function CatalogClient({ families, isLoggedIn, currentUserId, hasActiveFa
                 {t.catalog.clear}
               </Button>
             )}
+            {isLoggedIn && !hasActiveFamily && <CreateFamilyDialog />}
           </div>
 
           {/* Filter panel */}
@@ -441,6 +457,26 @@ export function CatalogClient({ families, isLoggedIn, currentUserId, hasActiveFa
               Você já faz parte de uma família ativa. Só é possível pertencer a uma família por vez —
               para entrar em outra, primeiro saia da atual.
             </span>
+          </div>
+        )}
+
+        {needsLibrarySync && !librarySynced && (
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-primary/30 bg-primary/10 px-3.5 py-3 text-sm">
+            <div className="flex items-center gap-2.5 text-primary/90">
+              <Gamepad2 className="h-4 w-4 shrink-0" />
+              <span>
+                Sincronize sua biblioteca Steam para ver quais jogos você já possui em cada família.
+              </span>
+            </div>
+            <button
+              onClick={handleSyncLibrary}
+              disabled={syncingLibrary}
+              className="shrink-0 flex items-center gap-1.5 text-xs font-semibold text-white px-3 py-1.5 rounded-md transition-all disabled:opacity-50"
+              style={{ background: "linear-gradient(135deg, hsl(258 82% 60%), hsl(258 82% 50%))" }}
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${syncingLibrary ? "animate-spin" : ""}`} />
+              {syncingLibrary ? "Sincronizando..." : "Sincronizar"}
+            </button>
           </div>
         )}
 
