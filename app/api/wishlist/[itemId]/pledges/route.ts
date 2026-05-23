@@ -58,7 +58,7 @@ export async function POST(req: NextRequest, { params }: { params: { itemId: str
       }
 
       const aggregate = await tx.pledge.aggregate({
-        where: { wishlistItemId: params.itemId, status: "active" },
+        where: { wishlistItemId: params.itemId, status: "active", paidAt: { not: null } },
         _sum: { amountCents: true },
       });
       const currentTotal = aggregate._sum.amountCents ?? 0;
@@ -105,7 +105,9 @@ export async function POST(req: NextRequest, { params }: { params: { itemId: str
         await debitWallet(tx, user.id, creditsUsed, "pledge_payment", pledge.id);
       }
 
-      const newTotal = currentTotal + body.amountCents;
+      // Only count immediately-paid amount (credits). PIX pledges are pending until webhook confirms.
+      const paidNow = creditsUsed;
+      const newTotal = currentTotal + paidNow;
       const isFunded = newTotal >= wishlistItem.targetPriceCents;
 
       if (isFunded) {

@@ -108,7 +108,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   const enrichedItems = await Promise.all(
     family.wishlistItems.map(async (item) => {
       const steamData = await getAppDetails(item.steamAppId);
-      const totalPledged = item.pledges.reduce((s, p) => s + p.amountCents, 0);
+      const totalPledged = item.pledges.reduce((s, p) => p.paidAt ? s + p.amountCents : s, 0);
 
       // Price intelligence: compute avg from 90-day history (if enough samples)
       let priceAlert: "low" | "high" | null = null;

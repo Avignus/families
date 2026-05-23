@@ -415,6 +415,19 @@ async function handlePledgePayment(pledgeId: string, paymentId: string, status: 
     if (status === "approved" && !pledge.paidAt) {
       updates.paidAt = new Date();
 
+      // Recalculate funded status based on all paid pledges after this payment
+      const paidAggregate = await tx.pledge.aggregate({
+        where: { wishlistItemId: pledge.wishlistItemId, status: "active", paidAt: { not: null } },
+        _sum: { amountCents: true },
+      });
+      const totalPaid = (paidAggregate._sum.amountCents ?? 0) + pledge.amountCents;
+      if (totalPaid >= pledge.wishlistItem.targetPriceCents && pledge.wishlistItem.status === "open") {
+        await tx.wishlistItem.update({
+          where: { id: pledge.wishlistItemId },
+          data: { status: "funded" },
+        });
+      }
+
       if (pledge.wishlistItem.ownerUserId && pledge.wishlistItem.ownerUserId !== pledge.pledgerUserId) {
         const steamData = await import("@/lib/steam").then((m) =>
           m.getAppDetails(pledge.wishlistItem.steamAppId)
