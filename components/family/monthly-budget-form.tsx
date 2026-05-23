@@ -5,8 +5,40 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { Zap } from "lucide-react";
 import { useLanguage } from "@/lib/i18n/context";
+
+function DistributionTreeIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      {/* Root */}
+      <circle cx="8" cy="2.5" r="1.5" fill="currentColor" stroke="none" />
+      {/* Trunk */}
+      <line x1="8" y1="4" x2="8" y2="7" />
+      {/* Horizontal bar */}
+      <line x1="3" y1="7" x2="13" y2="7" />
+      {/* Left branch */}
+      <line x1="3" y1="7" x2="3" y2="11" />
+      {/* Center branch */}
+      <line x1="8" y1="7" x2="8" y2="11" />
+      {/* Right branch */}
+      <line x1="13" y1="7" x2="13" y2="11" />
+      {/* Leaves */}
+      <circle cx="3"  cy="12.5" r="1.5" fill="currentColor" stroke="none" />
+      <circle cx="8"  cy="12.5" r="1.5" fill="currentColor" stroke="none" />
+      <circle cx="13" cy="12.5" r="1.5" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
 
 type Props = {
   familyId: string;
@@ -69,7 +101,7 @@ export function MonthlyBudgetForm({ familyId, currency, initialBudgetCents, init
     <div className="space-y-2 p-3 rounded-lg border border-border/50 bg-secondary/30">
       {/* Budget amount row */}
       <div className="flex items-center gap-2">
-        <Zap className="h-4 w-4 text-primary flex-shrink-0" />
+        <DistributionTreeIcon className="h-4 w-4 text-primary flex-shrink-0" />
         <div className="flex-1 min-w-0">
           <p className="text-xs font-medium">{t.monthlyBudget.title}</p>
           <p className="text-[10px] text-muted-foreground">{t.monthlyBudget.desc}</p>
