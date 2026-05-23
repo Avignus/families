@@ -4,6 +4,7 @@ import { requireSession, isApiError, ok, err, parseBody } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { validatePixKey } from "@/lib/pix-key";
 import { sendEmailVerification } from "@/lib/email";
+import { maybeDisburseFunds } from "@/lib/disbursement";
 import crypto from "crypto";
 
 const UpdateSchema = z.object({
@@ -64,6 +65,18 @@ export async function PATCH(req: NextRequest) {
   }
 
   const updated = await prisma.user.update({ where: { id: user.id }, data });
+
+  // When PIX key is added, retry any funded items awaiting disbursement
+  if (data.pixKey) {
+    const pendingItems = await prisma.wishlistItem.findMany({
+      where: { ownerUserId: user.id, status: "funded", disbursedAt: null, disbursementId: null },
+      select: { id: true },
+    });
+    for (const item of pendingItems) {
+      maybeDisburseFunds(item.id).catch(() => {});
+    }
+  }
+
   return ok({ pixKey: updated.pixKey, email: updated.email, emailPending: updated.emailPending });
 }
 

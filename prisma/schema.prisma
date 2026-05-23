@@ -125,6 +125,7 @@ model WishlistItem {
   disbursedAt          DateTime?
   disbursementId       String?
   pixKeyReminderLevel  Int       @default(0)
+  pixKeyDeadlineAt     DateTime?  // set when PIX_KEY_REQUIRED is first sent; after this, retry fee applies
 
   family  Family  @relation(fields: [familyId], references: [id])
   owner   User?   @relation(fields: [ownerUserId], references: [id])
