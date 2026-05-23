@@ -506,7 +506,7 @@ function FamilyCard({
   const [spotPrice, setSpotPrice] = useState<number | null>(family.spotPriceCents);
   const [spotPriceLoading, setSpotPriceLoading] = useState(false);
 
-  const { data: badgesData } = useQuery<{ data: { badges: Array<{ slug: string; title: string; rarity: string }> } }>({
+  const { data: badgesData } = useQuery<{ data: { badges: Array<{ slug: string; title: string; rarity: string; category: string }> } }>({
     queryKey: ["family-badges", family.id],
     queryFn: async () => {
       const r = await fetch(`/api/families/${family.id}/badges`);
