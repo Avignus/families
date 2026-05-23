@@ -1,11 +1,15 @@
-import { requireSession, isApiError, ok } from "@/lib/api";
+import { requireSession, isApiError, ok, err } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
+import { recommendationGetLimiter, isRateLimited } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   const user = await requireSession();
   if (isApiError(user)) return user;
+
+  if (await isRateLimited(recommendationGetLimiter, `rec-get:${user.id}`))
+    return err("RATE_LIMITED", "Muitas requisições. Tente novamente em instantes.", 429);
 
   const recs = await prisma.gameRecommendation.findMany({
     where: { userId: user.id, type: "individual" },

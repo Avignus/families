@@ -3,13 +3,13 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getAppDetails } from "@/lib/steam";
-import { rateLimit } from "@/lib/rate-limit";
+import { catalogLimiter, isRateLimited } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
-  if (!rateLimit(`catalog:${ip}`, 30, 60_000)) {
+  if (await isRateLimited(catalogLimiter, `catalog:${ip}`)) {
     return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   }
 

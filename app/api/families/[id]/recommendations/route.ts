@@ -3,6 +3,7 @@ import { requireSession, isApiError, ok, err } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { recommendGamesForFamily, recommendGamesForUser } from "@/lib/gemini";
 import { getTier, TIER_WEEKLY_ONDEMAND_LIMIT } from "@/lib/reputation";
+import { recommendationGetLimiter, recommendationPostLimiter, isRateLimited } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -87,6 +88,9 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   const user = await requireSession();
   if (isApiError(user)) return user;
 
+  if (await isRateLimited(recommendationGetLimiter, `rec-get:${user.id}`))
+    return err("RATE_LIMITED", "Muitas requisições. Tente novamente em instantes.", 429);
+
   const membership = await prisma.familyMembership.findUnique({
     where: { userId_familyId: { userId: user.id, familyId: params.id } },
   });
@@ -111,6 +115,9 @@ type OwnedGame = { appId: number; name: string; playtimeMinutes: number };
 export async function POST(_req: NextRequest, { params }: { params: { id: string } }) {
   const user = await requireSession();
   if (isApiError(user)) return user;
+
+  if (await isRateLimited(recommendationPostLimiter, `rec-post:${user.id}`))
+    return err("RATE_LIMITED", "Muitas requisições. Aguarde um minuto antes de buscar novamente.", 429);
 
   if (!process.env.GOOGLE_API_KEY) {
     return err("AI_UNAVAILABLE", "Serviço de recomendações indisponível", 503);

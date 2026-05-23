@@ -1,25 +1,39 @@
-type Entry = { count: number; resetAt: number };
+import { Ratelimit } from "@upstash/ratelimit";
+import { Redis } from "@upstash/redis";
 
-const store = new Map<string, Entry>();
+// Falls back gracefully when Upstash env vars are absent (local dev without Redis).
+function makeRedis() {
+  const url = process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  if (!url || !token) return null;
+  return new Redis({ url, token });
+}
 
-// Prune stale entries every 5 minutes
-setInterval(() => {
-  const now = Date.now();
-  for (const [key, entry] of store) {
-    if (entry.resetAt < now) store.delete(key);
-  }
-}, 5 * 60 * 1000);
+const redis = makeRedis();
 
-export function rateLimit(key: string, limit: number, windowMs: number): boolean {
-  const now = Date.now();
-  const entry = store.get(key);
+function makeLimiter(requests: number, window: `${number} ${"s" | "m" | "h" | "d"}`) {
+  if (!redis) return null;
+  return new Ratelimit({ redis, limiter: Ratelimit.slidingWindow(requests, window) });
+}
 
-  if (!entry || entry.resetAt < now) {
-    store.set(key, { count: 1, resetAt: now + windowMs });
-    return true;
-  }
+// POST /api/families/[id]/recommendations — triggers Gemini (expensive, R$/call)
+export const recommendationPostLimiter = makeLimiter(4, "1 m");
 
-  if (entry.count >= limit) return false;
-  entry.count++;
-  return true;
+// GET /api/families/[id]/recommendations + GET /api/me/recommendations
+export const recommendationGetLimiter = makeLimiter(30, "1 m");
+
+// GET /api/catalog — public, IP-keyed
+export const catalogLimiter = makeLimiter(30, "1 m");
+
+/**
+ * Returns true when the request should be blocked.
+ * Returns false when Redis is unconfigured (dev without env vars → allow all).
+ */
+export async function isRateLimited(
+  limiter: Ratelimit | null,
+  key: string,
+): Promise<boolean> {
+  if (!limiter) return false;
+  const { success } = await limiter.limit(key);
+  return !success;
 }
