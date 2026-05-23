@@ -41,8 +41,11 @@ export function useNotifications() {
   return useContext(NotificationContext);
 }
 
-function showNotificationToast(notification: Notification) {
+function showNotificationToast(notification: Notification, currentPersonaName?: string | null) {
   const payload = notification.payload as Record<string, string | number>;
+
+  // Skip toast for notifications the user triggered themselves — the UI already showed feedback.
+  if (currentPersonaName && payload.personaName && String(payload.personaName) === currentPersonaName) return;
 
   if (notification.type === "ACHIEVEMENT_UNLOCKED") {
     const rarity = String(payload.rarity ?? "comum");
@@ -127,7 +130,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
           seenIds.current.add(notification.id);
 
           setNotifications((prev) => [notification, ...prev]);
-          showNotificationToast(notification);
+          showNotificationToast(notification, (session?.user as { personaName?: string })?.personaName ?? session?.user?.name);
         } catch {}
       };
 
