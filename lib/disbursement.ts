@@ -45,6 +45,15 @@ export async function maybeDisburseFunds(wishlistItemId: string): Promise<void> 
     return;
   }
 
+  // Pre-authorize: mark item as pending disbursement BEFORE calling Asaas.
+  // The transfer-auth webhook fires synchronously during transfer creation,
+  // so disbursementMpId must exist in DB before sendPixDisbursement is called.
+  const pendingId = `pending:${wishlistItemId}`;
+  await prisma.wishlistItem.update({
+    where: { id: wishlistItemId },
+    data: { disbursementMpId: pendingId },
+  });
+
   try {
     const transferId = await sendPixDisbursement({
       amountCents: totalCents,
@@ -71,6 +80,11 @@ export async function maybeDisburseFunds(wishlistItemId: string): Promise<void> 
       });
     });
   } catch (err) {
+    // Roll back the pending marker so it can be retried
+    await prisma.wishlistItem.update({
+      where: { id: wishlistItemId },
+      data: { disbursementMpId: null },
+    }).catch(() => {});
     console.error("Disbursement error:", err);
   }
 }

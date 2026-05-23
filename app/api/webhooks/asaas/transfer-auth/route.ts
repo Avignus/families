@@ -29,8 +29,14 @@ export async function POST(req: NextRequest) {
     const transferId = body.transfer.id;
 
     // Confirm this transfer was created by our disbursement system
+    // Match by final transfer ID or by pending placeholder (set before transfer creation)
     const item = await prisma.wishlistItem.findFirst({
-      where: { disbursementMpId: transferId },
+      where: {
+        OR: [
+          { disbursementMpId: transferId },
+          { disbursementMpId: { startsWith: "pending:" } },
+        ],
+      },
     });
 
     if (item) {
