@@ -1,5 +1,8 @@
-import { getFamilyTier, FAMILY_TIER_LABELS, FAMILY_TIER_COLORS } from "@/lib/family-reputation";
+"use client";
+
+import { getFamilyTier, FAMILY_TIER_COLORS } from "@/lib/family-reputation";
 import { TierIcon } from "@/components/tier-icon";
+import { useLanguage } from "@/lib/i18n/context";
 
 type Props = {
   score: number;
@@ -8,8 +11,9 @@ type Props = {
 };
 
 export function FamilyTierBadge({ score, showScore = false, size = "sm" }: Props) {
+  const { t } = useLanguage();
   const tier = getFamilyTier(score);
-  const label = FAMILY_TIER_LABELS[tier];
+  const label = t.tiers[tier];
   const color = FAMILY_TIER_COLORS[tier];
 
   const padding = size === "md" ? "px-2 py-0.5" : "px-1.5 py-0.5";

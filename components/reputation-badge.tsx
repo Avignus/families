@@ -1,5 +1,8 @@
-import { getTier, TIER_LABELS, TIER_COLORS } from "@/lib/reputation";
+"use client";
+
+import { getTier, TIER_COLORS } from "@/lib/reputation";
 import { UserTierIcon } from "@/components/user-tier-icon";
+import { useLanguage } from "@/lib/i18n/context";
 
 type Props = {
   score: number;
@@ -8,8 +11,9 @@ type Props = {
 };
 
 export function ReputationBadge({ score, showScore = false, size = "sm" }: Props) {
+  const { t } = useLanguage();
   const tier = getTier(score);
-  const label = TIER_LABELS[tier];
+  const label = t.tiers[tier as keyof typeof t.tiers] ?? tier;
   const color = TIER_COLORS[tier];
 
   const padding = size === "md" ? "px-2 py-0.5" : "px-1.5 py-0.5";

@@ -57,6 +57,14 @@ export const translations = {
       chief: "Chief",
       pending: (n: number) => `${n} pending${n > 1 ? "" : ""}`,
     },
+    tiers: {
+      ferro:    "Iron",
+      bronze:   "Bronze",
+      prata:    "Silver",
+      ouro:     "Gold",
+      elite:    "Elite",
+      lendario: "Legend",
+    },
     settings: {
       loading: "Loading...",
       accountSettings: "Account settings",
@@ -552,6 +560,14 @@ export const translations = {
       wishlist: (n: number) => `${n} na lista`,
       chief: "Chefe",
       pending: (n: number) => `${n} pendente${n > 1 ? "s" : ""}`,
+    },
+    tiers: {
+      ferro:    "Ferro",
+      bronze:   "Bronze",
+      prata:    "Prata",
+      ouro:     "Ouro",
+      elite:    "Elite",
+      lendario: "Lendário",
     },
     settings: {
       loading: "Carregando...",
