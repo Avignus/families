@@ -105,6 +105,7 @@ export default async function CatalogFamilyPage({ params }: { params: { id: stri
           pixQrCodeBase64: true,
           pixTicketUrl: true,
           feePaidAt: true,
+          feeChargedCents: true,
         },
       })
     : null;
@@ -123,6 +124,12 @@ export default async function CatalogFamilyPage({ params }: { params: { id: stri
     spotPriceCents = spotResult?.spotPriceCents ?? null;
     if (spotResult) spotCoverage = { familyGamesPriced: spotResult.coverage.familyGamesPriced, familyGamesTotal: spotResult.coverage.familyGamesTotal };
   }
+
+  // When there's a pending payment, always show the amount that was actually charged
+  // (the live recalculation can differ if prices or libraries changed since the user joined)
+  const displaySpotPriceCents = hasPendingPayment
+    ? (myMembership?.feeChargedCents ?? spotPriceCents)
+    : spotPriceCents;
   const memberCount = family.memberships.length;
   const isFull = family.maxMembers ? memberCount >= family.maxMembers : false;
 
@@ -228,10 +235,14 @@ export default async function CatalogFamilyPage({ params }: { params: { id: stri
                   <Lock className="h-3.5 w-3.5" /> {isFull ? t.catalogFamily.noSlots : t.catalogFamily.private}
                 </span>
               )}
-              {family.spotPricingEnabled && spotPriceCents !== null ? (
+              {family.spotPricingEnabled ? (
                 <Badge variant="outline" className="text-primary border-primary/40 flex items-center gap-1">
                   <Zap className="h-3 w-3" />
-                  {spotPriceCents > 0 ? formatCurrency(spotPriceCents, family.currency) : t.catalogFamily.free}
+                  {displaySpotPriceCents !== null
+                    ? displaySpotPriceCents > 0
+                      ? formatCurrency(displaySpotPriceCents, family.currency)
+                      : t.catalogFamily.free
+                    : "Spot"}
                 </Badge>
               ) : family.entryFeeCents > 0 ? (
                 <Badge variant="outline" className="text-primary border-primary/40">
@@ -294,11 +305,11 @@ export default async function CatalogFamilyPage({ params }: { params: { id: stri
             style={{ background: "linear-gradient(135deg, hsl(258 82% 10% / 0.6), hsl(258 82% 6% / 0.8))" }}>
             <div className="space-y-1 text-center sm:text-left">
               <p className="font-semibold text-lg">{t.catalogFamily.joinBannerTitle}</p>
-              {family.spotPricingEnabled && spotPriceCents !== null ? (
+              {family.spotPricingEnabled && displaySpotPriceCents !== null ? (
                 <p className="text-muted-foreground text-sm flex items-center gap-1.5 justify-center sm:justify-start">
                   <Zap className="h-4 w-4 text-primary" />
-                  {spotPriceCents > 0
-                    ? t.catalogFamily.joinBannerSpot(formatCurrency(spotPriceCents, family.currency))
+                  {displaySpotPriceCents > 0
+                    ? t.catalogFamily.joinBannerSpot(formatCurrency(displaySpotPriceCents, family.currency))
                     : t.catalogFamily.joinBannerFree}
                 </p>
               ) : family.entryFeeCents > 0 ? (
@@ -314,7 +325,7 @@ export default async function CatalogFamilyPage({ params }: { params: { id: stri
                 entryFeeCents={family.entryFeeCents}
                 currency={family.currency}
                 initialStatus={myMembership?.status ?? null}
-                spotPriceCents={family.spotPricingEnabled ? spotPriceCents : null}
+                spotPriceCents={family.spotPricingEnabled ? displaySpotPriceCents : null}
                 large
                 pendingPix={hasPendingPayment && myMembership?.pixQrCode ? {
                   qrCode: myMembership.pixQrCode,

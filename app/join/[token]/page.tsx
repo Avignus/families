@@ -2,12 +2,13 @@ import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { notFound, redirect } from "next/navigation";
 import { formatCurrency } from "@/lib/utils";
-import { Users, Crown, Lock, Unlock, ArrowLeft } from "lucide-react";
+import { Users, Crown, Lock, Unlock, ArrowLeft, Zap } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { FamilyCoverArt } from "@/components/family-cover-art";
 import { JoinViaInviteButton } from "@/components/family/join-via-invite-button";
 import Link from "next/link";
 import { getServerTranslations } from "@/lib/i18n/server";
+import { calculateSpotPrice } from "@/lib/spot-price";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +38,13 @@ export default async function JoinPage({ params }: { params: { token: string } }
     if (membership?.status === "active") {
       redirect(`/families/${family.id}`);
     }
+  }
+
+  // Compute personalized spot price for logged-in non-members
+  let spotPriceCents: number | null = null;
+  if (family.spotPricingEnabled && currentUserId) {
+    const spotResult = await calculateSpotPrice(family.id, currentUserId).catch(() => null);
+    spotPriceCents = spotResult?.spotPriceCents ?? null;
   }
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? process.env.NEXTAUTH_URL ?? "http://localhost:3000";
@@ -81,12 +89,29 @@ export default async function JoinPage({ params }: { params: { token: string } }
                 <Users className="h-4 w-4" />
                 {t.join.members(memberCount, family.maxMembers)}
               </span>
-              {family.entryFeeCents > 0 ? (
+              {family.spotPricingEnabled ? (
+                spotPriceCents !== null ? (
+                  spotPriceCents > 0 ? (
+                    <span className="flex items-center gap-1 text-primary font-semibold">
+                      <Zap className="h-3.5 w-3.5" />
+                      {formatCurrency(spotPriceCents, family.currency)}
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-1 text-emerald-400">
+                      <Unlock className="h-3.5 w-3.5" /> {t.join.free}
+                    </span>
+                  )
+                ) : (
+                  <span className="flex items-center gap-1 text-primary font-semibold">
+                    <Zap className="h-3.5 w-3.5" /> Spot
+                  </span>
+                )
+              ) : family.entryFeeCents > 0 ? (
                 <span className="font-semibold text-primary">
                   {formatCurrency(family.entryFeeCents, family.currency)}
                 </span>
               ) : (
-                <span className="flex items-center gap-1 text-emerald-400 text-sm">
+                <span className="flex items-center gap-1 text-emerald-400">
                   <Unlock className="h-3.5 w-3.5" /> {t.join.free}
                 </span>
               )}
@@ -113,6 +138,8 @@ export default async function JoinPage({ params }: { params: { token: string } }
                 familyName={family.name}
                 entryFeeCents={family.entryFeeCents}
                 currency={family.currency}
+                spotPricingEnabled={family.spotPricingEnabled}
+                spotPriceCents={spotPriceCents}
               />
             )}
           </div>
