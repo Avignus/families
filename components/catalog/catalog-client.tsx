@@ -21,6 +21,7 @@ import { CoverVideo } from "@/components/cosmetics/cover-video";
 import { useLanguage } from "@/lib/i18n/context";
 import { FamilyTierBadge } from "@/components/family-tier-badge";
 import { CreateFamilyDialog } from "@/components/family/create-family-dialog";
+import * as TooltipPrimitive from "@radix-ui/react-tooltip";
 
 type LibraryStats = { totalGames: number; ownedGames: number; missingGames: number };
 
@@ -564,7 +565,7 @@ function FamilyCard({
     },
     staleTime: 5 * 60_000,
   });
-  const badges = (badgesData?.data?.badges ?? []).filter((b) => b.category === "familia");
+  const badges = badgesData?.data?.badges ?? [];
 
   const handleButtonClick = async () => {
     if (!isLoggedIn) { toast.error(t.catalog.loginToJoin); return; }
@@ -757,30 +758,41 @@ function FamilyCard({
 
         {/* Badge strip */}
         {badges.length > 0 && (
-          <div className="flex items-center gap-1 flex-wrap">
-            {badges.slice(0, 6).map((b) => {
-              const cfg = RARITY_CONFIG[b.rarity] ?? RARITY_CONFIG.comum;
-              const badgeTitle = t.achievements[b.slug] ?? b.title;
-              return (
-                <span key={b.slug} className="relative group cursor-default">
-                  <span className={`flex items-center justify-center w-7 h-7 rounded-full ${cfg.bg}`}>
-                    <img
-                      src={`/badges/${b.slug}.png`}
-                      alt={badgeTitle}
-                      className="w-5 h-5 object-contain"
-                      onError={(e) => { e.currentTarget.style.visibility = "hidden"; }}
-                    />
-                  </span>
-                  <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 whitespace-nowrap text-[10px] bg-popover border border-border rounded px-1.5 py-0.5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-md text-foreground">
-                    {badgeTitle}
-                  </span>
-                </span>
-              );
-            })}
-            {badges.length > 6 && (
-              <span className="text-[10px] text-muted-foreground">+{badges.length - 6}</span>
-            )}
-          </div>
+          <TooltipPrimitive.Provider delayDuration={200}>
+            <div className="relative z-10 flex items-center gap-1 flex-wrap">
+              {badges.slice(0, 6).map((b) => {
+                const cfg = RARITY_CONFIG[b.rarity] ?? RARITY_CONFIG.comum;
+                const badgeTitle = t.achievements[b.slug] ?? b.title;
+                return (
+                  <TooltipPrimitive.Root key={b.slug}>
+                    <TooltipPrimitive.Trigger asChild>
+                      <span className={`flex items-center justify-center w-7 h-7 rounded-full cursor-default ${cfg.bg}`}>
+                        <img
+                          src={`/badges/${b.slug}.png`}
+                          alt={badgeTitle}
+                          className="w-5 h-5 object-contain"
+                          onError={(e) => { e.currentTarget.style.visibility = "hidden"; }}
+                        />
+                      </span>
+                    </TooltipPrimitive.Trigger>
+                    <TooltipPrimitive.Portal>
+                      <TooltipPrimitive.Content
+                        side="top"
+                        sideOffset={4}
+                        collisionPadding={8}
+                        className="z-50 whitespace-nowrap text-[10px] bg-popover border border-border rounded px-1.5 py-0.5 shadow-md text-foreground animate-in fade-in-0 zoom-in-95"
+                      >
+                        {badgeTitle}
+                      </TooltipPrimitive.Content>
+                    </TooltipPrimitive.Portal>
+                  </TooltipPrimitive.Root>
+                );
+              })}
+              {badges.length > 6 && (
+                <span className="text-[10px] text-muted-foreground">+{badges.length - 6}</span>
+              )}
+            </div>
+          </TooltipPrimitive.Provider>
         )}
 
         <div className="mt-auto relative z-10">

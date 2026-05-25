@@ -209,7 +209,7 @@ export function CoverThemeSelector({ familyId, isChief, currentUserId }: Props) 
                 <button
                   key={theme.id}
                   onClick={() => patchFamilyCover.mutate({
-                    cosmeticId: theme.isDefault ? null : theme.id,
+                    cosmeticId: theme.id,
                     _actionId: `theme-${theme.id}`,
                   })}
                   className={`relative rounded-lg overflow-hidden border-2 transition-all duration-200 text-left ${

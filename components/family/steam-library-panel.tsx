@@ -706,26 +706,19 @@ export function SteamLibraryPanel({ familyId, currentUserId, memberColors, share
   async function handleSync() {
     setSyncing(true);
     try {
-      if (tab === "library") {
-        // Sync only the current user's library
-        const res = await fetch("/api/me/steam/sync-library", { method: "POST" });
-        if (res.ok) {
-          toast.success("Biblioteca sincronizada");
-        } else {
-          const data = await res.json();
-          const code = data.error?.code;
-          const msg =
-            code === "STEAM_PRIVATE" ? "Perfil Steam privado — biblioteca indisponível."
-            : "Erro ao sincronizar biblioteca.";
-          toast.error(msg);
-        }
+      const res = await fetch("/api/me/steam/sync-library", { method: "POST" });
+      if (res.ok) {
+        toast.success("Biblioteca sincronizada");
       } else {
-        // Invalidate wishlist cache for ALL members, then re-fetch
-        await fetch(`/api/families/${familyId}/steam-library`, { method: "POST" });
-        toast.success("Wishlist de todos os membros atualizada");
+        const data = await res.json();
+        const code = data.error?.code;
+        const msg = code === "STEAM_PRIVATE"
+          ? "Perfil Steam privado — biblioteca indisponível."
+          : "Erro ao sincronizar biblioteca.";
+        toast.error(msg);
       }
     } catch {
-      toast.error(`Erro ao sincronizar ${tab === "library" ? "biblioteca" : "wishlist"}.`);
+      toast.error("Erro ao sincronizar biblioteca.");
     } finally {
       await queryClient.invalidateQueries({ queryKey: ["steam-library", familyId] });
       setSyncing(false);
@@ -796,17 +789,19 @@ export function SteamLibraryPanel({ familyId, currentUserId, memberColors, share
               </span>
             </div>
           )}
-          <div className="flex justify-end">
-            <button
-              onClick={handleSync}
-              disabled={syncing}
-              title="Sincronizar wishlist Steam"
-              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
-            >
-              <RefreshCw className={`h-3.5 w-3.5 ${syncing ? "animate-spin" : ""}`} />
-              {syncing ? "Sincronizando…" : "Atualizar"}
-            </button>
-          </div>
+          {tab === "library" && (
+            <div className="flex justify-end">
+              <button
+                onClick={handleSync}
+                disabled={syncing}
+                title="Sincronizar biblioteca Steam"
+                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+              >
+                <RefreshCw className={`h-3.5 w-3.5 ${syncing ? "animate-spin" : ""}`} />
+                {syncing ? "Sincronizando…" : "Atualizar"}
+              </button>
+            </div>
+          )}
 
           {tab === "wishes" ? (
             <WishesTab

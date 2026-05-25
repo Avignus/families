@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Loader2, Shield, Users } from "lucide-react";
+import * as TooltipPrimitive from "@radix-ui/react-tooltip";
 import { RARITY_CONFIG } from "@/lib/cosmetics";
 import { useLanguage } from "@/lib/i18n/context";
 
@@ -43,28 +44,30 @@ export function FamilyBadgesSection({ familyId, compact = false }: Props) {
 
   if (isLoading) {
     return (
-      <div className="flex items-center gap-2 text-muted-foreground py-4">
-        <Loader2 className="h-4 w-4 animate-spin" />
-        <span className="text-sm">Carregando insígnias…</span>
+      <div className="flex items-center gap-2 text-muted-foreground">
+        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+        <span className="text-xs">Carregando insígnias…</span>
       </div>
     );
   }
 
   if (badges.length === 0) {
     return (
-      <p className="text-sm text-muted-foreground py-4 text-center">
-        Nenhuma insígnia desbloqueada ainda.
+      <p className="text-xs text-muted-foreground">
+        Nenhuma insígnia ainda.
       </p>
     );
   }
 
   if (compact) {
     return (
-      <div className="grid grid-cols-3 gap-2">
-        {badges.slice(0, 6).map((badge) => (
-          <BadgeCard key={badge.achievementId} badge={badge} compact />
-        ))}
-      </div>
+      <TooltipPrimitive.Provider delayDuration={200}>
+        <div className="flex flex-wrap gap-1.5">
+          {badges.slice(0, 6).map((badge) => (
+            <BadgeIcon key={badge.achievementId} badge={badge} />
+          ))}
+        </div>
+      </TooltipPrimitive.Provider>
     );
   }
 
@@ -72,87 +75,96 @@ export function FamilyBadgesSection({ familyId, compact = false }: Props) {
   const memberBadges = badges.filter((b) => b.category !== "familia");
 
   return (
-    <div className="space-y-6">
-      {familyBadges.length > 0 && (
-        <div className="space-y-3">
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-            <Shield className="h-3.5 w-3.5" />
-            Insígnias da família
-          </p>
-          <div className="grid gap-3 grid-cols-2 sm:grid-cols-3">
-            {familyBadges.map((badge) => (
-              <BadgeCard key={badge.achievementId} badge={badge} compact={false} />
-            ))}
+    <TooltipPrimitive.Provider delayDuration={200}>
+      <div className="space-y-3">
+        {familyBadges.length > 0 && (
+          <div className="space-y-1.5">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+              <Shield className="h-3 w-3" />
+              Família
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {familyBadges.map((badge) => (
+                <BadgeIcon key={badge.achievementId} badge={badge} />
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {memberBadges.length > 0 && (
-        <div className="space-y-3">
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-            <Users className="h-3.5 w-3.5" />
-            Conquistas dos membros
-          </p>
-          <div className="grid gap-3 grid-cols-2 sm:grid-cols-3">
-            {memberBadges.map((badge) => (
-              <BadgeCard key={badge.achievementId} badge={badge} compact={false} />
-            ))}
+        {memberBadges.length > 0 && (
+          <div className="space-y-1.5">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+              <Users className="h-3 w-3" />
+              Membros
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {memberBadges.map((badge) => (
+                <BadgeIcon key={badge.achievementId} badge={badge} />
+              ))}
+            </div>
           </div>
-        </div>
-      )}
-    </div>
+        )}
+      </div>
+    </TooltipPrimitive.Provider>
   );
 }
 
-function BadgeCard({ badge, compact }: { badge: Badge; compact: boolean }) {
+function BadgeIcon({ badge }: { badge: Badge }) {
   const { t } = useLanguage();
   const cfg = RARITY_CONFIG[badge.rarity] ?? RARITY_CONFIG.comum;
   const [imgError, setImgError] = useState(false);
   const title = t.achievements[badge.slug] ?? badge.title;
 
   return (
-    <div
-      className={`rounded-xl border bg-card flex flex-col items-center text-center transition-all ${cfg.glow} ${compact ? "p-2 gap-1" : "p-4 gap-3"}`}
-      style={{ borderColor: rarityBorderColor(badge.rarity) }}
-    >
-      <div className={`group relative flex items-center justify-center rounded-full ${cfg.bg} ${compact ? "w-12 h-12" : "w-24 h-24"}`}>
-        {!imgError ? (
-          <img
-            src={`/badges/${badge.slug}.png`}
-            alt={title}
-            className={`object-contain ${compact ? "w-10 h-10" : "w-20 h-20"}`}
-            onError={() => setImgError(true)}
-          />
-        ) : (
-          <Shield className={`${compact ? "h-6 w-6" : "h-12 w-12"} ${cfg.color}`} />
-        )}
-        <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 whitespace-nowrap text-[11px] bg-popover border border-border rounded px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-md text-foreground">
-          {title}
-        </span>
-      </div>
-
-      <p className={`font-semibold leading-tight line-clamp-2 ${compact ? "text-[10px]" : "text-sm"}`}>
-        {title}
-      </p>
-
-      <span className={`uppercase tracking-wide font-bold ${compact ? "text-[8px]" : "text-[11px]"} ${cfg.color}`}>
-        {cfg.label}
-      </span>
-
-      <div className="flex -space-x-1.5 justify-center">
-        {badge.members.slice(0, compact ? 3 : 5).map((m) => (
-          <Avatar key={m.userId} className={`ring-1 ring-background ${compact ? "h-4 w-4" : "h-6 w-6"}`} title={m.personaName}>
-            <AvatarImage src={m.avatarMedium} />
-            <AvatarFallback className="text-[7px]">{m.personaName[0]}</AvatarFallback>
-          </Avatar>
-        ))}
-        {badge.members.length > (compact ? 3 : 5) && (
-          <div className={`rounded-full ring-1 ring-background bg-secondary flex items-center justify-center text-muted-foreground ${compact ? "h-4 w-4 text-[7px]" : "h-6 w-6 text-[9px]"}`}>
-            +{badge.members.length - (compact ? 3 : 5)}
-          </div>
-        )}
-      </div>
-    </div>
+    <TooltipPrimitive.Root>
+      <TooltipPrimitive.Trigger asChild>
+        <div
+          className={`w-10 h-10 rounded-full flex items-center justify-center cursor-default transition-transform hover:scale-110 ${cfg.bg} ${cfg.glow}`}
+          style={{ border: `1.5px solid ${rarityBorderColor(badge.rarity)}` }}
+        >
+          {!imgError ? (
+            <img
+              src={`/badges/${badge.slug}.png`}
+              alt={title}
+              className="w-7 h-7 object-contain"
+              onError={() => setImgError(true)}
+            />
+          ) : (
+            <Shield className={`h-4 w-4 ${cfg.color}`} />
+          )}
+        </div>
+      </TooltipPrimitive.Trigger>
+      <TooltipPrimitive.Portal>
+        <TooltipPrimitive.Content
+          side="top"
+          align="center"
+          sideOffset={6}
+          collisionPadding={8}
+          className="z-50 w-44 rounded-lg border border-border bg-popover px-3 py-2 shadow-lg text-left animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95"
+        >
+          <p className="text-xs font-semibold text-foreground leading-tight">{title}</p>
+          <p className={`text-[10px] font-bold uppercase tracking-wide mt-0.5 ${cfg.color}`}>{cfg.label}</p>
+          {badge.description && (
+            <p className="text-[11px] text-muted-foreground mt-1 leading-snug">{badge.description}</p>
+          )}
+          {badge.members.length > 0 && (
+            <div className="flex -space-x-1 mt-1.5">
+              {badge.members.slice(0, 5).map((m) => (
+                <Avatar key={m.userId} className="h-4 w-4 ring-1 ring-background" title={m.personaName}>
+                  <AvatarImage src={m.avatarMedium} />
+                  <AvatarFallback className="text-[6px]">{m.personaName[0]}</AvatarFallback>
+                </Avatar>
+              ))}
+              {badge.members.length > 5 && (
+                <div className="h-4 w-4 rounded-full ring-1 ring-background bg-secondary flex items-center justify-center text-[7px] text-muted-foreground">
+                  +{badge.members.length - 5}
+                </div>
+              )}
+            </div>
+          )}
+        </TooltipPrimitive.Content>
+      </TooltipPrimitive.Portal>
+    </TooltipPrimitive.Root>
   );
 }
 
