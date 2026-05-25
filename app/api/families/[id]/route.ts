@@ -155,6 +155,19 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     pendingMemberships: family.chiefId === user.id
       ? await (async () => {
           const wishlistAppIds = new Set(family.wishlistItems.map((i) => i.steamAppId));
+
+          // Build the combined library of all active members (one query, all caches)
+          const activeMembers = family.memberships.filter((m) => m.status === "active");
+          const activeCaches = await prisma.steamUserCache.findMany({
+            where: {
+              userId: { in: activeMembers.map((m) => m.user.steamId) },
+              type: "library",
+            },
+          });
+          const familyAppIds = new Set(
+            activeCaches.flatMap((c) => (c.payload as Array<{ appId: number }>).map((g) => g.appId))
+          );
+
           return Promise.all(
             family.memberships
               .filter((m) => m.status === "pending")
@@ -168,8 +181,9 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
                 const wishlistMatches: number[] | null = ownedAppIds
                   ? ownedAppIds.filter((id) => wishlistAppIds.has(id))
                   : null;
+                // Games the candidate owns that no active family member has
                 const libraryExtras: number[] = ownedAppIds
-                  ? ownedAppIds.filter((id) => !wishlistAppIds.has(id)).slice(0, 6)
+                  ? ownedAppIds.filter((id) => !familyAppIds.has(id)).slice(0, 6)
                   : [];
                 return { ...m, wishlistMatches, libraryExtras };
               })

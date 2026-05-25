@@ -829,7 +829,7 @@ function PendingRequestCard({
           {libraryExtras.length > 0 && (
             <div className="space-y-1">
               <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                Outros jogos
+                Exclusivos (família não tem)
               </p>
               <div className="flex items-center gap-1 flex-wrap">
                 {libraryExtras.map((appId) => (
