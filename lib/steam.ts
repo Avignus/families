@@ -337,29 +337,30 @@ export async function resolveAppNames(appIds: number[]): Promise<Map<number, str
 
   const missing = appIds.filter((id) => !nameMap.has(id));
   if (missing.length > 0) {
-    try {
-      const url = `https://store.steampowered.com/api/appdetails?appids=${missing.join(",")}&filters=basic`;
-      const res = await fetch(url, { signal: AbortSignal.timeout(6000) });
-      if (res.ok) {
-        const data = await res.json();
-        await Promise.all(
-          missing.map(async (id) => {
-            const entry = data[String(id)];
-            const name: string | null = entry?.success ? entry.data?.name ?? null : null;
-            if (name) {
-              nameMap.set(id, name);
-              await prisma.steamAppCatalog.upsert({
-                where: { appId: id },
-                update: { name, updatedAt: new Date() },
-                create: { appId: id, name },
-              });
-            }
-          })
-        );
-      }
-    } catch {
-      // Non-fatal — fall back to "App <id>" in the UI
-    }
+    // Steam store API only works reliably with one appid at a time — fetch in parallel
+    await Promise.all(
+      missing.map(async (id) => {
+        try {
+          const res = await fetch(
+            `https://store.steampowered.com/api/appdetails?appids=${id}&filters=basic`,
+            { signal: AbortSignal.timeout(5000) }
+          );
+          if (!res.ok) return;
+          const data = await res.json();
+          const name: string | null = data[String(id)]?.success ? (data[String(id)].data?.name ?? null) : null;
+          if (name) {
+            nameMap.set(id, name);
+            await prisma.steamAppCatalog.upsert({
+              where: { appId: id },
+              update: { name, updatedAt: new Date() },
+              create: { appId: id, name },
+            });
+          }
+        } catch {
+          // Non-fatal — UI falls back to "App <id>"
+        }
+      })
+    );
   }
 
   return nameMap;
