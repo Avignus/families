@@ -162,12 +162,16 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
                 const cache = await prisma.steamUserCache.findUnique({
                   where: { userId_type: { userId: m.user.steamId, type: "library" } },
                 });
-                const wishlistMatches: number[] | null = cache
-                  ? (cache.payload as Array<{ appId: number }>)
-                      .map((g) => g.appId)
-                      .filter((id) => wishlistAppIds.has(id))
+                const ownedAppIds = cache
+                  ? (cache.payload as Array<{ appId: number }>).map((g) => g.appId)
                   : null;
-                return { ...m, wishlistMatches };
+                const wishlistMatches: number[] | null = ownedAppIds
+                  ? ownedAppIds.filter((id) => wishlistAppIds.has(id))
+                  : null;
+                const libraryExtras: number[] = ownedAppIds
+                  ? ownedAppIds.filter((id) => !wishlistAppIds.has(id)).slice(0, 6)
+                  : [];
+                return { ...m, wishlistMatches, libraryExtras };
               })
           );
         })()

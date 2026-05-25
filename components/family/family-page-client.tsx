@@ -68,6 +68,7 @@ type PendingMember = {
   id: string;
   user: Member;
   wishlistMatches: number[] | null;
+  libraryExtras: number[];
   feePaidAt: string | null;
   feeChargedCents: number | null;
 };
@@ -136,6 +137,7 @@ export function FamilyPageClient({
 
   const [addGameOpen, setAddGameOpen] = useState(false);
   const [votesExpanded, setVotesExpanded] = useState(false);
+  const [badgesExpanded, setBadgesExpanded] = useState(true);
   const [steamExpanded, setSteamExpanded] = useState(true);
   const [distributing, setDistributing] = useState(false);
   const [localCredits, setLocalCredits] = useState(creditsCents);
@@ -445,6 +447,7 @@ export function FamilyPageClient({
                   familyId={familyId}
                   user={pending.user}
                   wishlistMatches={pending.wishlistMatches}
+                  libraryExtras={pending.libraryExtras}
                   wishlistItems={family.wishlistItems}
                   feePaidAt={pending.feePaidAt}
                   feeChargedCents={pending.feeChargedCents}
@@ -679,11 +682,19 @@ export function FamilyPageClient({
           {/* Family badges */}
           <Separator />
           <div>
-            <h3 className="font-semibold mb-3 flex items-center gap-2 text-sm">
+            <button
+              onClick={() => setBadgesExpanded((v) => !v)}
+              className="flex items-center gap-2 text-sm font-semibold w-full text-left"
+            >
               <Medal className="h-4 w-4 text-amber-400" />
-              Insígnias da família
-            </h3>
-            <FamilyBadgesSection familyId={familyId} />
+              <span>Insígnias da família</span>
+              {badgesExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            </button>
+            {badgesExpanded && (
+              <div className="mt-3">
+                <FamilyBadgesSection familyId={familyId} />
+              </div>
+            )}
           </div>
 
           {/* AI recommendations */}
@@ -733,12 +744,13 @@ export function FamilyPageClient({
 }
 
 function PendingRequestCard({
-  membershipId, familyId, user, wishlistMatches, wishlistItems, feePaidAt, feeChargedCents, onAction,
+  membershipId, familyId, user, wishlistMatches, libraryExtras, wishlistItems, feePaidAt, feeChargedCents, onAction,
 }: {
   membershipId: string;
   familyId: string;
   user: Member;
   wishlistMatches: number[] | null;
+  libraryExtras: number[];
   wishlistItems: WishlistItem[];
   feePaidAt: string | null;
   feeChargedCents: number | null;
@@ -767,15 +779,15 @@ function PendingRequestCard({
     : [];
 
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 rounded-lg bg-amber-500/8 border border-amber-500/25">
-      <div className="flex items-center gap-3 flex-1 min-w-0">
-        <Avatar className="h-10 w-10 shrink-0" style={{ boxShadow: `0 0 0 2px ${borderColor}` }}>
+    <div className="flex flex-col sm:flex-row sm:items-start gap-3 p-3 rounded-lg bg-amber-500/8 border border-amber-500/25">
+      <div className="flex items-start gap-3 flex-1 min-w-0">
+        <Avatar className="h-10 w-10 shrink-0 mt-0.5" style={{ boxShadow: `0 0 0 2px ${borderColor}` }}>
           <AvatarImage src={user.avatarMedium} alt={user.personaName} />
           <AvatarFallback style={{ backgroundColor: "hsl(45 90% 30%)" }}>
             {user.personaName[0]}
           </AvatarFallback>
         </Avatar>
-        <div className="min-w-0">
+        <div className="min-w-0 space-y-1.5">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm font-semibold truncate">{user.personaName}</span>
             {xp > 0 && <ReputationBadge score={xp} />}
@@ -785,35 +797,52 @@ function PendingRequestCard({
               </span>
             )}
           </div>
+
+          {/* Wishlist matches */}
           {wishlistMatches === null ? null : matchedItems.length === 0 ? (
-            <p className="text-xs text-muted-foreground mt-0.5">Não possui jogos da wishlist</p>
+            <p className="text-xs text-muted-foreground">Não possui jogos da wishlist</p>
           ) : (
-            <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-              <span className="text-xs text-amber-400/80 shrink-0">
-                Possui {matchedItems.length} {matchedItems.length === 1 ? "jogo" : "jogos"} da wishlist:
-              </span>
+            <div className="space-y-1">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-amber-400/80">
+                Possui {matchedItems.length} da wishlist
+              </p>
               <div className="flex items-center gap-1 flex-wrap">
-                {matchedItems.slice(0, 5).map((item) => (
-                  <span
+                {matchedItems.slice(0, 6).map((item) => (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
                     key={item.id}
+                    src={`https://cdn.cloudflare.steamstatic.com/steam/apps/${item.steamAppId}/capsule_sm_120.jpg`}
+                    alt={item.steamData?.name ?? `App ${item.steamAppId}`}
                     title={item.steamData?.name ?? `App ${item.steamAppId}`}
-                  >
-                    {item.steamData?.headerImage ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={`https://cdn.cloudflare.steamstatic.com/steam/apps/${item.steamAppId}/capsule_sm_120.jpg`}
-                        alt={item.steamData.name}
-                        className="h-6 rounded-sm object-cover"
-                        style={{ width: 40 }}
-                      />
-                    ) : (
-                      <span className="text-xs text-muted-foreground">{item.steamData?.name ?? item.steamAppId}</span>
-                    )}
-                  </span>
+                    className="w-[60px] h-auto rounded-sm"
+                    onError={(e) => { e.currentTarget.style.display = "none"; }}
+                  />
                 ))}
-                {matchedItems.length > 5 && (
-                  <span className="text-xs text-muted-foreground">+{matchedItems.length - 5}</span>
+                {matchedItems.length > 6 && (
+                  <span className="text-xs text-muted-foreground">+{matchedItems.length - 6}</span>
                 )}
+              </div>
+            </div>
+          )}
+
+          {/* Library extras — games they own not on wishlist */}
+          {libraryExtras.length > 0 && (
+            <div className="space-y-1">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Outros jogos
+              </p>
+              <div className="flex items-center gap-1 flex-wrap">
+                {libraryExtras.map((appId) => (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    key={appId}
+                    src={`https://cdn.akamai.steamstatic.com/steam/apps/${appId}/capsule_sm_120.jpg`}
+                    alt={`App ${appId}`}
+                    title={`App ${appId}`}
+                    className="w-[60px] h-auto rounded-sm opacity-60"
+                    onError={(e) => { e.currentTarget.style.display = "none"; }}
+                  />
+                ))}
               </div>
             </div>
           )}
