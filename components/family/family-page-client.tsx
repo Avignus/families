@@ -70,6 +70,7 @@ type PendingMember = {
   user: Member;
   wishlistMatches: number[] | null;
   libraryExtras: { appId: number; name: string | null }[];
+  libraryExtrasTotal: number;
   feePaidAt: string | null;
   feeChargedCents: number | null;
 };
@@ -449,6 +450,7 @@ export function FamilyPageClient({
                   user={pending.user}
                   wishlistMatches={pending.wishlistMatches}
                   libraryExtras={pending.libraryExtras}
+                  libraryExtrasTotal={pending.libraryExtrasTotal}
                   wishlistItems={family.wishlistItems}
                   feePaidAt={pending.feePaidAt}
                   feeChargedCents={pending.feeChargedCents}
@@ -745,13 +747,14 @@ export function FamilyPageClient({
 }
 
 function PendingRequestCard({
-  membershipId, familyId, user, wishlistMatches, libraryExtras, wishlistItems, feePaidAt, feeChargedCents, onAction,
+  membershipId, familyId, user, wishlistMatches, libraryExtras, libraryExtrasTotal, wishlistItems, feePaidAt, feeChargedCents, onAction,
 }: {
   membershipId: string;
   familyId: string;
   user: Member;
   wishlistMatches: number[] | null;
   libraryExtras: { appId: number; name: string | null }[];
+  libraryExtrasTotal: number;
   wishlistItems: WishlistItem[];
   feePaidAt: string | null;
   feeChargedCents: number | null;
@@ -840,7 +843,7 @@ function PendingRequestCard({
           {libraryExtras.length > 0 && (
             <div className="space-y-1">
               <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                Exclusivos (família não tem)
+                Exclusivos — {libraryExtrasTotal} jogo{libraryExtrasTotal !== 1 ? "s" : ""} que a família não tem
               </p>
               <TooltipPrimitive.Provider delayDuration={300}>
                 <div className="flex flex-wrap gap-1.5">
