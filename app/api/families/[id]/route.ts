@@ -187,7 +187,15 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
                   ? ownedAppIds.filter((id) => !familyAppIds.has(id) && !wishlistAppIds.has(id)).slice(0, 6)
                   : [];
                 const extraNameMap = await resolveAppNames(extraAppIds);
-                const libraryExtras = extraAppIds.map((appId) => ({ appId, name: extraNameMap.get(appId) ?? null }));
+                const seenNames = new Set<string>();
+                const libraryExtras = extraAppIds
+                  .map((appId) => ({ appId, name: extraNameMap.get(appId) ?? null }))
+                  .filter(({ name }) => {
+                    if (!name) return true;
+                    if (seenNames.has(name)) return false;
+                    seenNames.add(name);
+                    return true;
+                  });
                 return { ...m, wishlistMatches, libraryExtras };
               })
           );
