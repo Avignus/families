@@ -17,6 +17,7 @@ import { MemberActions } from "@/components/family/member-actions";
 import { Plus, ChevronDown, ChevronUp, Settings, Copy, LogIn, Gamepad2, Check, X, Camera, AlertTriangle, Library, Share2, Wallet, ShoppingCart, Medal } from "lucide-react";
 import { RecommendationsSection } from "@/components/recommendations/recommendations-section";
 import { FamilyBadgesSection } from "@/components/family/family-badges-section";
+import * as TooltipPrimitive from "@radix-ui/react-tooltip";
 import { FamilyTierBadge } from "@/components/family-tier-badge";
 import { ReputationBadge } from "@/components/reputation-badge";
 import { getTier, TIER_COLORS } from "@/lib/reputation";
@@ -806,25 +807,32 @@ function PendingRequestCard({
               <p className="text-[10px] font-semibold uppercase tracking-wide text-amber-400/80">
                 Possui {matchedItems.length} da wishlist
               </p>
-              <div className="flex flex-wrap gap-1.5">
-                {matchedItems.slice(0, 6).map((item) => (
-                  <div key={item.id} className="w-[80px] rounded-md overflow-hidden border border-amber-500/20 bg-card/60" title={item.steamData?.name ?? `App ${item.steamAppId}`}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={`https://cdn.cloudflare.steamstatic.com/steam/apps/${item.steamAppId}/capsule_sm_120.jpg`}
-                      alt={item.steamData?.name ?? `App ${item.steamAppId}`}
-                      className="w-full h-auto"
-                      onError={(e) => { e.currentTarget.style.display = "none"; }}
-                    />
-                    <p className="text-[9px] leading-tight px-1 py-0.5 truncate text-foreground/80">
-                      {item.steamData?.name ?? `App ${item.steamAppId}`}
-                    </p>
-                  </div>
-                ))}
-                {matchedItems.length > 6 && (
-                  <span className="text-xs text-muted-foreground self-center">+{matchedItems.length - 6}</span>
-                )}
-              </div>
+              <TooltipPrimitive.Provider delayDuration={300}>
+                <div className="flex flex-wrap gap-1.5">
+                  {matchedItems.slice(0, 6).map((item) => {
+                    const name = item.steamData?.name ?? `App ${item.steamAppId}`;
+                    return (
+                      <TooltipPrimitive.Root key={item.id}>
+                        <TooltipPrimitive.Trigger asChild>
+                          <div className="w-[80px] rounded-md overflow-hidden border border-amber-500/20 bg-card/60 cursor-default">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={`https://cdn.cloudflare.steamstatic.com/steam/apps/${item.steamAppId}/capsule_sm_120.jpg`} alt={name} className="w-full h-auto" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+                            <p className="text-[9px] leading-tight px-1 py-0.5 truncate text-foreground/80">{name}</p>
+                          </div>
+                        </TooltipPrimitive.Trigger>
+                        <TooltipPrimitive.Portal>
+                          <TooltipPrimitive.Content side="top" sideOffset={4} collisionPadding={8} className="z-50 max-w-[160px] text-[11px] bg-popover border border-border rounded px-2 py-1 shadow-md text-foreground break-words">
+                            {name}
+                          </TooltipPrimitive.Content>
+                        </TooltipPrimitive.Portal>
+                      </TooltipPrimitive.Root>
+                    );
+                  })}
+                  {matchedItems.length > 6 && (
+                    <span className="text-xs text-muted-foreground self-center">+{matchedItems.length - 6}</span>
+                  )}
+                </div>
+              </TooltipPrimitive.Provider>
             </div>
           )}
 
@@ -834,22 +842,29 @@ function PendingRequestCard({
               <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                 Exclusivos (família não tem)
               </p>
-              <div className="flex flex-wrap gap-1.5">
-                {libraryExtras.map(({ appId, name }) => (
-                  <div key={appId} className="w-[80px] rounded-md overflow-hidden border border-border/30 bg-card/40" title={name ?? `App ${appId}`}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={`https://cdn.akamai.steamstatic.com/steam/apps/${appId}/capsule_sm_120.jpg`}
-                      alt={name ?? `App ${appId}`}
-                      className="w-full h-auto opacity-70"
-                      onError={(e) => { e.currentTarget.style.display = "none"; }}
-                    />
-                    <p className="text-[9px] leading-tight px-1 py-0.5 truncate text-muted-foreground">
-                      {name ?? `App ${appId}`}
-                    </p>
-                  </div>
-                ))}
-              </div>
+              <TooltipPrimitive.Provider delayDuration={300}>
+                <div className="flex flex-wrap gap-1.5">
+                  {libraryExtras.map(({ appId, name: rawName }) => {
+                    const name = rawName ?? `App ${appId}`;
+                    return (
+                      <TooltipPrimitive.Root key={appId}>
+                        <TooltipPrimitive.Trigger asChild>
+                          <div className="w-[80px] rounded-md overflow-hidden border border-border/30 bg-card/40 cursor-default">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={`https://cdn.akamai.steamstatic.com/steam/apps/${appId}/capsule_sm_120.jpg`} alt={name} className="w-full h-auto opacity-70" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+                            <p className="text-[9px] leading-tight px-1 py-0.5 truncate text-muted-foreground">{name}</p>
+                          </div>
+                        </TooltipPrimitive.Trigger>
+                        <TooltipPrimitive.Portal>
+                          <TooltipPrimitive.Content side="top" sideOffset={4} collisionPadding={8} className="z-50 max-w-[160px] text-[11px] bg-popover border border-border rounded px-2 py-1 shadow-md text-foreground break-words">
+                            {name}
+                          </TooltipPrimitive.Content>
+                        </TooltipPrimitive.Portal>
+                      </TooltipPrimitive.Root>
+                    );
+                  })}
+                </div>
+              </TooltipPrimitive.Provider>
             </div>
           )}
         </div>
