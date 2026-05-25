@@ -68,7 +68,7 @@ type PendingMember = {
   id: string;
   user: Member;
   wishlistMatches: number[] | null;
-  libraryExtras: number[];
+  libraryExtras: { appId: number; name: string | null }[];
   feePaidAt: string | null;
   feeChargedCents: number | null;
 };
@@ -750,7 +750,7 @@ function PendingRequestCard({
   familyId: string;
   user: Member;
   wishlistMatches: number[] | null;
-  libraryExtras: number[];
+  libraryExtras: { appId: number; name: string | null }[];
   wishlistItems: WishlistItem[];
   feePaidAt: string | null;
   feeChargedCents: number | null;
@@ -806,42 +806,48 @@ function PendingRequestCard({
               <p className="text-[10px] font-semibold uppercase tracking-wide text-amber-400/80">
                 Possui {matchedItems.length} da wishlist
               </p>
-              <div className="flex items-center gap-1 flex-wrap">
+              <div className="flex flex-wrap gap-1.5">
                 {matchedItems.slice(0, 6).map((item) => (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    key={item.id}
-                    src={`https://cdn.cloudflare.steamstatic.com/steam/apps/${item.steamAppId}/capsule_sm_120.jpg`}
-                    alt={item.steamData?.name ?? `App ${item.steamAppId}`}
-                    title={item.steamData?.name ?? `App ${item.steamAppId}`}
-                    className="w-[60px] h-auto rounded-sm"
-                    onError={(e) => { e.currentTarget.style.display = "none"; }}
-                  />
+                  <div key={item.id} className="w-[80px] rounded-md overflow-hidden border border-amber-500/20 bg-card/60" title={item.steamData?.name ?? `App ${item.steamAppId}`}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={`https://cdn.cloudflare.steamstatic.com/steam/apps/${item.steamAppId}/capsule_sm_120.jpg`}
+                      alt={item.steamData?.name ?? `App ${item.steamAppId}`}
+                      className="w-full h-auto"
+                      onError={(e) => { e.currentTarget.style.display = "none"; }}
+                    />
+                    <p className="text-[9px] leading-tight px-1 py-0.5 truncate text-foreground/80">
+                      {item.steamData?.name ?? `App ${item.steamAppId}`}
+                    </p>
+                  </div>
                 ))}
                 {matchedItems.length > 6 && (
-                  <span className="text-xs text-muted-foreground">+{matchedItems.length - 6}</span>
+                  <span className="text-xs text-muted-foreground self-center">+{matchedItems.length - 6}</span>
                 )}
               </div>
             </div>
           )}
 
-          {/* Library extras — games they own not on wishlist */}
+          {/* Library extras — games they own that no family member has */}
           {libraryExtras.length > 0 && (
             <div className="space-y-1">
               <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                 Exclusivos (família não tem)
               </p>
-              <div className="flex items-center gap-1 flex-wrap">
-                {libraryExtras.map((appId) => (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    key={appId}
-                    src={`https://cdn.akamai.steamstatic.com/steam/apps/${appId}/capsule_sm_120.jpg`}
-                    alt={`App ${appId}`}
-                    title={`App ${appId}`}
-                    className="w-[60px] h-auto rounded-sm opacity-60"
-                    onError={(e) => { e.currentTarget.style.display = "none"; }}
-                  />
+              <div className="flex flex-wrap gap-1.5">
+                {libraryExtras.map(({ appId, name }) => (
+                  <div key={appId} className="w-[80px] rounded-md overflow-hidden border border-border/30 bg-card/40" title={name ?? `App ${appId}`}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={`https://cdn.akamai.steamstatic.com/steam/apps/${appId}/capsule_sm_120.jpg`}
+                      alt={name ?? `App ${appId}`}
+                      className="w-full h-auto opacity-70"
+                      onError={(e) => { e.currentTarget.style.display = "none"; }}
+                    />
+                    <p className="text-[9px] leading-tight px-1 py-0.5 truncate text-muted-foreground">
+                      {name ?? `App ${appId}`}
+                    </p>
+                  </div>
                 ))}
               </div>
             </div>

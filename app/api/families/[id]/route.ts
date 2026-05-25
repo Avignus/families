@@ -182,9 +182,14 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
                   ? ownedAppIds.filter((id) => wishlistAppIds.has(id))
                   : null;
                 // Games the candidate owns that no active family member has
-                const libraryExtras: number[] = ownedAppIds
+                const extraAppIds = ownedAppIds
                   ? ownedAppIds.filter((id) => !familyAppIds.has(id)).slice(0, 6)
                   : [];
+                const extraCatalog = extraAppIds.length > 0
+                  ? await prisma.steamAppCatalog.findMany({ where: { appId: { in: extraAppIds } }, select: { appId: true, name: true } })
+                  : [];
+                const extraNameMap = new Map(extraCatalog.map((c) => [c.appId, c.name]));
+                const libraryExtras = extraAppIds.map((appId) => ({ appId, name: extraNameMap.get(appId) ?? null }));
                 return { ...m, wishlistMatches, libraryExtras };
               })
           );
