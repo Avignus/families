@@ -183,10 +183,9 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
                   : null;
                 // Games the candidate owns that no active family member has,
                 // excluding games already shown in wishlistMatches
-                const allExtraAppIds = ownedAppIds
+                const extraAppIds = ownedAppIds
                   ? ownedAppIds.filter((id) => !familyAppIds.has(id) && !wishlistAppIds.has(id))
                   : [];
-                const extraAppIds = allExtraAppIds.slice(0, 6);
                 const extraNameMap = await resolveAppNames(extraAppIds);
                 const seenNames = new Set<string>();
                 const libraryExtras = extraAppIds
@@ -197,8 +196,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
                     seenNames.add(name);
                     return true;
                   });
-                const libraryExtrasTotal = allExtraAppIds.length;
-                return { ...m, wishlistMatches, libraryExtras, libraryExtrasTotal };
+                return { ...m, wishlistMatches, libraryExtras };
               })
           );
         })()
