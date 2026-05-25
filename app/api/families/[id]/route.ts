@@ -176,14 +176,15 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
                   where: { userId_type: { userId: m.user.steamId, type: "library" } },
                 });
                 const ownedAppIds = cache
-                  ? [...new Set((cache.payload as Array<{ appId: number }>).map((g) => g.appId))]
+                  ? [...new Set((cache.payload as Array<{ appId: number | string }>).map((g) => Number(g.appId)))]
                   : null;
                 const wishlistMatches: number[] | null = ownedAppIds
                   ? ownedAppIds.filter((id) => wishlistAppIds.has(id))
                   : null;
-                // Games the candidate owns that no active family member has
+                // Games the candidate owns that no active family member has,
+                // excluding games already shown in wishlistMatches
                 const extraAppIds = ownedAppIds
-                  ? ownedAppIds.filter((id) => !familyAppIds.has(id)).slice(0, 6)
+                  ? ownedAppIds.filter((id) => !familyAppIds.has(id) && !wishlistAppIds.has(id)).slice(0, 6)
                   : [];
                 const extraNameMap = await resolveAppNames(extraAppIds);
                 const libraryExtras = extraAppIds.map((appId) => ({ appId, name: extraNameMap.get(appId) ?? null }));
