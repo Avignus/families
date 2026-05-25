@@ -176,7 +176,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
                   where: { userId_type: { userId: m.user.steamId, type: "library" } },
                 });
                 const ownedAppIds = cache
-                  ? (cache.payload as Array<{ appId: number }>).map((g) => g.appId)
+                  ? [...new Set((cache.payload as Array<{ appId: number }>).map((g) => g.appId))]
                   : null;
                 const wishlistMatches: number[] | null = ownedAppIds
                   ? ownedAppIds.filter((id) => wishlistAppIds.has(id))
