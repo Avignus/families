@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { z } from "zod";
 import { requireSession, isApiError, ok, err, parseBody } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
-import { getAppDetails, getPlayerSummaries } from "@/lib/steam";
+import { getAppDetails, getPlayerSummaries, resolveAppNames } from "@/lib/steam";
 import { refundPayment } from "@/lib/asaas";
 import { creditWallet } from "@/lib/wallet";
 import { createNotification } from "@/lib/notifications/service";
@@ -185,10 +185,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
                 const extraAppIds = ownedAppIds
                   ? ownedAppIds.filter((id) => !familyAppIds.has(id)).slice(0, 6)
                   : [];
-                const extraCatalog = extraAppIds.length > 0
-                  ? await prisma.steamAppCatalog.findMany({ where: { appId: { in: extraAppIds } }, select: { appId: true, name: true } })
-                  : [];
-                const extraNameMap = new Map(extraCatalog.map((c) => [c.appId, c.name]));
+                const extraNameMap = await resolveAppNames(extraAppIds);
                 const libraryExtras = extraAppIds.map((appId) => ({ appId, name: extraNameMap.get(appId) ?? null }));
                 return { ...m, wishlistMatches, libraryExtras };
               })

@@ -320,3 +320,47 @@ export async function refreshAppCatalog(): Promise<void> {
     console.error("Failed to refresh Steam app catalog:", err);
   }
 }
+
+/**
+ * Resolves names for the given appIds. Hits SteamAppCatalog first; for any
+ * missing ones, fetches from the Steam store API (filters=basic) and caches
+ * the results. Safe to call with an empty array.
+ */
+export async function resolveAppNames(appIds: number[]): Promise<Map<number, string>> {
+  if (appIds.length === 0) return new Map();
+
+  const cached = await prisma.steamAppCatalog.findMany({
+    where: { appId: { in: appIds } },
+    select: { appId: true, name: true },
+  });
+  const nameMap = new Map(cached.map((c) => [c.appId, c.name]));
+
+  const missing = appIds.filter((id) => !nameMap.has(id));
+  if (missing.length > 0) {
+    try {
+      const url = `https://store.steampowered.com/api/appdetails?appids=${missing.join(",")}&filters=basic`;
+      const res = await fetch(url, { signal: AbortSignal.timeout(6000) });
+      if (res.ok) {
+        const data = await res.json();
+        await Promise.all(
+          missing.map(async (id) => {
+            const entry = data[String(id)];
+            const name: string | null = entry?.success ? entry.data?.name ?? null : null;
+            if (name) {
+              nameMap.set(id, name);
+              await prisma.steamAppCatalog.upsert({
+                where: { appId: id },
+                update: { name, updatedAt: new Date() },
+                create: { appId: id, name },
+              });
+            }
+          })
+        );
+      }
+    } catch {
+      // Non-fatal — fall back to "App <id>" in the UI
+    }
+  }
+
+  return nameMap;
+}
