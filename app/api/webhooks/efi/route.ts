@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { timingSafeEqual } from "crypto";
 import { getChargeByTxId, normalizeEfiStatus } from "@/lib/efi";
 import {
   handleMembershipPayment,
@@ -20,24 +19,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
-  // Real events carry pix data — validate the secret token from the registered URL
-  const token = req.nextUrl.searchParams.get("token") ?? "";
-  const expected = process.env.EFI_WEBHOOK_SECRET ?? "";
-  if (!expected) {
-    return NextResponse.json({ ok: false }, { status: 401 });
-  }
-  let valid = false;
-  try {
-    const a = Buffer.from(token);
-    const b = Buffer.from(expected);
-    valid = a.length === b.length && timingSafeEqual(a, b);
-  } catch {
-    valid = false;
-  }
-  if (!valid) {
-    return NextResponse.json({ ok: false }, { status: 401 });
-  }
-
+  // Security: each txid is verified directly against the Efí API before any processing,
+  // so a spoofed webhook cannot trigger state changes with fake data.
   for (const pixEvent of body.pix as Array<{
     txid?: string;
     endToEndId?: string;
