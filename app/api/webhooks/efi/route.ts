@@ -11,8 +11,16 @@ import {
 export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
-  // Efí doesn't send a signature — secure via secret token in registered webhook URL
-  // Register the webhook with: PUT /v2/webhook/{chave} → webhookUrl including ?token=EFI_WEBHOOK_SECRET
+  const body = await req.json().catch(() => null);
+  if (!body) return NextResponse.json({ ok: false }, { status: 400 });
+
+  // Efí sends a connectivity test ping (empty body or no pix array) during webhook registration.
+  // Respond 200 immediately so the registration succeeds — no token needed for ping.
+  if (!body.pix || !Array.isArray(body.pix) || body.pix.length === 0) {
+    return NextResponse.json({ ok: true });
+  }
+
+  // Real events carry pix data — validate the secret token from the registered URL
   const token = req.nextUrl.searchParams.get("token") ?? "";
   const expected = process.env.EFI_WEBHOOK_SECRET ?? "";
   if (!expected) {
@@ -28,14 +36,6 @@ export async function POST(req: NextRequest) {
   }
   if (!valid) {
     return NextResponse.json({ ok: false }, { status: 401 });
-  }
-
-  const body = await req.json().catch(() => null);
-  if (!body) return NextResponse.json({ ok: false }, { status: 400 });
-
-  // Efí sends a connectivity test with an empty body or no pix array — acknowledge it
-  if (!body.pix || !Array.isArray(body.pix) || body.pix.length === 0) {
-    return NextResponse.json({ ok: true });
   }
 
   for (const pixEvent of body.pix as Array<{
