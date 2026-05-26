@@ -23,7 +23,7 @@ if (!secret) {
   process.exit(1);
 }
 
-const webhookUrl = `${baseUrl}/api/webhooks/efi?token=${encodeURIComponent(secret)}`;
+const webhookUrl = `${baseUrl}/api/webhooks/efi`;
 console.log("Registering Efí webhook:", webhookUrl);
 
 registerEfiWebhook(webhookUrl)
