@@ -15,10 +15,6 @@
     {
       "path": "/api/cron/game-recommendations",
       "schedule": "0 4 * * 1"
-    },
-    {
-      "path": "/api/cron/sync-efi-payments",
-      "schedule": "*/3 * * * *"
     }
   ]
 }

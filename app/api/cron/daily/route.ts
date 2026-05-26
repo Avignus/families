@@ -10,6 +10,7 @@ const DAILY_ROUTES = [
   "/api/cron/refund-stuck-pledges",
   "/api/cron/opportunity-notifications",
   "/api/cron/expire-spots",
+  "/api/cron/sync-efi-payments",
 ];
 
 
