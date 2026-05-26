@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Search, Loader2, Heart, Plus } from "lucide-react";
+import { SteamPriceBadge } from "@/components/ui/steam-price-badge";
 import { useLanguage } from "@/lib/i18n/context";
 import { formatCurrency } from "@/lib/utils";
 
@@ -24,6 +25,8 @@ type WishlistGame = {
   comingSoon: boolean;
   isFree: boolean;
   priceCents: number;
+  originalPriceCents: number;
+  discountPercent: number;
   currency: string;
 };
 
@@ -38,7 +41,10 @@ type SuggestionGame = {
   appId: number;
   name: string;
   priceCents: number;
+  originalPriceCents: number;
+  discountPercent: number;
   isFree: boolean;
+  comingSoon: boolean;
   members: Array<{ userId: string; personaName: string; avatarMedium: string }>;
 };
 
@@ -51,10 +57,9 @@ type Props = {
   existingAppIds?: Set<number>;
 };
 
-type PriceFilter = "free" | "20" | "50" | "any";
+type PriceFilter = "20" | "50" | "any";
 
 const PRICE_PRESETS: Array<{ key: PriceFilter; label: string; maxCents: number }> = [
-  { key: "free", label: "Gratuito", maxCents: 0 },
   { key: "20",   label: "≤ R$20",   maxCents: 2000 },
   { key: "50",   label: "≤ R$50",   maxCents: 5000 },
   { key: "any",  label: "Qualquer", maxCents: Infinity },
@@ -91,12 +96,16 @@ export function GameSearchModal({ open, onOpenChange, onSelect, title, familyId,
     for (const member of members) {
       for (const game of member.steamWishlist ?? []) {
         if (existingAppIds?.has(game.appId)) continue;
+        if (game.isFree || game.comingSoon) continue;
         if (!gameMap.has(game.appId)) {
           gameMap.set(game.appId, {
             appId: game.appId,
             name: game.name,
             priceCents: game.priceCents,
+            originalPriceCents: game.originalPriceCents,
+            discountPercent: game.discountPercent,
             isFree: game.isFree,
+            comingSoon: game.comingSoon,
             members: [],
           });
         }
@@ -110,9 +119,7 @@ export function GameSearchModal({ open, onOpenChange, onSelect, title, familyId,
 
     let all = [...gameMap.values()];
 
-    if (priceFilter === "free") {
-      all = all.filter((g) => g.isFree);
-    } else if (priceFilter !== "any") {
+    if (priceFilter !== "any") {
       const preset = PRICE_PRESETS.find((p) => p.key === priceFilter)!;
       all = all.filter((g) => !g.isFree && g.priceCents <= preset.maxCents);
     }
@@ -350,12 +357,16 @@ function SuggestionCard({
               </div>
             )}
           </div>
-          <span className="text-[10px] font-semibold shrink-0">
-            {game.isFree ? (
-              <span className="text-emerald-400">Grátis</span>
-            ) : game.priceCents > 0 ? (
-              <span className="text-muted-foreground">{formatCurrency(game.priceCents, "BRL")}</span>
-            ) : null}
+          <span className="shrink-0">
+            {game.priceCents > 0 && (
+              <SteamPriceBadge
+                priceCents={game.priceCents}
+                originalPriceCents={game.originalPriceCents}
+                discountPercent={game.discountPercent}
+                currency="BRL"
+                size="xs"
+              />
+            )}
           </span>
         </div>
       </div>

@@ -15,6 +15,8 @@ export type SteamAppDetails = {
   headerImage: string;
   capsuleImage: string;
   priceCents: number;
+  originalPriceCents: number;
+  discountPercent: number;
   currency: string;
   shortDescription: string;
   isFree: boolean;
@@ -45,12 +47,14 @@ export type SteamPlayerSummary = {
 export async function getAppDetails(appId: number, country = DEFAULT_COUNTRY): Promise<SteamAppDetails | null> {
   // Check cache first
   const GENRE_VERSION = 3; // bump when synthesis logic changes to force cache refresh
+  const PRICE_VERSION = 2; // bump when new price fields are added to force cache refresh
   const cached = await prisma.steamAppCache.findUnique({ where: { steamAppId: appId } });
   if (cached) {
     const age = Date.now() - cached.fetchedAt.getTime();
-    const p = cached.payload as { genres?: unknown; _genreVersion?: number };
+    const p = cached.payload as { genres?: unknown; _genreVersion?: number; _priceVersion?: number };
     const genresCurrent = p.genres !== undefined && (p._genreVersion ?? 0) >= GENRE_VERSION;
-    if (age < PRICE_CACHE_TTL_MS && genresCurrent) {
+    const priceCurrent = (p._priceVersion ?? 0) >= PRICE_VERSION;
+    if (age < PRICE_CACHE_TTL_MS && genresCurrent && priceCurrent) {
       return cached.payload as unknown as SteamAppDetails;
     }
   }
@@ -107,12 +111,14 @@ export async function getAppDetails(appId: number, country = DEFAULT_COUNTRY): P
     const survivalKw = ["survival", "sobrevivência", "sobreviver", "survive", "scavenge"];
     if (survivalKw.some((kw) => desc.includes(kw))) genres.push("Sobrevivência");
 
-    const payload: SteamAppDetails & { _genreVersion: number } = {
+    const payload: SteamAppDetails & { _genreVersion: number; _priceVersion: number } = {
       appId,
       name: d.name,
       headerImage: d.header_image,
       capsuleImage: d.capsule_imagev5 ?? d.capsule_image ?? d.header_image,
       priceCents: d.is_free ? 0 : (d.price_overview?.final ?? 0),
+      originalPriceCents: d.is_free ? 0 : (d.price_overview?.initial ?? d.price_overview?.final ?? 0),
+      discountPercent: d.is_free ? 0 : (d.price_overview?.discount_percent ?? 0),
       currency: d.price_overview?.currency ?? country,
       shortDescription: d.short_description ?? "",
       isFree: d.is_free ?? false,
@@ -120,6 +126,7 @@ export async function getAppDetails(appId: number, country = DEFAULT_COUNTRY): P
       releaseDate: d.release_date?.date ?? "",
       genres: [...new Set(genres)],
       _genreVersion: GENRE_VERSION,
+      _priceVersion: PRICE_VERSION,
     };
 
     await prisma.steamAppCache.upsert({

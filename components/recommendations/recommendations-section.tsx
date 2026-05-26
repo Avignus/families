@@ -43,40 +43,8 @@ type Props = {
 
 function RecommendationCard({ rec, familyId, wishlistAppIds }: { rec: Recommendation; familyId: string; wishlistAppIds: Set<number> }) {
   const qc = useQueryClient();
-  const cardRef = useRef<HTMLAnchorElement>(null);
-  const reasonRef = useRef<HTMLParagraphElement>(null);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [tooltipRect, setTooltipRect] = useState<DOMRect | null>(null);
   const [adding, setAdding] = useState(false);
   const added = wishlistAppIds.has(rec.steamAppId);
-
-  const openTooltip = useCallback(() => {
-    if (timerRef.current) clearTimeout(timerRef.current);
-    const el = reasonRef.current;
-    if (!el || el.scrollHeight <= el.clientHeight + 1) return;
-    const cardRect = cardRef.current?.getBoundingClientRect();
-    if (cardRect) setTooltipRect(cardRect);
-  }, []);
-
-  const scheduleClose = useCallback(() => {
-    timerRef.current = setTimeout(() => setTooltipRect(null), 100);
-  }, []);
-
-  const cancelClose = useCallback(() => {
-    if (timerRef.current) clearTimeout(timerRef.current);
-  }, []);
-
-  const closeNow = useCallback(() => {
-    if (timerRef.current) clearTimeout(timerRef.current);
-    setTooltipRect(null);
-  }, []);
-
-  useEffect(() => {
-    if (!tooltipRect) return;
-    const handler = () => setTooltipRect(null);
-    window.addEventListener("scroll", handler, { passive: true, capture: true });
-    return () => window.removeEventListener("scroll", handler, { capture: true });
-  }, [tooltipRect]);
 
   const handleAdd = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -101,83 +69,69 @@ function RecommendationCard({ rec, familyId, wishlistAppIds }: { rec: Recommenda
     }
   };
 
-  const image = rec.steamData?.headerImage ?? `https://cdn.cloudflare.steamstatic.com/steam/apps/${rec.steamAppId}/header.jpg`;
+  const headerImage = rec.steamData?.headerImage ?? `https://cdn.cloudflare.steamstatic.com/steam/apps/${rec.steamAppId}/header.jpg`;
   const name = rec.steamData?.name ?? rec.gameName;
   const storeUrl = `https://store.steampowered.com/app/${rec.steamAppId}`;
   const isNew = rec.source === "ondemand";
 
   return (
-    <>
-      <a
-        ref={cardRef}
-        href={storeUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        className={`flex flex-col flex-shrink-0 w-44 border transition-colors group relative rounded-lg ${
-          isNew ? "ring-1 ring-primary/30" : ""
-        } border-border/40 bg-card/60 hover:border-border hover:bg-card/80`}
-      >
+    <a
+      href={storeUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={`group relative flex-shrink-0 w-[120px] rounded-md overflow-hidden block hover:scale-[1.04] hover:z-10 transition-all duration-200 hover:shadow-[0_8px_28px_hsl(0_0%_0%/0.55)] ${isNew ? "ring-1 ring-primary/50" : ""}`}
+    >
+      <div className="relative aspect-[2/3] bg-secondary">
+        <img
+          src={`https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/${rec.steamAppId}/library_600x900.jpg`}
+          alt={name}
+          className="w-full h-full object-cover transition-all duration-300 group-hover:brightness-110 group-hover:saturate-[1.08]"
+          onError={(e) => {
+            const el = e.currentTarget;
+            if (!el.dataset.fallback) { el.dataset.fallback = "1"; el.src = `https://cdn.cloudflare.steamstatic.com/steam/apps/${rec.steamAppId}/library_600x900.jpg`; }
+            else if (el.dataset.fallback === "1") { el.dataset.fallback = "2"; el.src = headerImage; }
+            else { el.style.display = "none"; }
+          }}
+        />
+
+        {/* Hover overlay: reason + add button */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col justify-end p-2 gap-1.5">
+          <p className="text-[9px] text-white/80 leading-snug line-clamp-4">{rec.reason}</p>
+          <button
+            onClick={handleAdd}
+            disabled={adding || added}
+            className={`w-full h-6 rounded text-[10px] font-semibold flex items-center justify-center gap-1 transition-colors shrink-0 ${
+              added
+                ? "bg-emerald-500/30 text-emerald-300 border border-emerald-400/30"
+                : "bg-white/15 hover:bg-white/25 text-white border border-white/20"
+            } disabled:opacity-60`}
+          >
+            {adding ? <Loader2 className="h-3 w-3 animate-spin" /> : added ? <><Check className="h-3 w-3" /> Na lista</> : <><Plus className="h-3 w-3" /> Adicionar</>}
+          </button>
+        </div>
+
+        {/* Name badge — always visible, hides on hover */}
+        <div className="absolute bottom-0 inset-x-0 pb-1.5 px-1.5 group-hover:opacity-0 transition-opacity duration-200">
+          <p className="text-[10px] font-semibold text-white leading-tight line-clamp-2 drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]">{name}</p>
+        </div>
+
+        {/* "novo" badge */}
         {isNew && (
           <span className="absolute top-1.5 left-1.5 z-10 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-primary/90 text-white">
             novo
           </span>
         )}
-        <img
-          src={image}
-          alt={name}
-          className="w-full h-[62px] object-cover rounded-t-lg group-hover:brightness-110 transition-[filter]"
-        />
-        <div className="px-2 py-2 flex flex-col flex-1 gap-1">
-          <p className="text-[11px] font-semibold leading-tight line-clamp-1">{name}</p>
-          <p
-            ref={reasonRef}
-            onMouseEnter={openTooltip}
-            onMouseLeave={scheduleClose}
-            className="text-[10px] text-muted-foreground leading-snug line-clamp-5 flex-1 cursor-default"
-          >
-            {rec.reason}
-          </p>
-          <button
-            onMouseEnter={closeNow}
-            onClick={handleAdd}
-            disabled={adding || added}
-            className={`w-full h-6 rounded text-[10px] font-semibold flex items-center justify-center gap-1 transition-colors mt-1 shrink-0 ${
-              added
-                ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/25"
-                : "bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20"
-            } disabled:opacity-60`}
-          >
-            {adding ? (
-              <Loader2 className="h-3 w-3 animate-spin" />
-            ) : added ? (
-              <><Check className="h-3 w-3" /> Na lista</>
-            ) : (
-              <><Plus className="h-3 w-3" /> Adicionar</>
-            )}
-          </button>
-        </div>
-      </a>
 
-      {tooltipRect && typeof document !== "undefined" && createPortal(
-        <div
-          style={{
-            position: "fixed",
-            bottom: window.innerHeight - tooltipRect.top + 6,
-            left: tooltipRect.left,
-            width: tooltipRect.width,
-            zIndex: 9999,
-            maxHeight: 200,
-            overflowY: "auto",
-          }}
-          className="bg-popover border border-border rounded-lg shadow-xl px-2 py-2"
-          onMouseEnter={cancelClose}
-          onMouseLeave={scheduleClose}
-        >
-          <p className="text-[10px] text-muted-foreground leading-snug">{rec.reason}</p>
-        </div>,
-        document.body,
-      )}
-    </>
+        {/* Added checkmark */}
+        {added && (
+          <div className="absolute top-1.5 right-1.5">
+            <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-emerald-500/80 backdrop-blur-sm">
+              <Check className="h-3 w-3 text-white" />
+            </span>
+          </div>
+        )}
+      </div>
+    </a>
   );
 }
 
@@ -297,9 +251,9 @@ export function RecommendationsSection({ familyId, currentUserId, wishlistAppIds
         {expanded && (
           <div className="mt-4 space-y-5">
             {isLoading && (
-              <div className="flex gap-3">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="flex-shrink-0 w-44 h-40 rounded-lg bg-secondary animate-pulse" />
+              <div className="flex gap-2">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <div key={i} className="flex-shrink-0 w-[120px] aspect-[2/3] rounded-md bg-secondary animate-pulse" />
                 ))}
               </div>
             )}
@@ -310,9 +264,9 @@ export function RecommendationsSection({ familyId, currentUserId, wishlistAppIds
                   <Loader2 className="h-3 w-3 animate-spin shrink-0" />
                   Consultando IA e buscando jogos — pode levar até 30 segundos…
                 </p>
-                <div className="flex gap-3">
-                  {[1, 2, 3, 4].map((i) => (
-                    <div key={i} className="flex-shrink-0 w-44 h-40 rounded-lg bg-secondary animate-pulse" />
+                <div className="flex gap-2">
+                  {[1, 2, 3, 4, 5, 6].map((i) => (
+                    <div key={i} className="flex-shrink-0 w-[120px] aspect-[2/3] rounded-md bg-secondary animate-pulse" />
                   ))}
                 </div>
               </div>
@@ -325,7 +279,7 @@ export function RecommendationsSection({ familyId, currentUserId, wishlistAppIds
             {!isLoading && familyRecs.length > 0 && (
               <div>
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Para a família</p>
-                <div className="flex gap-3 overflow-x-auto pb-2">
+                <div className="flex gap-2 overflow-x-auto pb-2">
                   {familyRecs.map((rec) => (
                     <RecommendationCard key={rec.id} rec={rec} familyId={familyId} wishlistAppIds={wishlistAppIds} />
                   ))}
@@ -336,7 +290,7 @@ export function RecommendationsSection({ familyId, currentUserId, wishlistAppIds
             {!isLoading && personalRecs.length > 0 && (
               <div>
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Para você</p>
-                <div className="flex gap-3 overflow-x-auto pb-2">
+                <div className="flex gap-2 overflow-x-auto pb-2">
                   {personalRecs.map((rec) => (
                     <RecommendationCard key={rec.id} rec={rec} familyId={familyId} wishlistAppIds={wishlistAppIds} />
                   ))}

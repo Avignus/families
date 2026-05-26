@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { formatCurrency, getMemberColor } from "@/lib/utils";
 import { PledgeModal } from "./pledge-modal";
 import { ShoppingCart, Minus, X, Sparkles, RefreshCw, Clock, PackageOpen, CheckCircle2, Trash2, Link2, Copy, Check, Receipt, ChevronDown, ChevronUp } from "lucide-react";
+import { SteamPriceBadge } from "@/components/ui/steam-price-badge";
 import { toast } from "sonner";
 import { useLanguage } from "@/lib/i18n/context";
 
@@ -30,6 +31,8 @@ type SteamData = {
   name: string;
   headerImage: string;
   priceCents: number;
+  originalPriceCents?: number;
+  discountPercent?: number;
   currency: string;
   isFree: boolean;
   comingSoon?: boolean;
@@ -174,20 +177,29 @@ export function WishlistItemCard({ item, familyId, currentUserId, memberColors, 
       style={isFunded ? { boxShadow: "0 0 20px hsl(258 82% 66% / 0.15)" } : undefined}
     >
       {/* Game header image */}
-      <div className="relative h-[108px]">
-        {item.steamData?.headerImage ? (
-          <img
-            src={item.steamData.headerImage}
-            alt={gameName}
-            className={`w-full h-full object-cover transition-all duration-300 group-hover:brightness-110 group-hover:saturate-[1.1] ${comingSoon ? "opacity-80" : ""}`}
-          />
-        ) : (
-          <div className="w-full h-full bg-secondary flex items-center justify-center">
-            <span className="text-muted-foreground text-xs">{t.wishlist.noImage}</span>
-          </div>
-        )}
+      <div className="relative h-[220px]">
+        <img
+          src={`https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/${item.steamAppId}/library_600x900.jpg`}
+          alt={gameName}
+          className={`w-full h-full object-cover object-top transition-all duration-300 group-hover:brightness-110 group-hover:saturate-[1.1] ${comingSoon ? "opacity-80" : ""}`}
+          onError={(e) => {
+            const el = e.currentTarget;
+            if (!el.dataset.fallback) {
+              el.dataset.fallback = "1";
+              el.src = `https://cdn.cloudflare.steamstatic.com/steam/apps/${item.steamAppId}/library_600x900.jpg`;
+            } else if (el.dataset.fallback === "1") {
+              el.dataset.fallback = "2";
+              el.src = item.steamData?.headerImage ?? `https://cdn.cloudflare.steamstatic.com/steam/apps/${item.steamAppId}/header.jpg`;
+              el.className = el.className.replace("object-top", "object-center");
+            } else {
+              el.replaceWith(Object.assign(document.createElement("div"), {
+                className: "w-full h-full bg-secondary flex items-center justify-center",
+              }));
+            }
+          }}
+        />
         {/* Gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-card via-card/20 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-card via-card/10 to-transparent" />
 
         {/* Remove button — top-left, owner only, visible on card hover */}
         {isOwner && !isPurchased && (
@@ -285,13 +297,21 @@ export function WishlistItemCard({ item, familyId, currentUserId, memberColors, 
             </div>
           )}
           <div className="flex items-center justify-between mt-0.5">
-            <p className="text-xs text-muted-foreground">
-              {item.steamData?.isFree
-                ? t.wishlist.free
-                : noPriceDefined
-                ? t.wishlist.priceToSet
-                : formatCurrency(item.steamData?.priceCents ?? item.targetPriceCents, item.currency)}
-            </p>
+            <div className="text-xs">
+              {item.steamData?.isFree ? (
+                <span className="text-muted-foreground">{t.wishlist.free}</span>
+              ) : noPriceDefined ? (
+                <span className="text-muted-foreground">{t.wishlist.priceToSet}</span>
+              ) : (
+                <SteamPriceBadge
+                  priceCents={item.steamData?.priceCents ?? item.targetPriceCents}
+                  originalPriceCents={item.steamData?.originalPriceCents}
+                  discountPercent={item.steamData?.discountPercent}
+                  currency={item.currency}
+                  size="sm"
+                />
+              )}
+            </div>
             {item.owner && (
               <div className="flex items-center gap-1">
                 <Avatar className="h-4 w-4">

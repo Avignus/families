@@ -43,7 +43,15 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     return err("STEAM_APP_NOT_FOUND", "Game not found on Steam", 404);
   }
 
-  if (!steamData.isFree && steamData.priceCents < 3000) {
+  if (steamData.isFree) {
+    return err("GAME_IS_FREE", "Jogos gratuitos não podem ser adicionados à lista de desejos.", 422);
+  }
+
+  if (steamData.comingSoon) {
+    return err("GAME_NOT_RELEASED", "Jogos ainda não lançados não podem ser adicionados à lista de desejos.", 422);
+  }
+
+  if (steamData.priceCents < 3000) {
     return err(
       "PRICE_TOO_LOW",
       `Este jogo custa R$ ${(steamData.priceCents / 100).toFixed(2).replace(".", ",")} — o valor mínimo para repasse via PIX é R$ 30,00.`,

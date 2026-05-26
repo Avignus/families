@@ -27,6 +27,7 @@ import { Badge } from "@/components/ui/badge";
 import { Library, Heart, Users, Gift, Lock, AlertTriangle, Plus, Clock, CheckCircle2, Search, RefreshCw } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { formatCurrency } from "@/lib/utils";
+import { SteamPriceBadge } from "@/components/ui/steam-price-badge";
 import { PledgeModal } from "@/components/wishlist/pledge-modal";
 import { toast } from "sonner";
 import { useLanguage } from "@/lib/i18n/context";
@@ -34,7 +35,7 @@ import { useLanguage } from "@/lib/i18n/context";
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type OwnedGame = { appId: number; name: string; playtimeMinutes: number };
-type WishlistGame = { appId: number; name: string; comingSoon: boolean; releaseDate: string; isFree: boolean; priceCents: number; currency: string };
+type WishlistGame = { appId: number; name: string; comingSoon: boolean; releaseDate: string; isFree: boolean; priceCents: number; originalPriceCents: number; discountPercent: number; currency: string };
 
 type MemberSteamData = {
   userId: string;
@@ -72,6 +73,14 @@ function headerImage(appId: number) {
 
 function headerImageFallback(appId: number) {
   return `https://cdn.cloudflare.steamstatic.com/steam/apps/${appId}/header.jpg`;
+}
+
+function capsuleImage(appId: number) {
+  return `https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/${appId}/library_600x900.jpg`;
+}
+
+function capsuleImageFallback(appId: number) {
+  return `https://cdn.cloudflare.steamstatic.com/steam/apps/${appId}/library_600x900.jpg`;
 }
 
 function fmtPlaytime(minutes: number) {
@@ -114,6 +123,8 @@ type UnifiedEntry = {
   releaseDate: string;
   isFree: boolean;
   priceCents: number;
+  originalPriceCents: number;
+  discountPercent: number;
   currency: string;
   ownedByCurrentUser: boolean;
 };
@@ -164,6 +175,8 @@ function WishesTab({
             releaseDate: game.releaseDate,
             isFree: game.isFree,
             priceCents: game.priceCents,
+            originalPriceCents: game.originalPriceCents,
+            discountPercent: game.discountPercent,
             currency: game.currency,
             ownedByCurrentUser: currentUserOwnedAppIds.has(game.appId),
           });
@@ -274,7 +287,7 @@ function WishesTab({
 
       {/* Grid */}
       {visible.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-2">
           {visible.map((entry, i) => (
             <div key={entry.appId} className="fade-in-up" style={{ animationDelay: `${Math.max(0, i - (count - PAGE)) * 30}ms` }}>
               <WishEntry
@@ -354,122 +367,104 @@ function WishEntry({
     }
   };
 
+  const showPrice = !entry.isFree && entry.priceCents > 0;
+
   return (
     <>
-      <div className="group relative rounded-xl overflow-hidden border border-border/50 bg-card hover:border-primary/30 hover:shadow-[0_4px_16px_hsl(0_0%_0%/0.3)] transition-all duration-200">
-        {/* Cover */}
-        <div className="relative h-[80px]">
+      <div className="group relative rounded-md overflow-hidden hover:scale-[1.04] hover:z-10 transition-all duration-200 hover:shadow-[0_8px_28px_hsl(0_0%_0%/0.55)]">
+        {/* Portrait capsule image */}
+        <div className="relative aspect-[2/3] bg-secondary">
           <img
-            src={headerImage(entry.appId)}
+            src={capsuleImage(entry.appId)}
             alt={entry.name}
-            className="w-full h-full object-cover transition-all duration-300 group-hover:brightness-110 group-hover:saturate-[1.1]"
+            className="w-full h-full object-cover transition-all duration-300 group-hover:brightness-110 group-hover:saturate-[1.08]"
             onError={(e) => {
               const el = e.currentTarget;
-              if (!el.dataset.fallback) {
-                el.dataset.fallback = "1";
-                el.src = headerImageFallback(entry.appId);
-              } else {
-                el.parentElement!.style.display = "none";
-              }
+              if (!el.dataset.fallback) { el.dataset.fallback = "1"; el.src = capsuleImageFallback(entry.appId); }
+              else if (el.dataset.fallback === "1") { el.dataset.fallback = "2"; el.src = headerImage(entry.appId); }
+              else { el.style.display = "none"; }
             }}
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-card via-card/30 to-transparent" />
 
-          {/* Badges top-right */}
-          <div className="absolute top-2 right-2 flex flex-col items-end gap-1">
-            {entry.isShared && (
-              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-violet-600/90 text-white">
-                <Gift className="h-2.5 w-2.5" />
-                {t.steamLibrary.sharedWishlist}
-              </span>
-            )}
-            {entry.comingSoon && (
-              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-sky-600/85 text-white">
-                <Clock className="h-2.5 w-2.5" />
-                {t.steamLibrary.comingSoon}{entry.releaseDate && entry.releaseDate !== "Em breve" ? ` · ${entry.releaseDate}` : ""}
-              </span>
-            )}
-            {entry.isFree && (
-              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-teal-600/85 text-white">
-                {t.steamLibrary.free}
-              </span>
-            )}
-            {entry.ownedByCurrentUser && !entry.isFree && (
-              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-600/85 text-white">
-                <CheckCircle2 className="h-2.5 w-2.5" />
-                {t.steamLibrary.youOwn}
-              </span>
-            )}
-            {!entry.ownedByCurrentUser && isCrossover && (
-              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-sky-600/90 text-white">
-                <Users className="h-2.5 w-2.5" />
-                {t.steamLibrary.crossover(entry.wantedBy.length)}
-              </span>
-            )}
-            {!entry.ownedByCurrentUser && isMine && !isCrossover && (
-              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-600/90 text-white">
-                <Heart className="h-2.5 w-2.5" />
-                {t.steamLibrary.youWant}
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* Info */}
-        <div className="px-3 py-2.5 space-y-2">
-          <div className="flex items-start justify-between gap-1">
-            <p className="text-xs font-semibold leading-tight line-clamp-1">{entry.name}</p>
-            <p className="text-[11px] text-muted-foreground shrink-0">
-              {entry.isFree
-                ? t.steamLibrary.free
-                : entry.priceCents > 0
-                ? formatCurrency(entry.priceCents, entry.currency)
-                : entry.comingSoon
-                ? t.steamLibrary.toBeAnnounced
-                : ""}
-            </p>
+          {/* Hover: name overlay */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-end p-1.5">
+            <p className="text-[9px] font-semibold text-white leading-tight line-clamp-2">{entry.name}</p>
           </div>
 
+          {/* Bottom badge: price */}
+          {showPrice && (
+            <div className="absolute bottom-0 inset-x-0 flex justify-center pb-1.5 group-hover:opacity-0 transition-opacity">
+              <SteamPriceBadge
+                priceCents={entry.priceCents}
+                originalPriceCents={entry.originalPriceCents}
+                discountPercent={entry.discountPercent}
+                currency={entry.currency}
+                size="xs"
+              />
+            </div>
+          )}
+
+          {/* Top-left: member avatars */}
           {entry.wantedBy.length > 0 && (
-            <div className="flex items-center gap-1">
-              {entry.wantedBy.map((uid) => {
+            <div className="absolute top-1 left-1 flex -space-x-1">
+              {entry.wantedBy.slice(0, 3).map((uid) => {
                 const m = memberMap.get(uid);
                 if (!m) return null;
                 const color = memberColors.get(uid) ?? "#888";
                 return <MemberAvatar key={uid} member={m} color={color} size="xs" />;
               })}
-              <span className="text-[10px] text-muted-foreground ml-0.5">
-                {entry.wantedBy.length === 1
-                  ? memberMap.get(entry.wantedBy[0])?.personaName ?? ""
-                  : t.steamLibrary.members(entry.wantedBy.length)}
-              </span>
             </div>
           )}
 
-          {/* Actions */}
-          {!entry.isShared && !entry.ownedByCurrentUser && !entry.isFree && (
-            <button
-              onClick={handleAdd}
-              disabled={adding}
-              className="w-full h-7 rounded-md text-[11px] font-semibold border border-dashed border-border/60 text-muted-foreground hover:border-primary/40 hover:text-primary transition-colors flex items-center justify-center gap-1"
-            >
-              <Plus className="h-3 w-3" />
-              {adding ? t.steamLibrary.adding : t.steamLibrary.addToList}
-            </button>
-          )}
-          {canPledge && (
-            <button
-              onClick={() => setPledgeOpen(true)}
-              className="w-full h-7 rounded-md text-[11px] font-semibold text-white transition-all hover:opacity-90"
-              style={{
-                background: "linear-gradient(135deg, hsl(258 82% 60%), hsl(258 82% 50%))",
-                boxShadow: "0 0 10px hsl(258 82% 66% / 0.2)",
-              }}
-            >
-              {t.steamLibrary.contribute}
-            </button>
-          )}
+          {/* Top-right: status badges (icons only, compact) */}
+          <div className="absolute top-1 right-1 flex flex-col items-end gap-0.5">
+            {entry.isShared && (
+              <span className="inline-flex items-center justify-center w-4 h-4 rounded bg-violet-600/90" title={t.steamLibrary.sharedWishlist}>
+                <Gift className="h-2.5 w-2.5 text-white" />
+              </span>
+            )}
+            {entry.ownedByCurrentUser && (
+              <span className="inline-flex items-center justify-center w-4 h-4 rounded bg-emerald-600/90" title={t.steamLibrary.youOwn}>
+                <CheckCircle2 className="h-2.5 w-2.5 text-white" />
+              </span>
+            )}
+            {!entry.ownedByCurrentUser && isCrossover && (
+              <span className="inline-flex items-center gap-0.5 px-1 py-0.5 rounded bg-sky-600/90 text-[9px] font-semibold text-white" title={t.steamLibrary.crossover(entry.wantedBy.length)}>
+                <Users className="h-2 w-2" />{entry.wantedBy.length}
+              </span>
+            )}
+            {entry.comingSoon && (
+              <span className="inline-flex items-center justify-center w-4 h-4 rounded bg-sky-700/85" title={t.steamLibrary.comingSoon}>
+                <Clock className="h-2.5 w-2.5 text-white" />
+              </span>
+            )}
+          </div>
         </div>
+
+        {/* Action bar — always visible, compact */}
+        {(!entry.isShared && !entry.ownedByCurrentUser && !entry.isFree && !entry.comingSoon) || canPledge ? (
+          <div className="bg-card/95 px-1.5 py-1">
+            {!entry.isShared && !entry.ownedByCurrentUser && !entry.isFree && !entry.comingSoon && (
+              <button
+                onClick={handleAdd}
+                disabled={adding}
+                className="w-full h-6 rounded text-[10px] font-semibold border border-dashed border-border/60 text-muted-foreground hover:border-primary/40 hover:text-primary transition-colors flex items-center justify-center gap-1"
+              >
+                <Plus className="h-2.5 w-2.5" />
+                {adding ? t.steamLibrary.adding : t.steamLibrary.addToList}
+              </button>
+            )}
+            {canPledge && (
+              <button
+                onClick={() => setPledgeOpen(true)}
+                className="w-full h-6 rounded text-[10px] font-semibold text-white transition-all hover:opacity-90 flex items-center justify-center"
+                style={{ background: "linear-gradient(135deg, hsl(258 82% 60%), hsl(258 82% 50%))" }}
+              >
+                {t.steamLibrary.contribute}
+              </button>
+            )}
+          </div>
+        ) : null}
       </div>
 
       {sharedItem && canPledge && (
@@ -613,7 +608,7 @@ function LibraryTab({
       )}
 
       {/* Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2.5">
+      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-2">
         {visible.map((game, i) => (
           <div key={game.appId} className="fade-in-up" style={{ animationDelay: `${Math.max(0, i - (libCount - PAGE)) * 20}ms` }}>
             <LibraryGameCard
@@ -649,48 +644,54 @@ function LibraryGameCard({
   const sharedBy = game.ownedBy.length > 1;
 
   return (
-    <div className="group relative rounded-lg overflow-hidden border border-border/40 bg-card hover:border-primary/30 hover:shadow-[0_3px_12px_hsl(0_0%_0%/0.25)] transition-all duration-200">
-      <div className="relative h-[54px]">
+    <div className="group relative rounded-md overflow-hidden cursor-default hover:scale-[1.04] hover:z-10 transition-all duration-200 hover:shadow-[0_8px_28px_hsl(0_0%_0%/0.55)]">
+      {/* Portrait capsule image */}
+      <div className="relative aspect-[2/3] bg-secondary">
         <img
-          src={headerImage(game.appId)}
+          src={capsuleImage(game.appId)}
           alt={game.name}
-          className="w-full h-full object-cover transition-all duration-300 group-hover:brightness-110"
+          className="w-full h-full object-cover transition-all duration-300 group-hover:brightness-110 group-hover:saturate-[1.08]"
           onError={(e) => {
             const el = e.currentTarget;
             if (!el.dataset.fallback) {
               el.dataset.fallback = "1";
-              el.src = headerImageFallback(game.appId);
+              el.src = capsuleImageFallback(game.appId);
+            } else if (el.dataset.fallback === "1") {
+              el.dataset.fallback = "2";
+              el.src = headerImage(game.appId);
             } else {
-              el.parentElement!.style.display = "none";
+              el.style.display = "none";
             }
           }}
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-card/90 via-card/20 to-transparent" />
-        {sharedBy && (
-          <div className="absolute top-1 right-1">
-            <span className="inline-flex items-center gap-0.5 px-1 py-0.5 rounded text-[9px] font-semibold bg-sky-600/80 text-white">
-              <Users className="h-2 w-2" />{game.ownedBy.length}
+
+        {/* Game name overlay on hover */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-end p-2">
+          <p className="text-[10px] font-semibold text-white leading-tight line-clamp-2">{game.name}</p>
+        </div>
+
+        {/* Bottom badge — shared count */}
+        <div className="absolute bottom-0 inset-x-0 flex justify-center pb-1.5">
+          {sharedBy ? (
+            <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-sm text-[10px] font-semibold bg-[#1b2838]/85 text-sky-300 backdrop-blur-sm">
+              <Users className="h-2.5 w-2.5" /> {game.ownedBy.length}
             </span>
+          ) : null}
+        </div>
+
+        {/* Member avatars — top-right when shared */}
+        {sharedBy && (
+          <div className="absolute top-1.5 right-1.5 flex flex-col items-end gap-0.5">
+            <div className="flex -space-x-1">
+              {game.ownedBy.slice(0, 3).map((uid) => {
+                const m = memberMap.get(uid);
+                if (!m) return null;
+                const color = memberColors.get(uid) ?? "#888";
+                return <MemberAvatar key={uid} member={m} color={color} size="xs" />;
+              })}
+            </div>
           </div>
         )}
-      </div>
-      <div className="px-2 py-1.5 space-y-1.5">
-        <p className="text-[11px] font-medium leading-tight line-clamp-2">{game.name}</p>
-        <div className="flex items-center justify-between">
-          <div className="flex -space-x-1">
-            {game.ownedBy.map((uid) => {
-              const m = memberMap.get(uid);
-              if (!m) return null;
-              const color = memberColors.get(uid) ?? "#888";
-              return <MemberAvatar key={uid} member={m} color={color} size="xs" />;
-            })}
-          </div>
-          {game.totalPlaytime > 0 && (
-            <span className="text-[10px] text-muted-foreground tabular-nums">
-              {fmtPlaytime(game.totalPlaytime)}
-            </span>
-          )}
-        </div>
       </div>
     </div>
   );
@@ -765,9 +766,9 @@ export function SteamLibraryPanel({ familyId, currentUserId, memberColors, share
       </div>
 
       {isLoading ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2.5 animate-pulse">
-          {Array.from({ length: 10 }).map((_, i) => (
-            <div key={i} className="h-24 rounded-lg bg-secondary" />
+        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-2 animate-pulse">
+          {Array.from({ length: 14 }).map((_, i) => (
+            <div key={i} className="aspect-[2/3] rounded-md bg-secondary" />
           ))}
         </div>
       ) : (
