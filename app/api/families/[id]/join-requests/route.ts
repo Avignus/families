@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { requireSession, isApiError, ok, err } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { createNotification } from "@/lib/notifications/service";
-import { createPixPayment, ENTRY_FEE_SERVICE_RATE, ASAAS_MIN_CHARGE_CENTS } from "@/lib/asaas";
+import { createPixPayment, ENTRY_FEE_SERVICE_RATE, MIN_CHARGE_CENTS as ASAAS_MIN_CHARGE_CENTS, getWebhookPath } from "@/lib/payment";
 import { getAppBaseUrl } from "@/lib/utils";
 import { getPlayerSummaries } from "@/lib/steam";
 import { calculateSpotPrice } from "@/lib/spot-price";
@@ -177,7 +177,7 @@ async function handlePost(req: NextRequest, params: { id: string }) {
         payerSteamId: user.steamId,
         payerName: personaName,
         externalReference: `spot:${membership.id}`,
-        notificationUrl: `${baseUrl}/api/webhooks/asaas`,
+        notificationUrl: `${baseUrl}${getWebhookPath()}`,
       });
     } catch (asaasErr: unknown) {
       const msg = asaasErr instanceof Error ? asaasErr.message : JSON.stringify(asaasErr);
@@ -282,7 +282,7 @@ async function handlePost(req: NextRequest, params: { id: string }) {
       payerSteamId: user.steamId,
       payerName: personaName,
       externalReference: `membership:${membership.id}`,
-      notificationUrl: `${baseUrl}/api/webhooks/asaas`,
+      notificationUrl: `${baseUrl}${getWebhookPath()}`,
     });
   } catch (asaasErr: unknown) {
     const msg = asaasErr instanceof Error ? asaasErr.message : JSON.stringify(asaasErr);

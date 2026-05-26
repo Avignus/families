@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { sendPixDisbursement, ASAAS_MIN_CHARGE_CENTS } from "@/lib/asaas";
+import { sendPixDisbursement, MIN_CHARGE_CENTS as ASAAS_MIN_CHARGE_CENTS } from "@/lib/payment";
 import { createNotification } from "@/lib/notifications/service";
 
 // After this grace period, a late-registration fee is charged before disbursement

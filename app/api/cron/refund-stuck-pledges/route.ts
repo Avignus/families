@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isCronAuthorized } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
-import { refundPayment } from "@/lib/asaas";
+import { refundPayment } from "@/lib/payment";
 import { createNotification } from "@/lib/notifications/service";
 import { getAppDetails } from "@/lib/steam";
 import { formatCurrency } from "@/lib/notifications/templates";

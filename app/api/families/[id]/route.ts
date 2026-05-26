@@ -3,7 +3,7 @@ import { z } from "zod";
 import { requireSession, isApiError, ok, err, parseBody } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { getAppDetails, getPlayerSummaries, resolveAppNames } from "@/lib/steam";
-import { refundPayment } from "@/lib/asaas";
+import { refundPayment } from "@/lib/payment";
 import { creditWallet } from "@/lib/wallet";
 import { createNotification } from "@/lib/notifications/service";
 import { formatCurrency } from "@/lib/notifications/templates";

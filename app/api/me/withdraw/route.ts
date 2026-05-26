@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { requireSession, isApiError, ok, err, parseBody } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
-import { sendPixDisbursement, ASAAS_MIN_CHARGE_CENTS } from "@/lib/asaas";
+import { sendPixDisbursement, MIN_CHARGE_CENTS as ASAAS_MIN_CHARGE_CENTS } from "@/lib/payment";
 import { z } from "zod";
 
 // Platform keeps 2% of the withdrawal amount to cover operational costs.

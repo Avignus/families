@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { requireSession, isApiError, ok, err } from "@/lib/api";
-import { getPaymentsByExternalReference, normalizeAsaasStatus } from "@/lib/asaas";
+import { getPaymentsByExternalReference, normalizePaymentStatus as normalizeAsaasStatus } from "@/lib/payment";
 import { prisma } from "@/lib/prisma";
 import { creditWallet } from "@/lib/wallet";
 import { createNotification } from "@/lib/notifications/service";

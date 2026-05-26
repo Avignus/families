@@ -18,7 +18,7 @@ export async function GET(_req: NextRequest, { params }: { params: { pledgeId: s
 
   return ok({ paid: pledge.paidAt !== null });
 }
-import { refundPayment } from "@/lib/asaas";
+import { refundPayment } from "@/lib/payment";
 import { creditWallet } from "@/lib/wallet";
 
 export async function DELETE(_req: NextRequest, { params }: { params: { pledgeId: string } }) {

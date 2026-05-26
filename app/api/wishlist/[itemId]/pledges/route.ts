@@ -5,7 +5,7 @@ import { getAppBaseUrl } from "@/lib/utils";
 import { prisma } from "@/lib/prisma";
 import { createNotification } from "@/lib/notifications/service";
 import { getAppDetails } from "@/lib/steam";
-import { createPixPayment, SERVICE_FEE_RATE, ASAAS_MIN_CHARGE_CENTS } from "@/lib/asaas";
+import { createPixPayment, SERVICE_FEE_RATE, MIN_CHARGE_CENTS as ASAAS_MIN_CHARGE_CENTS, getWebhookPath } from "@/lib/payment";
 import { debitWallet } from "@/lib/wallet";
 import { maybeDisburseFunds } from "@/lib/disbursement";
 
@@ -158,7 +158,7 @@ export async function POST(req: NextRequest, { params }: { params: { itemId: str
         payerSteamId: user.steamId,
         payerName: user.personaName,
         externalReference: `pledge:${result.pledge.id}`,
-        notificationUrl: `${baseUrl}/api/webhooks/asaas`,
+        notificationUrl: `${baseUrl}${getWebhookPath()}`,
       });
 
       await prisma.pledge.update({

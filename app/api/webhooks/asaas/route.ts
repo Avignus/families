@@ -1,15 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { timingSafeEqual } from "crypto";
-import { prisma } from "@/lib/prisma";
-import { normalizeAsaasStatus, sendPixDisbursement, refundPayment } from "@/lib/asaas";
-import { createNotification } from "@/lib/notifications/service";
-import { computeAndSaveReputation } from "@/lib/reputation";
-import { maybeDisburseFunds } from "@/lib/disbursement";
-import { creditWallet } from "@/lib/wallet";
-import { autoDistributeCredits } from "@/lib/auto-distribute";
-import { computeAndSaveFamilyReputation } from "@/lib/family-reputation";
-import { getOwnedGames } from "@/lib/steam";
-import { checkAchievements } from "@/lib/achievements";
+import { normalizeAsaasStatus } from "@/lib/asaas";
+import {
+  handleMembershipPayment,
+  handleSpotPayment,
+  handleCreditsPayment,
+  handlePledgePayment,
+} from "@/lib/payment-handlers";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +14,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null);
   if (!body) return NextResponse.json({ ok: false }, { status: 400 });
 
-  // Verify webhook origin — timing-safe comparison prevents secret enumeration (ISO A.10.2.1)
+  // Timing-safe comparison prevents secret enumeration (ISO A.10.2.1)
   const token = req.headers.get("asaas-access-token") ?? "";
   const expectedToken = process.env.ASAAS_WEBHOOK_SECRET ?? "";
   if (!expectedToken) {
@@ -28,7 +25,9 @@ export async function POST(req: NextRequest) {
     const a = Buffer.from(token);
     const b = Buffer.from(expectedToken);
     tokenValid = a.length === b.length && timingSafeEqual(a, b);
-  } catch { tokenValid = false; }
+  } catch {
+    tokenValid = false;
+  }
   if (!tokenValid) {
     return NextResponse.json({ ok: false }, { status: 401 });
   }
@@ -40,450 +39,25 @@ export async function POST(req: NextRequest) {
   const paymentId: string = paymentData.id;
   const externalRef: string = paymentData.externalReference ?? "";
 
-  // Route to membership or pledge handler based on externalReference prefix
   if (externalRef.startsWith("membership:")) {
-    const membershipId = externalRef.replace("membership:", "");
-    const membership = await prisma.familyMembership.findUnique({
-      where: { id: membershipId },
-      include: {
-        family: { select: { id: true, name: true, chiefId: true, entryFeeCents: true, currency: true, autoApprove: true } },
-        user: { select: { id: true, personaName: true, steamId: true } },
-      },
-    });
-    if (membership) await handleMembershipPayment(membership, status, paymentId);
+    await handleMembershipPayment(externalRef.replace("membership:", ""), status, paymentId);
     return NextResponse.json({ ok: true });
   }
 
   if (externalRef.startsWith("spot:")) {
-    const membershipId = externalRef.replace("spot:", "");
-    const membership = await prisma.familyMembership.findUnique({
-      where: { id: membershipId },
-      include: {
-        family: { select: { id: true, name: true, chiefId: true, entryFeeCents: true, currency: true, autoApprove: true } },
-        user: { select: { id: true, personaName: true, steamId: true } },
-      },
-    });
-    if (membership) await handleSpotPayment(membership, status, paymentId);
+    await handleSpotPayment(externalRef.replace("spot:", ""), status, paymentId);
     return NextResponse.json({ ok: true });
   }
 
   if (externalRef.startsWith("credits:")) {
-    const userId = externalRef.replace("credits:", "");
-    if (status === "approved") {
-      const amountCents = Math.round((paymentData.value ?? 0) * 100);
-      if (amountCents > 0) {
-        // Idempotency: skip if this paymentId was already processed
-        const alreadyProcessed = await prisma.walletTransaction.findFirst({
-          where: { userId, reason: "topup", pledgeId: paymentId },
-        });
-        if (!alreadyProcessed) {
-          await prisma.$transaction(async (tx) => {
-            await creditWallet(tx, userId, amountCents, "topup", paymentId);
-            await createNotification(tx, {
-              recipientUserId: userId,
-              type: "CREDITS_ADDED",
-              payload: { amountCents, currency: "BRL" },
-            });
-          });
-        }
-        // Auto-distribute only if user opted in and has a monthly budget configured
-        const membership = await prisma.familyMembership.findFirst({
-          where: { userId, status: "active", autoDistributeEnabled: true, monthlyBudgetCents: { gt: 0 } },
-          select: { monthlyBudgetCents: true },
-        });
-        if (membership) {
-          const budget = Math.min(membership.monthlyBudgetCents, amountCents);
-          await autoDistributeCredits(userId, budget).catch((err) =>
-            console.error("Auto-distribute error after top-up:", err)
-          );
-        }
-      }
-    }
+    const amountCents = Math.round((paymentData.value ?? 0) * 100);
+    await handleCreditsPayment(externalRef.replace("credits:", ""), status, paymentId, amountCents);
     return NextResponse.json({ ok: true });
   }
 
   if (externalRef.startsWith("pledge:")) {
-    const pledgeId = externalRef.replace("pledge:", "");
-    await handlePledgePayment(pledgeId, paymentId, status);
+    await handlePledgePayment(externalRef.replace("pledge:", ""), paymentId, status);
   }
 
   return NextResponse.json({ ok: true });
-}
-
-type MembershipWithFamily = {
-  id: string;
-  userId: string;
-  familyId: string;
-  pixPaymentId: string | null;
-  pixStatus: string | null;
-  feePaidAt: Date | null;
-  feeChargedCents: number | null;
-  feeRefundedAt: Date | null;
-  family: { id: string; name: string; chiefId: string; entryFeeCents: number; currency: string; autoApprove: boolean };
-  user: { id: string; personaName: string; steamId: string };
-};
-
-async function handleMembershipPayment(membership: MembershipWithFamily, status: string, paymentId: string) {
-  await prisma.familyMembership.update({
-    where: { id: membership.id },
-    data: { pixStatus: status },
-  });
-
-  if (status === "approved" && !membership.feePaidAt) {
-    // Single-family rule: if user joined another family while payment was pending, reject
-    const otherActive = await prisma.familyMembership.findFirst({
-      where: { userId: membership.userId, status: "active", familyId: { not: membership.familyId } },
-      select: { familyId: true },
-    });
-    if (otherActive) {
-      let refunded = false;
-      if (membership.pixPaymentId && membership.feeChargedCents && !membership.feeRefundedAt) {
-        try {
-          await refundPayment(membership.pixPaymentId, membership.feeChargedCents);
-          refunded = true;
-        } catch (refundErr) {
-          console.error("Auto-refund error (single-family rule):", refundErr);
-        }
-      }
-
-      await prisma.$transaction(async (tx) => {
-        await tx.familyMembership.update({
-          where: { id: membership.id },
-          data: {
-            status: "rejected",
-            pixStatus: "rejected",
-            ...(refunded ? { feeRefundedAt: new Date() } : {}),
-          },
-        });
-        const refundAmountFormatted = membership.feeChargedCents
-          ? new Intl.NumberFormat("pt-BR", { style: "currency", currency: membership.family.currency })
-              .format(membership.feeChargedCents / 100)
-          : null;
-        await createNotification(tx, {
-          recipientUserId: membership.userId,
-          type: "JOIN_REJECTED",
-          payload: {
-            familyId: membership.family.id,
-            familyName: membership.family.name,
-            refunded,
-            refundAmountFormatted,
-          },
-        });
-      });
-      return;
-    }
-
-    if (membership.family.autoApprove) {
-      await prisma.$transaction(async (tx) => {
-        // Atomic idempotency guard: only activates if not yet activated (ISO A.14.2.5)
-        const activated = await tx.familyMembership.updateMany({
-          where: { id: membership.id, feePaidAt: null },
-          data: { status: "active", feePaidAt: new Date(), joinedAt: new Date() },
-        });
-        if (activated.count === 0) return;
-
-        await createNotification(tx, {
-          recipientUserId: membership.family.chiefId,
-          type: "JOIN_FEE_PAID",
-          payload: {
-            familyId: membership.family.id,
-            familyName: membership.family.name,
-            memberId: membership.userId,
-            personaName: membership.user.personaName,
-          },
-        });
-        await createNotification(tx, {
-          recipientUserId: membership.userId,
-          type: "JOIN_APPROVED",
-          payload: { familyId: membership.family.id, familyName: membership.family.name },
-        });
-      });
-
-      const activated = await prisma.familyMembership.findUnique({
-        where: { id: membership.id },
-        select: { feePaidAt: true },
-      });
-      if (!activated?.feePaidAt) return;
-
-      // Sync new member's Steam library immediately so family stats are accurate
-      getOwnedGames(membership.user.steamId).catch(() => {});
-
-      // Disburse entry fee to chief — or hold in wallet if chief has no PIX key
-      const chief = await prisma.user.findUnique({
-        where: { id: membership.family.chiefId },
-        select: { pixKey: true },
-      });
-      if (membership.family.entryFeeCents > 0) {
-        if (chief?.pixKey) {
-          await sendPixDisbursement({
-            amountCents: membership.family.entryFeeCents,
-            pixKey: chief.pixKey,
-            description: `Families — Taxa de entrada em ${membership.family.name}`,
-          }).catch((err) => console.error("Entry fee disbursement error:", err));
-        } else {
-          await prisma.$transaction(async (tx) => {
-            await tx.user.update({
-              where: { id: membership.family.chiefId },
-              data: { chiefSpotEarningsCents: { increment: membership.family.entryFeeCents } },
-            });
-            await createNotification(tx, {
-              recipientUserId: membership.family.chiefId,
-              type: "ENTRY_FEE_HELD",
-              payload: {
-                familyId: membership.family.id,
-                familyName: membership.family.name,
-                amountCents: membership.family.entryFeeCents,
-                currency: membership.family.currency,
-                memberName: membership.user.personaName,
-              },
-            });
-          });
-        }
-      }
-    } else {
-      // autoApprove = false: mark payment received, keep pending for chief review
-      await prisma.$transaction(async (tx) => {
-        const marked = await tx.familyMembership.updateMany({
-          where: { id: membership.id, feePaidAt: null },
-          data: { feePaidAt: new Date() },
-        });
-        if (marked.count === 0) return;
-
-        const amountFormatted = new Intl.NumberFormat("pt-BR", {
-          style: "currency",
-          currency: membership.family.currency,
-        }).format((membership.feeChargedCents ?? membership.family.entryFeeCents) / 100);
-
-        await createNotification(tx, {
-          recipientUserId: membership.family.chiefId,
-          type: "JOIN_PAYMENT_AWAITING_APPROVAL",
-          payload: {
-            familyId: membership.family.id,
-            familyName: membership.family.name,
-            memberId: membership.userId,
-            personaName: membership.user.personaName,
-            amountFormatted,
-          },
-        });
-      });
-    }
-  }
-
-  if (status === "rejected" || status === "cancelled") {
-    await prisma.familyMembership.update({
-      where: { id: membership.id },
-      data: { status: "rejected" },
-    });
-  }
-}
-
-const SPOT_COMMISSION_RATE = 0.12; // platform keeps 12%, chief receives 88%
-
-async function handleSpotPayment(membership: MembershipWithFamily, status: string, _paymentId: string) {
-  await prisma.familyMembership.update({
-    where: { id: membership.id },
-    data: { pixStatus: status },
-  });
-
-  if (status === "approved" && !membership.feePaidAt) {
-    const otherActive = await prisma.familyMembership.findFirst({
-      where: { userId: membership.userId, status: "active", familyId: { not: membership.familyId } },
-      select: { familyId: true },
-    });
-    if (otherActive) {
-      let refunded = false;
-      if (membership.pixPaymentId && membership.feeChargedCents && !membership.feeRefundedAt) {
-        try {
-          await refundPayment(membership.pixPaymentId, membership.feeChargedCents);
-          refunded = true;
-        } catch (refundErr) {
-          console.error("Auto-refund error (single-family rule, spot):", refundErr);
-        }
-      }
-      await prisma.$transaction(async (tx) => {
-        await tx.familyMembership.update({
-          where: { id: membership.id },
-          data: {
-            status: "rejected",
-            pixStatus: "rejected",
-            ...(refunded ? { feeRefundedAt: new Date() } : {}),
-          },
-        });
-        const refundAmountFormatted = membership.feeChargedCents
-          ? new Intl.NumberFormat("pt-BR", { style: "currency", currency: membership.family.currency })
-              .format(membership.feeChargedCents / 100)
-          : null;
-        await createNotification(tx, {
-          recipientUserId: membership.userId,
-          type: "JOIN_REJECTED",
-          payload: { familyId: membership.family.id, familyName: membership.family.name, refunded, refundAmountFormatted },
-        });
-      });
-      return;
-    }
-
-    if (membership.family.autoApprove) {
-      const spotExpiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
-
-      await prisma.$transaction(async (tx) => {
-        // Atomic idempotency guard (ISO A.14.2.5)
-        const activated = await tx.familyMembership.updateMany({
-          where: { id: membership.id, feePaidAt: null },
-          data: { status: "active", feePaidAt: new Date(), joinedAt: new Date(), spotExpiresAt },
-        });
-        if (activated.count === 0) return;
-
-        await createNotification(tx, {
-          recipientUserId: membership.family.chiefId,
-          type: "JOIN_FEE_PAID",
-          payload: {
-            familyId: membership.family.id,
-            familyName: membership.family.name,
-            memberId: membership.userId,
-            personaName: membership.user.personaName,
-          },
-        });
-        await createNotification(tx, {
-          recipientUserId: membership.userId,
-          type: "JOIN_APPROVED",
-          payload: { familyId: membership.family.id, familyName: membership.family.name },
-        });
-      });
-
-      const activated = await prisma.familyMembership.findUnique({
-        where: { id: membership.id },
-        select: { feePaidAt: true },
-      });
-      if (!activated?.feePaidAt) return;
-
-      // Sync new member's Steam library immediately so family stats are accurate
-      getOwnedGames(membership.user.steamId).catch(() => {});
-
-      // Credit 88% to chief's spot earnings balance
-      if (membership.feeChargedCents && membership.feeChargedCents > 0) {
-        const chiefAmountCents = Math.floor(membership.feeChargedCents * (1 - SPOT_COMMISSION_RATE));
-        if (chiefAmountCents > 0) {
-          await prisma.user.update({
-            where: { id: membership.family.chiefId },
-            data: { chiefSpotEarningsCents: { increment: chiefAmountCents } },
-          });
-        }
-      }
-    } else {
-      // autoApprove = false: mark payment received, keep pending for chief review
-      await prisma.$transaction(async (tx) => {
-        const marked = await tx.familyMembership.updateMany({
-          where: { id: membership.id, feePaidAt: null },
-          data: { feePaidAt: new Date() },
-        });
-        if (marked.count === 0) return;
-
-        const amountFormatted = new Intl.NumberFormat("pt-BR", {
-          style: "currency",
-          currency: membership.family.currency,
-        }).format((membership.feeChargedCents ?? 0) / 100);
-
-        await createNotification(tx, {
-          recipientUserId: membership.family.chiefId,
-          type: "JOIN_PAYMENT_AWAITING_APPROVAL",
-          payload: {
-            familyId: membership.family.id,
-            familyName: membership.family.name,
-            memberId: membership.userId,
-            personaName: membership.user.personaName,
-            amountFormatted,
-          },
-        });
-      });
-    }
-  }
-
-  if (status === "rejected" || status === "cancelled") {
-    await prisma.familyMembership.update({
-      where: { id: membership.id },
-      data: { status: "rejected" },
-    });
-  }
-}
-
-async function handlePledgePayment(pledgeId: string, paymentId: string, status: string) {
-  const pledge = await prisma.pledge.findUnique({
-    where: { id: pledgeId },
-    include: {
-      wishlistItem: { include: { family: true, owner: true } },
-      pledger: true,
-    },
-  });
-  if (!pledge) return;
-
-  await prisma.$transaction(async (tx) => {
-    const updates: Record<string, unknown> = { pixStatus: status };
-
-    if (status === "approved" && !pledge.paidAt) {
-      updates.paidAt = new Date();
-
-      // Recalculate funded status based on all paid pledges after this payment
-      const paidAggregate = await tx.pledge.aggregate({
-        where: { wishlistItemId: pledge.wishlistItemId, status: "active", paidAt: { not: null } },
-        _sum: { amountCents: true },
-      });
-      const totalPaid = (paidAggregate._sum.amountCents ?? 0) + pledge.amountCents;
-      if (totalPaid >= pledge.wishlistItem.targetPriceCents && pledge.wishlistItem.status === "open") {
-        await tx.wishlistItem.update({
-          where: { id: pledge.wishlistItemId },
-          data: { status: "funded" },
-        });
-      }
-
-      if (pledge.wishlistItem.ownerUserId && pledge.wishlistItem.ownerUserId !== pledge.pledgerUserId) {
-        const steamData = await import("@/lib/steam").then((m) =>
-          m.getAppDetails(pledge.wishlistItem.steamAppId)
-        );
-        const gameName = steamData?.name ?? `App #${pledge.wishlistItem.steamAppId}`;
-
-        await createNotification(tx, {
-          recipientUserId: pledge.wishlistItem.ownerUserId,
-          type: "PLEDGE_RECEIVED",
-          payload: {
-            pledgeId: pledge.id,
-            itemId: pledge.wishlistItemId,
-            familyId: pledge.wishlistItem.familyId,
-            familyName: pledge.wishlistItem.family.name,
-            ownerUserId: pledge.wishlistItem.ownerUserId,
-            gameName,
-            pledgerId: pledge.pledgerUserId,
-            personaName: pledge.pledger.personaName,
-            amountCents: pledge.amountCents,
-            currency: pledge.wishlistItem.currency,
-            percent: Math.round((pledge.amountCents / pledge.wishlistItem.targetPriceCents) * 100),
-            paymentConfirmed: true,
-          },
-        });
-      }
-    }
-
-    if (status === "rejected" || status === "cancelled") {
-      updates.status = "withdrawn";
-      if (pledge.wishlistItem.status === "funded") {
-        await tx.wishlistItem.update({
-          where: { id: pledge.wishlistItemId },
-          data: { status: "open" },
-        });
-      }
-    }
-
-    await tx.pledge.update({ where: { id: pledge.id }, data: updates });
-  });
-
-  if (status === "approved") {
-    await computeAndSaveReputation(pledge.pledgerUserId).catch(() => {});
-    await computeAndSaveFamilyReputation(pledge.wishlistItem.familyId).catch(() => {});
-    await maybeDisburseFunds(pledge.wishlistItemId);
-    // Check night-time payment achievement
-    const hour = new Date().getHours();
-    if (hour >= 0 && hour < 3) {
-      checkAchievements(pledge.pledgerUserId, { type: "pix_paid_at_night" }).catch(() => {});
-    }
-    checkAchievements(pledge.pledgerUserId, { type: "pledge_paid", pledgeId: pledge.id }).catch(() => {});
-  }
 }

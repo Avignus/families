@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
 import { requireSession, isApiError, ok, err, parseBody } from "@/lib/api";
-import { createPixPayment, ASAAS_MIN_CHARGE_CENTS } from "@/lib/asaas";
+import { createPixPayment, MIN_CHARGE_CENTS as ASAAS_MIN_CHARGE_CENTS, getWebhookPath } from "@/lib/payment";
 import { prisma } from "@/lib/prisma";
 import { getAppBaseUrl } from "@/lib/utils";
 
@@ -22,15 +22,13 @@ export async function POST(req: NextRequest) {
   });
   if (!dbUser) return err("NOT_FOUND", "User not found", 404);
 
-  const notificationUrl = `${getAppBaseUrl(req)}/api/webhooks/asaas`;
-
   const pix = await createPixPayment({
     amountCents: body.amountCents,
     description: "Families — Recarga de créditos",
     payerSteamId: dbUser.steamId,
     payerName: dbUser.personaName,
     externalReference: `credits:${user.id}`,
-    notificationUrl,
+    notificationUrl: `${getAppBaseUrl(req)}${getWebhookPath()}`,
   });
 
   return ok({ pix });

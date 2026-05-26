@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { requireSession, isApiError, ok, err } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
-import { refundPayment } from "@/lib/asaas";
+import { refundPayment } from "@/lib/payment";
 
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
   const user = await requireSession();

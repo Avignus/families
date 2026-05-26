@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { requireSession, isApiError, ok, err } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { createNotification } from "@/lib/notifications/service";
-import { refundPayment } from "@/lib/asaas";
+import { refundPayment } from "@/lib/payment";
 
 export async function POST(
   _req: NextRequest,
