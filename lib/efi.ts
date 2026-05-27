@@ -172,6 +172,7 @@ export async function createPixPayment(params: {
 
 export async function getChargeByTxId(txid: string): Promise<{
   status: string;
+  valor?: { original: string };
   infoAdicionais?: Array<{ nome: string; valor: string }>;
   pix?: Array<{ endToEndId: string; valor: string }>;
 }> {

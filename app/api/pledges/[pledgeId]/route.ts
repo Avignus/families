@@ -10,11 +10,34 @@ export async function GET(_req: NextRequest, { params }: { params: { pledgeId: s
 
   const pledge = await prisma.pledge.findUnique({
     where: { id: params.pledgeId },
-    select: { pledgerUserId: true, paidAt: true },
+    select: { pledgerUserId: true, paidAt: true, pixPaymentId: true, pixStatus: true },
   });
 
   if (!pledge) return err("NOT_FOUND", "Pledge not found", 404);
   if (pledge.pledgerUserId !== user.id) return err("FORBIDDEN", "Access denied", 403);
+
+  // When using Efí, poll the API directly so confirmation is real-time (no webhook needed)
+  if (
+    process.env.PAYMENT_PROVIDER === "efi" &&
+    pledge.pixPaymentId &&
+    pledge.pixStatus === "pending" &&
+    !pledge.paidAt
+  ) {
+    try {
+      const { getChargeByTxId, normalizeEfiStatus } = await import("@/lib/efi");
+      const { handlePledgePayment } = await import("@/lib/payment-handlers");
+      const charge = await getChargeByTxId(pledge.pixPaymentId);
+      const status = normalizeEfiStatus(charge.status);
+      if (status !== "pending") {
+        await handlePledgePayment(params.pledgeId, pledge.pixPaymentId, status);
+      }
+    } catch {}
+    const updated = await prisma.pledge.findUnique({
+      where: { id: params.pledgeId },
+      select: { paidAt: true },
+    });
+    return ok({ paid: updated?.paidAt !== null });
+  }
 
   return ok({ paid: pledge.paidAt !== null });
 }
