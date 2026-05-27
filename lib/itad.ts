@@ -79,11 +79,8 @@ async function itadCurrentPrices(itadId: string, country = "BR"): Promise<ItadDe
   }
 }
 
-/**
- * Returns current deals for a Steam app, caching the result in SteamAppCache.
- * Non-Steam deals cheaper than the Steam price are returned sorted by price.
- */
-export async function itadGetDealsForApp(steamAppId: number, steamPriceCents: number): Promise<ItadDeal[]> {
+/** Returns Steam-only discounted deals for a Steam app, caching the result in SteamAppCache. */
+export async function itadGetDealsForApp(steamAppId: number): Promise<ItadDeal[]> {
   if (!KEY) return [];
 
   const cached = await prisma.steamAppCache.findUnique({ where: { steamAppId } });
@@ -95,7 +92,7 @@ export async function itadGetDealsForApp(steamAppId: number, steamPriceCents: nu
 
   const fresh = cachedAt && Date.now() - cachedAt < DEALS_CACHE_TTL_MS;
   if (fresh && cachedDeals) {
-    return cachedDeals.filter((d) => d.shopId !== 61 && d.priceCents < steamPriceCents);
+    return cachedDeals.filter((d) => d.shopId === 61 && d.cut > 0);
   }
 
   const itadId = cachedItadId ?? await itadLookup(steamAppId);
@@ -112,6 +109,5 @@ export async function itadGetDealsForApp(steamAppId: number, steamPriceCents: nu
     });
   }
 
-  // Exclude Steam itself (ITAD shop id 61) and keep only deals cheaper than Steam
-  return deals.filter((d) => d.shopId !== 61 && d.priceCents < steamPriceCents);
+  return deals.filter((d) => d.shopId === 61 && d.cut > 0);
 }

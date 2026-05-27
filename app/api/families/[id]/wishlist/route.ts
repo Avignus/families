@@ -127,9 +127,8 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     items.map(async (item) => {
       const steamData = await getAppDetails(item.steamAppId);
       const totalPledged = item.pledges.reduce((s, p) => s + p.amountCents, 0);
-      const steamPrice = steamData?.priceCents ?? item.targetPriceCents;
-      const itadDeals = steamPrice > 0 && !steamData?.isFree
-        ? await itadGetDealsForApp(item.steamAppId, steamPrice)
+      const itadDeals = steamData && !steamData.isFree && steamData.priceCents > 0
+        ? await itadGetDealsForApp(item.steamAppId)
         : [];
       return {
         ...item,

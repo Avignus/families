@@ -148,21 +148,11 @@ function RecommendationCard({ rec, familyId, wishlistAppIds }: { rec: Recommenda
           </span>
         )}
 
-        {/* Store icon / added checkmark — top-right */}
-        {added ? (
+        {added && (
           <div className="absolute top-1.5 right-1.5">
             <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-emerald-500/80 backdrop-blur-sm">
               <Check className="h-3 w-3 text-white" />
             </span>
-          </div>
-        ) : (
-          <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded bg-black/60 backdrop-blur-sm flex items-center justify-center group-hover:opacity-0 transition-opacity pointer-events-none">
-            <img
-              src="/api/favicon?domain=store.steampowered.com"
-              alt="Steam"
-              className="w-3.5 h-3.5 rounded-sm"
-              onError={(e) => { e.currentTarget.parentElement!.style.display = "none"; }}
-            />
           </div>
         )}
       </div>
@@ -172,15 +162,6 @@ function RecommendationCard({ rec, familyId, wishlistAppIds }: { rec: Recommenda
 
 function EmptyState({ label }: { label: string }) {
   return <p className="text-xs text-muted-foreground py-1">{label}</p>;
-}
-
-function storeFavicon(url: string): string {
-  try {
-    const { hostname } = new URL(url);
-    return `/api/favicon?domain=${encodeURIComponent(hostname)}`;
-  } catch {
-    return "";
-  }
 }
 
 function SaleCard({ item, familyId, wishlistAppIds, showAdd }: {
@@ -263,17 +244,6 @@ function SaleCard({ item, familyId, wishlistAppIds, showAdd }: {
             {adding ? <Loader2 className="h-3 w-3 animate-spin" /> : added ? <Check className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
           </button>
         )}
-
-        {/* Favicon da loja — canto superior direito, some no hover */}
-        <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded bg-black/60 backdrop-blur-sm flex items-center justify-center group-hover:opacity-0 transition-opacity pointer-events-none"
-          title={item.cheapestDeal.shopName}>
-          <img
-            src={storeFavicon(item.cheapestDeal.url)}
-            alt={item.cheapestDeal.shopName}
-            className="w-3.5 h-3.5 rounded-sm"
-            onError={(e) => { e.currentTarget.parentElement!.style.display = "none"; }}
-          />
-        </div>
 
         {/* Price badge — centrado no fundo, some no hover */}
         <div className="absolute bottom-0 inset-x-0 flex justify-center pb-1.5 group-hover:opacity-0 transition-opacity pointer-events-none">

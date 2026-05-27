@@ -37,7 +37,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     if (!steamData || steamData.isFree) continue;
     const steamPrice = steamData.priceCents || item.targetPriceCents;
     if (!steamPrice) continue;
-    const deals = await itadGetDealsForApp(item.steamAppId, steamPrice);
+    const deals = await itadGetDealsForApp(item.steamAppId);
     if (!deals.length) continue;
     wishlistOnSale.push({
       steamAppId: item.steamAppId,
@@ -64,7 +64,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     if (wishlistAppIds.has(steamAppId)) continue;
     const steamData = await getAppDetails(steamAppId);
     if (!steamData || steamData.isFree || !steamData.priceCents) continue;
-    const deals = await itadGetDealsForApp(steamAppId, steamData.priceCents);
+    const deals = await itadGetDealsForApp(steamAppId);
     if (!deals.length) continue;
     recsOnSale.push({
       steamAppId,
