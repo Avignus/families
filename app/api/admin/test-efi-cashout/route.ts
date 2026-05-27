@@ -67,12 +67,14 @@ export async function GET(req: NextRequest) {
   // PUT /v2/gn/pix/{idEnvio} exists — test different body shapes
   const idEnvio = crypto.randomUUID().replace(/-/g, "").slice(0, 35);
   const path = `/v2/gn/pix/${idEnvio}`;
+  const myPixKey = process.env.EFI_PIX_KEY ?? "";
   const bodyCandidates = [
-    { label: "pagamento.chave",   body: { valor, pagamento:   { chave: pixKey, infoPagador: "Teste repasse" } } },
-    { label: "favorecido.chave",  body: { valor, favorecido:  { chave: pixKey, nome: "Igor" } } },
-    { label: "destinatario.chave",body: { valor, destinatario:{ chave: pixKey } } },
-    { label: "chave flat",        body: { valor, chave: pixKey, infoEntreClientes: "Teste repasse" } },
-    { label: "minimal",           body: { valor, chave: pixKey } },
+    // "favorecido.chave" was closest — now adding pagador variants
+    { label: "favorecido+pagador.chave",    body: { valor, favorecido: { chave: pixKey },              pagador: { chave: myPixKey } } },
+    { label: "favorecido+pagador.cpfCnpj",  body: { valor, favorecido: { chave: pixKey },              pagador: { cpf: "00000000000" } } },
+    { label: "favorecido+pagador(empty)",   body: { valor, favorecido: { chave: pixKey },              pagador: {} } },
+    { label: "favorecido.nome+pagador",     body: { valor, favorecido: { chave: pixKey, nome: "Igor" }, pagador: { chave: myPixKey } } },
+    { label: "favorecido.tipo+pagador",     body: { valor, favorecido: { tipo: "telefone", chave: pixKey }, pagador: { chave: myPixKey } } },
   ];
 
   const attempts: Array<{ label: string; status: number; body: unknown }> = [];
