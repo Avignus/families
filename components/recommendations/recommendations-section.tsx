@@ -111,8 +111,8 @@ function RecommendationCard({ rec, familyId, wishlistAppIds }: { rec: Recommenda
         </div>
 
         {/* Name badge — always visible, hides on hover */}
-        <div className="absolute bottom-0 inset-x-0 pb-1.5 px-1.5 group-hover:opacity-0 transition-opacity duration-200">
-          <p className="text-[10px] font-semibold text-white leading-tight line-clamp-2 drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]">{name}</p>
+        <div className="absolute bottom-0 inset-x-0 pt-8 pb-1.5 px-1.5 bg-gradient-to-t from-black/80 to-transparent group-hover:opacity-0 transition-opacity duration-200">
+          <p className="text-[10px] font-semibold text-white leading-tight line-clamp-2">{name}</p>
         </div>
 
         {/* "novo" badge */}
