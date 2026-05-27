@@ -162,7 +162,9 @@ export async function createPixPayment(params: {
   return {
     paymentId: txid,
     qrCode: qr.qrcode ?? "",
-    qrCodeBase64: qr.imagemQrcode ?? "",
+    // Efí returns imagemQrcode with "data:image/png;base64," prefix already included;
+    // strip it so callers get raw base64 (consistent with Asaas).
+    qrCodeBase64: (qr.imagemQrcode ?? "").replace(/^data:image\/[^;]+;base64,/, ""),
     ticketUrl: "",
     status: normalizeEfiStatus(charge.status),
     expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
