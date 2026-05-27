@@ -4,8 +4,7 @@ import https from "node:https";
 // Same platform-level fee rates as Asaas — not provider-specific
 export const SERVICE_FEE_RATE = parseFloat(process.env.SERVICE_FEE_RATE ?? "0.18");
 export const ENTRY_FEE_SERVICE_RATE = parseFloat(process.env.ENTRY_FEE_SERVICE_RATE ?? "0.18");
-// Keep same minimum as Asaas to preserve business logic; can lower later when pricing is confirmed
-export const EFI_MIN_CHARGE_CENTS = 3000;
+export const EFI_MIN_CHARGE_CENTS = 1; // 1 centavo — Efí não tem mínimo prático; limite de negócio definido no front
 
 export type PixPaymentResult = {
   paymentId: string;
