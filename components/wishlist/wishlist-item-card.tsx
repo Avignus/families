@@ -177,7 +177,7 @@ export function WishlistItemCard({ item, familyId, currentUserId, memberColors, 
       style={isFunded ? { boxShadow: "0 0 20px hsl(258 82% 66% / 0.15)" } : undefined}
     >
       {/* Game header image */}
-      <div className="relative h-[220px]">
+      <div className="relative h-[280px]">
         <img
           src={`https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/${item.steamAppId}/library_600x900.jpg`}
           alt={gameName}

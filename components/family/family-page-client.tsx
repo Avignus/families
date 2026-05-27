@@ -258,14 +258,14 @@ export function FamilyPageClient({
   const memberMap = new Map(family.memberships.map((m) => [m.user.id, m.user]));
 
   // Contributions feed: one entry per pledge on open/funded items
-  const contributions: Array<{ pledger: Member; gameName: string; amountCents: number; currency: string }> = [];
+  const contributions: Array<{ pledger: Member; gameName: string; headerImage: string | null; steamAppId: number; amountCents: number; currency: string }> = [];
   for (const item of family.wishlistItems) {
     if (item.status !== "open" && item.status !== "funded") continue;
     const gameName = item.steamData?.name ?? `App #${item.steamAppId}`;
     for (const pledge of item.pledges) {
       const pledger = memberMap.get(pledge.pledgerUserId);
       if (!pledger) continue;
-      contributions.push({ pledger, gameName, amountCents: pledge.amountCents, currency: item.currency });
+      contributions.push({ pledger, gameName, headerImage: item.steamData?.headerImage ?? null, steamAppId: item.steamAppId, amountCents: pledge.amountCents, currency: item.currency });
     }
   }
 
@@ -660,17 +660,34 @@ export function FamilyPageClient({
               <Separator />
               <div>
                 <h3 className="font-semibold mb-3">{t.family.contributionSummary}</h3>
-                <div className="space-y-1 text-sm">
-                  {contributions.map(({ pledger, gameName, amountCents, currency }, i) => (
-                    <div key={i} className="flex items-center justify-between gap-2 text-muted-foreground">
-                      <span className="min-w-0 truncate">
-                        <span className="font-medium" style={{ color: memberColors.get(pledger.id) }}>
+                <div className="space-y-1">
+                  {contributions.map(({ pledger, gameName, headerImage, steamAppId, amountCents, currency }, i) => (
+                    <div key={i} className="flex items-center gap-3 py-1.5 px-2 rounded-lg hover:bg-secondary/50 transition-colors group">
+                      {/* Pledger avatar */}
+                      <Avatar className="h-7 w-7 shrink-0">
+                        <AvatarImage src={pledger.avatarMedium} alt={pledger.personaName} />
+                        <AvatarFallback className="text-[10px]">{pledger.personaName[0]}</AvatarFallback>
+                      </Avatar>
+
+                      {/* Name + game */}
+                      <div className="flex-1 min-w-0">
+                        <span className="text-sm font-semibold" style={{ color: memberColors.get(pledger.id) }}>
                           {pledger.personaName}
                         </span>
-                        {" · "}
-                        <span className="truncate">{gameName}</span>
-                      </span>
-                      <span className="font-medium text-foreground shrink-0">
+                        <span className="text-sm text-muted-foreground"> · {gameName}</span>
+                      </div>
+
+                      {/* Game thumbnail */}
+                      {headerImage && (
+                        <img
+                          src={headerImage}
+                          alt={gameName}
+                          className="h-7 w-12 object-cover rounded shrink-0 opacity-70 group-hover:opacity-100 transition-opacity"
+                        />
+                      )}
+
+                      {/* Amount */}
+                      <span className="text-sm font-semibold text-foreground shrink-0 tabular-nums">
                         {formatCurrency(amountCents, currency)}
                       </span>
                     </div>
