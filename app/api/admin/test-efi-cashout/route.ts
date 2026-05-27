@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isCronAuthorized } from "@/lib/api";
 import https from "node:https";
+import crypto from "node:crypto";
 
 export const dynamic = "force-dynamic";
 
@@ -64,10 +65,13 @@ export async function GET(req: NextRequest) {
   const bearer = { Authorization: `Bearer ${token}` };
 
   // 2. Try endpoints for outgoing PIX
+  const idEnvio = crypto.randomUUID().replace(/-/g, "").slice(0, 35);
   const body = JSON.stringify({ valor, chave: pixKey, descricao: "Teste repasse Families.im" });
   const candidates = [
-    { label: "POST /v2/gn/pix", path: "/v2/gn/pix", method: "POST" },
-    { label: "POST /v2/pix",    path: "/v2/pix",    method: "POST" },
+    { label: `PUT /v2/gn/pix/${idEnvio}`, path: `/v2/gn/pix/${idEnvio}`, method: "PUT" },
+    { label: "POST /v2/gn/pix",           path: "/v2/gn/pix",            method: "POST" },
+    { label: "POST /v2/pix",              path: "/v2/pix",               method: "POST" },
+    { label: `PUT /v2/pix/${idEnvio}`,    path: `/v2/pix/${idEnvio}`,    method: "PUT" },
   ];
 
   const attempts: Array<{ label: string; status: number; body: unknown }> = [];
