@@ -64,21 +64,25 @@ export async function GET(req: NextRequest) {
   const token = (tokenRes.body as { access_token: string }).access_token;
   const bearer = { Authorization: `Bearer ${token}` };
 
-  // 2. Try endpoints for outgoing PIX
+  // PUT /v2/gn/pix/{idEnvio} exists — test different body shapes
   const idEnvio = crypto.randomUUID().replace(/-/g, "").slice(0, 35);
-  const body = JSON.stringify({ valor, chave: pixKey, descricao: "Teste repasse Families.im" });
-  const candidates = [
-    { label: `PUT /v2/gn/pix/${idEnvio}`, path: `/v2/gn/pix/${idEnvio}`, method: "PUT" },
-    { label: "POST /v2/gn/pix",           path: "/v2/gn/pix",            method: "POST" },
-    { label: "POST /v2/pix",              path: "/v2/pix",               method: "POST" },
-    { label: `PUT /v2/pix/${idEnvio}`,    path: `/v2/pix/${idEnvio}`,    method: "PUT" },
+  const path = `/v2/gn/pix/${idEnvio}`;
+  const bodyCandidates = [
+    { label: "pagamento.chave",   body: { valor, pagamento:   { chave: pixKey, infoPagador: "Teste repasse" } } },
+    { label: "favorecido.chave",  body: { valor, favorecido:  { chave: pixKey, nome: "Igor" } } },
+    { label: "destinatario.chave",body: { valor, destinatario:{ chave: pixKey } } },
+    { label: "chave flat",        body: { valor, chave: pixKey, infoEntreClientes: "Teste repasse" } },
+    { label: "minimal",           body: { valor, chave: pixKey } },
   ];
 
   const attempts: Array<{ label: string; status: number; body: unknown }> = [];
-  for (const ep of candidates) {
-    const res = await rawRequest(ep.path, { method: ep.method, headers: bearer, body });
-    attempts.push({ label: ep.label, ...res });
-    if (res.status < 400) break; // first success wins
+  for (const candidate of bodyCandidates) {
+    const res = await rawRequest(path, { method: "PUT", headers: bearer, body: JSON.stringify(candidate.body) });
+    attempts.push({ label: candidate.label, ...res });
+    if (res.status < 400) break;
+    // Don't retry if it's not a body-shape error
+    const errName = (res.body as { nome?: string }).nome;
+    if (errName !== "json_invalido") break;
   }
 
   const success = attempts.find((a) => a.status < 400);
