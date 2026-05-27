@@ -181,6 +181,7 @@ export function WishlistItemCard({ item, familyId, currentUserId, memberColors, 
         <img
           src={`https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/${item.steamAppId}/library_600x900.jpg`}
           alt={gameName}
+          style={{ imageOrientation: "from-image" }}
           className={`w-full h-full object-cover object-top transition-all duration-300 group-hover:brightness-110 group-hover:saturate-[1.1] ${comingSoon ? "opacity-80" : ""}`}
           onError={(e) => {
             const el = e.currentTarget;

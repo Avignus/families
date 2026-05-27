@@ -377,6 +377,7 @@ function WishEntry({
           <img
             src={capsuleImage(entry.appId)}
             alt={entry.name}
+            style={{ imageOrientation: "from-image" }}
             className="w-full h-full object-cover transition-all duration-300 group-hover:brightness-110 group-hover:saturate-[1.08]"
             onError={(e) => {
               const el = e.currentTarget;

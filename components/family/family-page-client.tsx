@@ -681,19 +681,21 @@ export function FamilyPageClient({
                         <span className="text-sm text-muted-foreground"> · {gameName}</span>
                       </div>
 
-                      {/* Game thumbnail */}
-                      {headerImage && (
-                        <img
-                          src={headerImage}
-                          alt={gameName}
-                          className="h-7 w-12 object-cover rounded shrink-0 opacity-70 group-hover:opacity-100 transition-opacity"
-                        />
-                      )}
-
-                      {/* Amount */}
-                      <span className="text-sm font-semibold text-foreground shrink-0 tabular-nums">
-                        {formatCurrency(amountCents, currency)}
-                      </span>
+                      {/* Thumbnail + amount — fixed right column so values always align */}
+                      <div className="flex items-center gap-2 shrink-0">
+                        <div className="w-12 h-7">
+                          {headerImage && (
+                            <img
+                              src={headerImage}
+                              alt={gameName}
+                              className="w-full h-full object-cover rounded opacity-70 group-hover:opacity-100 transition-opacity"
+                            />
+                          )}
+                        </div>
+                        <span className="text-sm font-semibold text-foreground tabular-nums w-16 text-right">
+                          {formatCurrency(amountCents, currency)}
+                        </span>
+                      </div>
                     </div>
                   ))}
                 </div>
