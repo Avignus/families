@@ -14,7 +14,7 @@ import { GameSearchModal } from "@/components/wishlist/game-search-modal";
 import { VotesPanel } from "@/components/votes/votes-panel";
 import { SteamLibraryPanel } from "@/components/family/steam-library-panel";
 import { MemberActions } from "@/components/family/member-actions";
-import { Plus, ChevronDown, ChevronUp, Settings, Copy, LogIn, Gamepad2, Check, X, Camera, AlertTriangle, Library, Share2, Wallet, ShoppingCart, Medal } from "lucide-react";
+import { Plus, ChevronDown, ChevronUp, Settings, Copy, LogIn, Gamepad2, Check, X, Camera, AlertTriangle, Library, Share2, Wallet, ShoppingCart } from "lucide-react";
 import { RecommendationsSection } from "@/components/recommendations/recommendations-section";
 import { FamilyBadgesSection } from "@/components/family/family-badges-section";
 import * as TooltipPrimitive from "@radix-ui/react-tooltip";
@@ -138,7 +138,6 @@ export function FamilyPageClient({
 
   const [addGameOpen, setAddGameOpen] = useState(false);
   const [votesExpanded, setVotesExpanded] = useState(false);
-  const [badgesExpanded, setBadgesExpanded] = useState(true);
   const [steamExpanded, setSteamExpanded] = useState(true);
   const [distributing, setDistributing] = useState(false);
   const [localCredits, setLocalCredits] = useState(creditsCents);
@@ -350,28 +349,33 @@ export function FamilyPageClient({
             </label>
           )}
 
-          <div className="absolute bottom-0 left-0 right-0 z-30 px-6 pb-4 flex items-end justify-between gap-3">
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-2xl font-bold leading-tight" style={{ fontFamily: "var(--font-space-grotesk)" }}>
-                  {family.name}
-                </h1>
-                <FamilyTierBadge score={family.familyScore} size="md" />
+          <div className="absolute bottom-0 left-0 right-0 z-30 px-6 pb-4 flex flex-col gap-2.5">
+            {/* Badges strip — subtle overlay above family name */}
+            <FamilyBadgesSection familyId={familyId} compact />
+
+            <div className="flex items-end justify-between gap-3">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-2xl font-bold leading-tight" style={{ fontFamily: "var(--font-space-grotesk)" }}>
+                    {family.name}
+                  </h1>
+                  <FamilyTierBadge score={family.familyScore} size="md" />
+                </div>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-xs text-muted-foreground font-mono">{familyId}</span>
+                  <button onClick={copyId} className="text-muted-foreground hover:text-foreground">
+                    <Copy className="h-3 w-3" />
+                  </button>
+                </div>
               </div>
-              <div className="flex items-center gap-2 mt-1">
-                <span className="text-xs text-muted-foreground font-mono">{familyId}</span>
-                <button onClick={copyId} className="text-muted-foreground hover:text-foreground">
-                  <Copy className="h-3 w-3" />
-                </button>
-              </div>
+              {family.isChief && (
+                <Link href={`/families/${familyId}/admin`}>
+                  <Button size="sm" variant="outline" className="shrink-0">
+                    <Settings className="h-4 w-4 mr-1" /> {t.family.manage}
+                  </Button>
+                </Link>
+              )}
             </div>
-            {family.isChief && (
-              <Link href={`/families/${familyId}/admin`}>
-                <Button size="sm" variant="outline" className="shrink-0">
-                  <Settings className="h-4 w-4 mr-1" /> {t.family.manage}
-                </Button>
-              </Link>
-            )}
           </div>
         </div>
 
@@ -696,24 +700,6 @@ export function FamilyPageClient({
               </div>
             </>
           )}
-
-          {/* Family badges */}
-          <Separator />
-          <div>
-            <button
-              onClick={() => setBadgesExpanded((v) => !v)}
-              className="flex items-center gap-2 text-sm font-semibold w-full text-left"
-            >
-              <Medal className="h-4 w-4 text-amber-400" />
-              <span>Insígnias da família</span>
-              {badgesExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-            </button>
-            {badgesExpanded && (
-              <div className="mt-3">
-                <FamilyBadgesSection familyId={familyId} />
-              </div>
-            )}
-          </div>
 
           {/* AI recommendations */}
           <RecommendationsSection
