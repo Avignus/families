@@ -3,6 +3,10 @@
 @tailwind utilities;
 
 @layer base {
+  html {
+    font-size: 20px; /* 125% of 16px — scales all rem-based values to match 125% browser zoom */
+  }
+
   :root {
     --background: 224 25% 6%;
     --foreground: 214 30% 92%;

@@ -5,7 +5,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { formatCurrency, getMemberColor } from "@/lib/utils";
 import { PledgeModal } from "./pledge-modal";
-import { ShoppingCart, Minus, X, Sparkles, RefreshCw, Clock, PackageOpen, CheckCircle2, Trash2, Link2, Copy, Check, Receipt, ChevronDown, ChevronUp } from "lucide-react";
+import { ShoppingCart, Minus, X, Sparkles, RefreshCw, Clock, PackageOpen, CheckCircle2, Trash2, Link2, Copy, Check, Receipt, ChevronDown, ChevronUp, Tag } from "lucide-react";
 import { SteamPriceBadge } from "@/components/ui/steam-price-badge";
 import { toast } from "sonner";
 import { useLanguage } from "@/lib/i18n/context";
@@ -24,6 +24,14 @@ type PledgeData = {
   percent: number;
   paidAt: string | null;
   pledger: Pledger;
+};
+
+type ItadDeal = {
+  shopId: string;
+  shopName: string;
+  priceCents: number;
+  cut: number;
+  url: string;
 };
 
 type SteamData = {
@@ -54,6 +62,7 @@ type Props = {
     percentFunded: number;
     steamData: SteamData | null;
     pledges: PledgeData[];
+    itadDeals?: ItadDeal[];
   };
   familyId: string;
   currentUserId: string;
@@ -312,6 +321,26 @@ export function WishlistItemCard({ item, familyId, currentUserId, memberColors, 
                   size="sm"
                 />
               )}
+              {(() => {
+                const cheapest = item.itadDeals?.[0];
+                if (!cheapest) return null;
+                const steamPrice = item.steamData?.priceCents ?? item.targetPriceCents;
+                const savePct = steamPrice > 0 ? Math.round((1 - cheapest.priceCents / steamPrice) * 100) : 0;
+                if (savePct < 5) return null;
+                return (
+                  <a
+                    href={cheapest.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-1 flex items-center gap-1 text-[10px] text-emerald-400/80 hover:text-emerald-400 transition-colors"
+                    title={`Ver em ${cheapest.shopName}`}
+                  >
+                    <Tag className="h-2.5 w-2.5 flex-shrink-0" />
+                    <span>{cheapest.shopName}: {formatCurrency(cheapest.priceCents, item.currency)}</span>
+                    <span className="text-emerald-500/70">(-{savePct}%)</span>
+                  </a>
+                );
+              })()}
             </div>
             {item.owner && (
               <div className="flex items-center gap-1">
