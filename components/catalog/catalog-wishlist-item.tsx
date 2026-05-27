@@ -3,6 +3,7 @@
 import { formatCurrency } from "@/lib/utils";
 import { ShoppingCart, Sparkles } from "lucide-react";
 import { useLanguage } from "@/lib/i18n/context";
+import { SteamPriceBadge } from "@/components/ui/steam-price-badge";
 
 type Props = {
   item: {
@@ -17,6 +18,9 @@ type Props = {
       name: string;
       headerImage: string;
       priceCents: number;
+      originalPriceCents?: number;
+      discountPercent?: number;
+      currency?: string;
       isFree: boolean;
     } | null;
     owner: {
@@ -84,10 +88,20 @@ export function CatalogWishlistItem({ item }: Props) {
           >
             {gameName}
           </h3>
-          <div className="flex items-center justify-between mt-0.5">
-            <p className="text-xs text-muted-foreground">
-              {item.steam?.isFree ? t.catalogWishlistItem.free : formatCurrency(item.targetPriceCents, item.currency)}
-            </p>
+          <div className="flex items-center justify-between mt-1">
+            {item.steam?.isFree ? (
+              <span className="text-xs text-muted-foreground">{t.catalogWishlistItem.free}</span>
+            ) : item.steam?.priceCents ? (
+              <SteamPriceBadge
+                priceCents={item.steam.priceCents}
+                originalPriceCents={item.steam.originalPriceCents}
+                discountPercent={item.steam.discountPercent}
+                currency={item.steam.currency ?? item.currency}
+                size="xs"
+              />
+            ) : (
+              <span className="text-xs text-muted-foreground">{formatCurrency(item.targetPriceCents, item.currency)}</span>
+            )}
             {item.owner && (
               <div className="flex items-center gap-1">
                 <img

@@ -13,7 +13,7 @@ const config: Config = {
     container: {
       center: true,
       padding: "1.5rem",
-      screens: { "2xl": "1700px" },
+      screens: { "2xl": "1400px" },
     },
     extend: {
       fontFamily: {

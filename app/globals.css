@@ -4,7 +4,7 @@
 
 @layer base {
   html {
-    font-size: 24px; /* 150% of 16px — scales all rem-based values to match 150% browser zoom */
+    font-size: 20px; /* 125% of 16px */
   }
 
   :root {

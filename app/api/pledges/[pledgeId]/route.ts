@@ -61,9 +61,8 @@ export async function DELETE(_req: NextRequest, { params }: { params: { pledgeId
   if (!pledge) return err("NOT_FOUND", "Pledge not found", 404);
 
   const isPledger = pledge.pledgerUserId === user.id;
-  const isItemOwner = pledge.wishlistItem.ownerUserId === user.id;
 
-  if (!isPledger && !isItemOwner) return err("FORBIDDEN", "Only the pledger or item owner can remove this pledge", 403);
+  if (!isPledger) return err("FORBIDDEN", "Only the pledger can remove their own pledge", 403);
   if (pledge.status !== "active") return err("INVALID_STATE", "Pledge is not active");
   if (pledge.wishlistItem.status === "purchased") return err("INVALID_STATE", "Cannot remove pledge for a purchased item", 400);
   if (pledge.wishlistItem.disbursedAt) return err("INVALID_STATE", "Cannot remove pledge after funds have been disbursed to the owner", 400);
@@ -84,66 +83,37 @@ export async function DELETE(_req: NextRequest, { params }: { params: { pledgeId
       });
     }
 
-    if (isPledger) {
-      // Voluntary withdrawal: return credits, keep service fee
-      if (pledge.creditsCentsUsed > 0) {
-        await creditWallet(tx, pledge.pledgerUserId, pledge.creditsCentsUsed, "pledge_withdrawn", pledge.id);
-      }
-      // Notify item owner
-      if (pledge.wishlistItem.ownerUserId) {
-        await createNotification(tx, {
-          recipientUserId: pledge.wishlistItem.ownerUserId,
-          type: "PLEDGE_WITHDRAWN",
-          payload: {
-            pledgeId: pledge.id,
-            itemId: pledge.wishlistItemId,
-            familyId: pledge.wishlistItem.familyId,
-            familyName: pledge.wishlistItem.family.name,
-            ownerUserId: pledge.wishlistItem.ownerUserId,
-            gameName,
-            pledgerId: user.id,
-            personaName: user.personaName,
-            amountCents: pledge.amountCents,
-            currency: pledge.wishlistItem.currency,
-          },
-        });
-      }
-    } else {
-      // Owner-initiated removal: full refund to pledger wallet (money stays on platform)
-      const creditAmount = (pledge.paidAt ? (pledge.pixAmountCents ?? 0) : 0) + pledge.creditsCentsUsed;
-      if (creditAmount > 0) {
-        await creditWallet(tx, pledge.pledgerUserId, creditAmount, "pledge_removed_by_owner", pledge.id);
-      }
-      // Notify the pledger
+    // Voluntary withdrawal: return credits, keep service fee
+    if (pledge.creditsCentsUsed > 0) {
+      await creditWallet(tx, pledge.pledgerUserId, pledge.creditsCentsUsed, "pledge_withdrawn", pledge.id);
+    }
+    // Notify item owner
+    if (pledge.wishlistItem.ownerUserId) {
       await createNotification(tx, {
-        recipientUserId: pledge.pledgerUserId,
+        recipientUserId: pledge.wishlistItem.ownerUserId,
         type: "PLEDGE_WITHDRAWN",
         payload: {
           pledgeId: pledge.id,
           itemId: pledge.wishlistItemId,
           familyId: pledge.wishlistItem.familyId,
           familyName: pledge.wishlistItem.family.name,
-          ownerUserId: pledge.wishlistItem.ownerUserId ?? "",
+          ownerUserId: pledge.wishlistItem.ownerUserId,
           gameName,
-          pledgerId: pledge.pledgerUserId,
-          personaName: pledge.pledger.personaName,
+          pledgerId: user.id,
+          personaName: user.personaName,
           amountCents: pledge.amountCents,
           currency: pledge.wishlistItem.currency,
-          removedByOwner: true,
         },
       });
     }
   });
 
-  // PIX bank refund only for voluntary pledger withdrawal (keep service fee)
-  if (isPledger) {
-    const pixPortion = pledge.amountCents - pledge.creditsCentsUsed;
-    if (pledge.paidAt && pledge.pixPaymentId && pixPortion > 0) {
-      try {
-        await refundPayment(pledge.pixPaymentId, pixPortion);
-      } catch (e) {
-        console.error("Refund error on pledge withdrawal:", e);
-      }
+  const pixPortion = pledge.amountCents - pledge.creditsCentsUsed;
+  if (pledge.paidAt && pledge.pixPaymentId && pixPortion > 0) {
+    try {
+      await refundPayment(pledge.pixPaymentId, pixPortion);
+    } catch (e) {
+      console.error("Refund error on pledge withdrawal:", e);
     }
   }
 

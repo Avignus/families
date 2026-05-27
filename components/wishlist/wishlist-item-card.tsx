@@ -152,14 +152,6 @@ export function WishlistItemCard({ item, familyId, currentUserId, memberColors, 
     onRefresh();
   };
 
-  const handleRemovePledge = async (pledgeId: string) => {
-    const res = await fetch(`/api/pledges/${pledgeId}`, { method: "DELETE" });
-    const data = await res.json();
-    if (!res.ok) { toast.error(data.error?.message ?? "Erro"); return; }
-    toast.success(t.wishlist.contributionRemoved);
-    onRefresh();
-  };
-
   const handleRemoveItem = async () => {
     setRemoving(true);
     try {
@@ -463,15 +455,6 @@ export function WishlistItemCard({ item, familyId, currentUserId, memberColors, 
                           title={t.wishlist.cancelContribution}
                         >
                           <Minus className="h-3 w-3" />
-                        </button>
-                      )}
-                      {!isMyPledge && isOwner && (item.status === "open" || item.status === "funded") && !item.disbursedAt && (
-                        <button
-                          onClick={() => handleRemovePledge(pledge.id)}
-                          className="text-muted-foreground/50 hover:text-destructive transition-colors ml-0.5"
-                          title={t.wishlist.removeContribution}
-                        >
-                          <X className="h-3 w-3" />
                         </button>
                       )}
                     </div>

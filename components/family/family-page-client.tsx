@@ -54,7 +54,7 @@ type WishlistItem = {
   percentFunded: number;
   priceAlert: "low" | "high" | null;
   priceAvgCents: number | null;
-  steamData: { appId: number; name: string; headerImage: string; priceCents: number; currency: string; isFree: boolean; comingSoon?: boolean; releaseDate?: string; genres?: string[] } | null;
+  steamData: { appId: number; name: string; headerImage: string; priceCents: number; originalPriceCents?: number; discountPercent?: number; currency: string; isFree: boolean; comingSoon?: boolean; releaseDate?: string; genres?: string[] } | null;
   itadDeals?: Array<{ shopId: string; shopName: string; priceCents: number; cut: number; url: string }>;
   pledges: Array<{
     id: string;
