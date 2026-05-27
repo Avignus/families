@@ -1,0 +1,10 @@
+name = "efi-webhook-proxy"
+main = "src/index.ts"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+VERCEL_WEBHOOK_URL = "https://families.im/api/webhooks/efi"
+
+# Secrets (set via wrangler secret put):
+#   PROXY_SECRET  — shared with Vercel to authenticate forwarded requests

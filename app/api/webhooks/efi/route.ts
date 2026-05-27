@@ -10,6 +10,16 @@ import {
 export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
+  // When coming via the CF Worker proxy, validate shared secret.
+  // Direct calls without the secret are rejected (except in dev).
+  const proxySecret = process.env.EFI_PROXY_SECRET;
+  if (proxySecret) {
+    const incoming = req.headers.get("x-efi-proxy-secret");
+    if (incoming !== proxySecret) {
+      return NextResponse.json({ ok: false }, { status: 401 });
+    }
+  }
+
   const body = await req.json().catch(() => null);
   if (!body) return NextResponse.json({ ok: false }, { status: 400 });
 
