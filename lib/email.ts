@@ -21,6 +21,9 @@ const EMAIL_WORTHY: Set<NotificationType> = new Set([
   "JOIN_APPROVED",
   "JOIN_REJECTED",
   "JOIN_FEE_PAID",
+  "SPOT_VERIFICATION_PENDING",
+  "SPOT_VERIFIED",
+  "SPOT_VERIFICATION_EXPIRED",
 ]);
 
 export async function sendNotificationEmail(params: {

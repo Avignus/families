@@ -184,6 +184,23 @@ const templates: Record<Locale, Templates> = {
       body: (p) => `${p.description}${p.cosmeticsCount ? ` • ${p.cosmeticsCount} cosmético(s) desbloqueado(s)` : ""}`,
       link: () => `/profile#achievements`,
     },
+    SPOT_VERIFICATION_PENDING: {
+      title: () => "Confirme sua entrada na família Steam",
+      body: (p) => `Você entrou em "${p.familyName}"! O chefe precisa te adicionar à família Steam. Quando estiver na lista, tire um print e envie como comprovante. Prazo: 5 dias.`,
+      link: (p) => `/verify-spot/${p.membershipId}`,
+    },
+    SPOT_VERIFIED: {
+      title: () => "Entrada na família confirmada!",
+      body: (p) => `Sua presença na família Steam de "${p.familyName}" foi verificada com sucesso. Boa jogatina!`,
+      link: (p) => `/families/${p.familyId}`,
+    },
+    SPOT_VERIFICATION_EXPIRED: {
+      title: () => "Verificação de spot expirada",
+      body: (p) => p.refunded
+        ? `O prazo de verificação para "${p.familyName}" expirou. Seu pagamento de ${p.refundAmountFormatted} foi estornado.`
+        : `O prazo de verificação para "${p.familyName}" expirou.`,
+      link: () => `/catalog`,
+    },
   },
   en: {
     JOIN_REQUEST: {
@@ -355,6 +372,23 @@ const templates: Record<Locale, Templates> = {
       title: (p) => `Achievement unlocked: ${p.title}`,
       body: (p) => `${p.description}${p.cosmeticsCount ? ` • ${p.cosmeticsCount} cosmetic(s) unlocked` : ""}`,
       link: () => `/profile#achievements`,
+    },
+    SPOT_VERIFICATION_PENDING: {
+      title: () => "Confirm your Steam family membership",
+      body: (p) => `You joined "${p.familyName}"! The chief needs to add you to the Steam family. Once you're on the list, take a screenshot and upload it as proof. Deadline: 5 days.`,
+      link: (p) => `/verify-spot/${p.membershipId}`,
+    },
+    SPOT_VERIFIED: {
+      title: () => "Steam family membership confirmed!",
+      body: (p) => `Your presence in the Steam family "${p.familyName}" has been verified. Enjoy gaming!`,
+      link: (p) => `/families/${p.familyId}`,
+    },
+    SPOT_VERIFICATION_EXPIRED: {
+      title: () => "Spot verification expired",
+      body: (p) => p.refunded
+        ? `The verification deadline for "${p.familyName}" has passed. Your payment of ${p.refundAmountFormatted} has been refunded.`
+        : `The verification deadline for "${p.familyName}" has passed.`,
+      link: () => `/catalog`,
     },
   },
 };

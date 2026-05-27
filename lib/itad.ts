@@ -79,6 +79,39 @@ async function itadCurrentPrices(itadId: string, country = "BR"): Promise<ItadDe
   }
 }
 
+/** Returns ALL deals from all stores for a Steam app, sorted cheapest-first. Uses the same cache as itadGetDealsForApp. */
+export async function itadAllDeals(steamAppId: number): Promise<ItadDeal[]> {
+  if (!KEY) return [];
+
+  const cached = await prisma.steamAppCache.findUnique({ where: { steamAppId } });
+  const payload = (cached?.payload ?? {}) as Record<string, unknown>;
+
+  const cachedDeals = payload._itadDeals as ItadDeal[] | undefined;
+  const cachedAt = payload._itadDealsAt as number | undefined;
+  const cachedItadId = payload._itadId as string | undefined;
+
+  const fresh = cachedAt && Date.now() - cachedAt < DEALS_CACHE_TTL_MS;
+  if (fresh && cachedDeals) {
+    return [...cachedDeals].sort((a, b) => a.priceCents - b.priceCents);
+  }
+
+  const itadId = cachedItadId ?? (await itadLookup(steamAppId));
+  if (!itadId) return [];
+
+  const deals = await itadCurrentPrices(itadId);
+
+  if (cached) {
+    await prisma.steamAppCache.update({
+      where: { steamAppId },
+      data: {
+        payload: { ...payload, _itadId: itadId, _itadDeals: deals, _itadDealsAt: Date.now() },
+      },
+    });
+  }
+
+  return [...deals].sort((a, b) => a.priceCents - b.priceCents);
+}
+
 /** Returns Steam-only discounted deals for a Steam app, caching the result in SteamAppCache. */
 export async function itadGetDealsForApp(steamAppId: number): Promise<ItadDeal[]> {
   if (!KEY) return [];

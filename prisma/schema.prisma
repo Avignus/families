@@ -100,6 +100,13 @@ model FamilyMembership {
   // Spot marketplace lease duration
   spotExpiresAt DateTime? // 1 year from activation; null = not a spot lease
 
+  // Spot escrow & verification
+  spotVerifStatus   String?   // null | "pending" | "verified" | "expired"
+  spotVerifDeadline DateTime? // payment confirmed + 5 days; after this, auto-refund
+  spotVerifImageUrl String?   // Vercel Blob URL of the screenshot uploaded by buyer
+  spotVerifNotes    String?   // AI analysis result summary
+  spotEscrowCents   Int?      // chief's net amount held in escrow until verification
+
   // Auto-distribution
   monthlyBudgetCents    Int       @default(0)
   autoDistributeEnabled Boolean   @default(false)
@@ -435,4 +442,7 @@ enum NotificationType {
   SPOT_EXPIRING_SOON
   SPOT_EXPIRED
   ACHIEVEMENT_UNLOCKED
+  SPOT_VERIFICATION_PENDING
+  SPOT_VERIFIED
+  SPOT_VERIFICATION_EXPIRED
 }

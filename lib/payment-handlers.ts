@@ -277,81 +277,66 @@ export async function handleSpotPayment(
       return;
     }
 
-    if (membership.family.autoApprove) {
-      const spotExpiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
+    // ── Spot escrow flow ────────────────────────────────────────────────────
+    // Regardless of autoApprove, we activate the membership but hold the chief's
+    // earnings in escrow until the buyer uploads proof of Steam family membership.
+    const spotExpiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
+    const verificationDeadline = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000); // 5 days
+    const chiefAmountCents = membership.feeChargedCents
+      ? Math.floor(membership.feeChargedCents * (1 - SPOT_COMMISSION_RATE))
+      : 0;
 
-      await prisma.$transaction(async (tx) => {
-        const activated = await tx.familyMembership.updateMany({
-          where: { id: membership.id, feePaidAt: null },
-          data: { status: "active", feePaidAt: new Date(), joinedAt: new Date(), spotExpiresAt },
-        });
-        if (activated.count === 0) return;
+    await prisma.$transaction(async (tx) => {
+      const activated = await tx.familyMembership.updateMany({
+        where: { id: membership.id, feePaidAt: null },
+        data: {
+          status: "active",
+          feePaidAt: new Date(),
+          joinedAt: new Date(),
+          spotExpiresAt,
+          spotVerifStatus: "pending",
+          spotVerifDeadline: verificationDeadline,
+          spotEscrowCents: chiefAmountCents,
+        },
+      });
+      if (activated.count === 0) return;
 
-        await createNotification(tx, {
-          recipientUserId: membership.family.chiefId,
-          type: "JOIN_FEE_PAID",
-          payload: {
-            familyId: membership.family.id,
-            familyName: membership.family.name,
-            memberId: membership.userId,
-            personaName: membership.user.personaName,
-          },
-        });
-        await createNotification(tx, {
-          recipientUserId: membership.userId,
-          type: "JOIN_APPROVED",
-          payload: {
-            familyId: membership.family.id,
-            familyName: membership.family.name,
-          },
-        });
+      // Notify buyer: they're in, now they need to upload proof
+      await createNotification(tx, {
+        recipientUserId: membership.userId,
+        type: "SPOT_VERIFICATION_PENDING",
+        payload: {
+          familyId: membership.family.id,
+          familyName: membership.family.name,
+          membershipId: membership.id,
+          deadlineAt: verificationDeadline.toISOString(),
+        },
       });
 
-      const activated = await prisma.familyMembership.findUnique({
-        where: { id: membership.id },
-        select: { feePaidAt: true },
-      });
-      if (!activated?.feePaidAt) return;
-
-      getOwnedGames(membership.user.steamId).catch(() => {});
-
-      if (membership.feeChargedCents && membership.feeChargedCents > 0) {
-        const chiefAmountCents = Math.floor(
-          membership.feeChargedCents * (1 - SPOT_COMMISSION_RATE)
-        );
-        if (chiefAmountCents > 0) {
-          await prisma.user.update({
-            where: { id: membership.family.chiefId },
-            data: { chiefSpotEarningsCents: { increment: chiefAmountCents } },
-          });
-        }
-      }
-    } else {
-      await prisma.$transaction(async (tx) => {
-        const marked = await tx.familyMembership.updateMany({
-          where: { id: membership.id, feePaidAt: null },
-          data: { feePaidAt: new Date() },
-        });
-        if (marked.count === 0) return;
-
-        const amountFormatted = new Intl.NumberFormat("pt-BR", {
-          style: "currency",
+      // Notify chief: add buyer to Steam Family, payment held until verified
+      await createNotification(tx, {
+        recipientUserId: membership.family.chiefId,
+        type: "JOIN_FEE_PAID",
+        payload: {
+          familyId: membership.family.id,
+          familyName: membership.family.name,
+          memberId: membership.userId,
+          personaName: membership.user.personaName,
+          escrowCents: chiefAmountCents,
           currency: membership.family.currency,
-        }).format((membership.feeChargedCents ?? 0) / 100);
-
-        await createNotification(tx, {
-          recipientUserId: membership.family.chiefId,
-          type: "JOIN_PAYMENT_AWAITING_APPROVAL",
-          payload: {
-            familyId: membership.family.id,
-            familyName: membership.family.name,
-            memberId: membership.userId,
-            personaName: membership.user.personaName,
-            amountFormatted,
-          },
-        });
+          verificationPending: true,
+        },
       });
-    }
+    });
+
+    const activated = await prisma.familyMembership.findUnique({
+      where: { id: membership.id },
+      select: { feePaidAt: true },
+    });
+    if (!activated?.feePaidAt) return;
+
+    getOwnedGames(membership.user.steamId).catch(() => {});
+    // Chief earnings are NOT credited here — they're released by the verification endpoint.
   }
 
   if (status === "rejected" || status === "cancelled") {
