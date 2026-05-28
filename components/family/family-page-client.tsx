@@ -8,13 +8,14 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { WishlistItemCard } from "@/components/wishlist/wishlist-item-card";
 import { GameSearchModal } from "@/components/wishlist/game-search-modal";
 import { VotesPanel } from "@/components/votes/votes-panel";
 import { SteamLibraryPanel } from "@/components/family/steam-library-panel";
 import { MemberActions } from "@/components/family/member-actions";
-import { Plus, ChevronDown, ChevronUp, Settings, Copy, LogIn, Gamepad2, Check, X, Camera, AlertTriangle, Library, Share2, Wallet, ShoppingCart } from "lucide-react";
+import { Plus, ChevronDown, ChevronUp, Settings, Copy, LogIn, Gamepad2, Check, X, Camera, AlertTriangle, Library, Share2, Wallet, ShoppingCart, LogOut } from "lucide-react";
 import { RecommendationsSection } from "@/components/recommendations/recommendations-section";
 import { FamilyBadgesSection } from "@/components/family/family-badges-section";
 import * as TooltipPrimitive from "@radix-ui/react-tooltip";
@@ -138,12 +139,31 @@ export function FamilyPageClient({
   const family = data?.data;
 
   const [addGameOpen, setAddGameOpen] = useState(false);
+  const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
+  const [leaving, setLeaving] = useState(false);
   const [votesExpanded, setVotesExpanded] = useState(false);
   const [steamExpanded, setSteamExpanded] = useState(true);
   const [distributing, setDistributing] = useState(false);
   const [localCredits, setLocalCredits] = useState(creditsCents);
   const [autoDistribute, setAutoDistribute] = useState(autoDistributeEnabled);
   const [localCoverUrl, setLocalCoverUrl] = useState<string | null | undefined>(undefined);
+
+  const handleLeaveFamily = async () => {
+    setLeaving(true);
+    try {
+      const res = await fetch(`/api/families/${familyId}/members/${userId}`, { method: "DELETE" });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error?.message ?? t.family.leaveFamilyError);
+        return;
+      }
+      toast.success(t.family.leaveFamilySuccess);
+      window.location.replace("/");
+    } finally {
+      setLeaving(false);
+      setLeaveDialogOpen(false);
+    }
+  };
 
   const handleDistributeCredits = async () => {
     setDistributing(true);
@@ -369,13 +389,20 @@ export function FamilyPageClient({
                   </button>
                 </div>
               </div>
-              {family.isChief && (
-                <Link href={`/families/${familyId}/admin`}>
-                  <Button size="sm" variant="outline" className="shrink-0">
-                    <Settings className="h-4 w-4 mr-1" /> {t.family.manage}
+              <div className="flex items-center gap-2">
+                {family.isChief && (
+                  <Link href={`/families/${familyId}/admin`}>
+                    <Button size="sm" variant="outline" className="shrink-0">
+                      <Settings className="h-4 w-4 mr-1" /> {t.family.manage}
+                    </Button>
+                  </Link>
+                )}
+                {!family.isChief && (
+                  <Button size="sm" variant="outline" className="shrink-0 text-destructive border-destructive/40 hover:bg-destructive/10" onClick={() => setLeaveDialogOpen(true)}>
+                    <LogOut className="h-4 w-4 mr-1" /> {t.family.leaveFamily}
                   </Button>
-                </Link>
-              )}
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -745,6 +772,24 @@ export function FamilyPageClient({
         familyId={familyId}
         existingAppIds={new Set(family.wishlistItems.map((i) => i.steamAppId))}
       />
+
+      <Dialog open={leaveDialogOpen} onOpenChange={setLeaveDialogOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{t.family.leaveFamilyTitle}</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">{t.family.leaveFamilyDesc}</p>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setLeaveDialogOpen(false)} disabled={leaving}>
+              {t.family.leaveFamilyCancel}
+            </Button>
+            <Button variant="destructive" onClick={handleLeaveFamily} disabled={leaving}>
+              <LogOut className="h-4 w-4 mr-2" />
+              {leaving ? t.family.leaveFamilyLeaving : t.family.leaveFamilyConfirm}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
     </div>
   );
