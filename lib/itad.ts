@@ -125,7 +125,7 @@ export async function itadGetDealsForApp(steamAppId: number): Promise<ItadDeal[]
 
   const fresh = cachedAt && Date.now() - cachedAt < DEALS_CACHE_TTL_MS;
   if (fresh && cachedDeals) {
-    return cachedDeals.filter((d) => d.shopId === 61 && d.cut > 0);
+    return cachedDeals.filter((d) => d.cut > 0);
   }
 
   const itadId = cachedItadId ?? await itadLookup(steamAppId);
@@ -142,5 +142,5 @@ export async function itadGetDealsForApp(steamAppId: number): Promise<ItadDeal[]
     });
   }
 
-  return deals.filter((d) => d.shopId === 61 && d.cut > 0);
+  return deals.filter((d) => d.cut > 0);
 }
