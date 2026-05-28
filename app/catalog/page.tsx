@@ -24,6 +24,7 @@ export default async function CatalogPage({
     minMissing?: string;
     maxMissing?: string;
     genre?: string | string[];
+    games?: string | string[];
   };
 }) {
   const session = await getSession();
@@ -41,6 +42,10 @@ export default async function CatalogPage({
   const page = Math.max(1, parseInt(searchParams.page ?? "1"));
   const genreFilter = searchParams.genre
     ? Array.isArray(searchParams.genre) ? searchParams.genre : [searchParams.genre]
+    : [];
+  const gameFilter = searchParams.games
+    ? (Array.isArray(searchParams.games) ? searchParams.games : [searchParams.games])
+        .map(Number).filter((n) => Number.isFinite(n) && n > 0)
     : [];
 
   const minPriceCents = searchParams.minPrice ? Math.round(parseFloat(searchParams.minPrice) * 100) : null;
@@ -70,6 +75,11 @@ export default async function CatalogPage({
     if (minPriceCents !== null) priceFilter.gte = minPriceCents;
     if (maxPriceCents !== null) priceFilter.lte = maxPriceCents;
     where.entryFeeCents = priceFilter;
+  }
+  if (gameFilter.length > 0) {
+    where.wishlistItems = {
+      some: { steamAppId: { in: gameFilter }, status: { not: "cancelled" } },
+    };
   }
 
   // Load all families matching text + price (needed for in-memory game filters)
@@ -462,6 +472,18 @@ export default async function CatalogPage({
     maxMissing: searchParams.maxMissing ?? "",
   };
 
+  // Resolve names for pre-selected games (from URL params)
+  const selectedGameRows = gameFilter.length > 0
+    ? await prisma.steamAppCatalog.findMany({
+        where: { appId: { in: gameFilter } },
+        select: { appId: true, name: true },
+      })
+    : [];
+  const selectedGames = gameFilter.map((id) => ({
+    appId: id,
+    name: selectedGameRows.find((r) => r.appId === id)?.name ?? `App ${id}`,
+  }));
+
   return (
     <CatalogClient
       families={items}
@@ -475,6 +497,7 @@ export default async function CatalogPage({
       query={q}
       filters={filters}
       selectedGenres={genreFilter}
+      selectedGames={selectedGames}
     />
   );
 }

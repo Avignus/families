@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useState, useTransition, useRef, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { RARITY_CONFIG } from "@/lib/cosmetics";
 import { formatCurrency } from "@/lib/utils";
@@ -127,6 +127,8 @@ type Filters = {
   maxMissing: string;
 };
 
+type PickedGame = { appId: number; name: string; headerImage?: string };
+
 type Props = {
   families: Family[];
   isLoggedIn: boolean;
@@ -139,9 +141,10 @@ type Props = {
   query: string;
   filters: Filters;
   selectedGenres: string[];
+  selectedGames: Array<{ appId: number; name: string }>;
 };
 
-export function CatalogClient({ families, isLoggedIn, currentUserId, hasActiveFamily, needsLibrarySync, total, page, pageSize, query, filters, selectedGenres }: Props) {
+export function CatalogClient({ families, isLoggedIn, currentUserId, hasActiveFamily, needsLibrarySync, total, page, pageSize, query, filters, selectedGenres, selectedGames }: Props) {
   const { t } = useLanguage();
   const router = useRouter();
   const pathname = usePathname();
@@ -152,7 +155,7 @@ export function CatalogClient({ families, isLoggedIn, currentUserId, hasActiveFa
   const [pixModal, setPixModal] = useState<{ family: Family; pix: PixData; amountCents: number } | null>(null);
   const [localStatus, setLocalStatus] = useState<Record<string, string>>({});
   const [filtersOpen, setFiltersOpen] = useState(() => {
-    return Object.values(filters).some((v) => v !== "");
+    return Object.values(filters).some((v) => v !== "") || selectedGames.length > 0;
   });
   const [syncingLibrary, setSyncingLibrary] = useState(false);
   const [librarySynced, setLibrarySynced] = useState(false);
@@ -177,6 +180,42 @@ export function CatalogClient({ families, isLoggedIn, currentUserId, hasActiveFa
   const [minMissing, setMinMissing] = useState(filters.minMissing);
   const [maxMissing, setMaxMissing] = useState(filters.maxMissing);
   const [genres, setGenres] = useState<string[]>(selectedGenres);
+  const [pickedGames, setPickedGames] = useState<PickedGame[]>(selectedGames);
+  const [gameQuery, setGameQuery] = useState("");
+  const [debouncedGameQuery, setDebouncedGameQuery] = useState("");
+  const [gameDropdownOpen, setGameDropdownOpen] = useState(false);
+  const gameInputRef = useRef<HTMLInputElement>(null);
+  const gameDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedGameQuery(gameQuery), 300);
+    return () => clearTimeout(t);
+  }, [gameQuery]);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        gameDropdownRef.current && !gameDropdownRef.current.contains(e.target as Node) &&
+        gameInputRef.current && !gameInputRef.current.contains(e.target as Node)
+      ) {
+        setGameDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const { data: gameSearchResults, isFetching: gameSearchFetching } = useQuery<PickedGame[]>({
+    queryKey: ["catalog-game-search", debouncedGameQuery],
+    queryFn: async () => {
+      const r = await fetch(`/api/catalog/games-search?q=${encodeURIComponent(debouncedGameQuery)}`);
+      if (!r.ok) return [];
+      const d = await r.json();
+      return d.data ?? [];
+    },
+    enabled: debouncedGameQuery.length >= 2,
+    staleTime: 60_000,
+  });
 
   const totalPages = Math.ceil(total / pageSize);
 
@@ -186,9 +225,16 @@ export function CatalogClient({ families, isLoggedIn, currentUserId, hasActiveFa
     minOwned || maxOwned,
     minMissing || maxMissing,
     genres.length > 0,
+    pickedGames.length > 0,
   ].filter(Boolean).length;
 
-  const navigate = (q: string, p: number, overrides?: Partial<Filters>, overrideGenres?: string[]) => {
+  const navigate = (
+    q: string,
+    p: number,
+    overrides?: Partial<Filters>,
+    overrideGenres?: string[],
+    overrideGames?: PickedGame[],
+  ) => {
     const f: Filters = { minPrice, maxPrice, minGames, maxGames, minOwned, maxOwned, minMissing, maxMissing, ...overrides };
     const params = new URLSearchParams();
     if (q) params.set("q", q);
@@ -197,6 +243,7 @@ export function CatalogClient({ families, isLoggedIn, currentUserId, hasActiveFa
       if (v) params.set(k, v);
     });
     for (const g of (overrideGenres ?? genres)) params.append("genre", g);
+    for (const g of (overrideGames ?? pickedGames)) params.append("games", String(g.appId));
     startTransition(() => router.push(`${pathname}?${params.toString()}`));
   };
 
@@ -217,7 +264,24 @@ export function CatalogClient({ families, isLoggedIn, currentUserId, hasActiveFa
     setMinOwned(""); setMaxOwned("");
     setMinMissing(""); setMaxMissing("");
     setGenres([]);
-    navigate(search, 1, { minPrice: "", maxPrice: "", minGames: "", maxGames: "", minOwned: "", maxOwned: "", minMissing: "", maxMissing: "" }, []);
+    setPickedGames([]);
+    navigate(search, 1, { minPrice: "", maxPrice: "", minGames: "", maxGames: "", minOwned: "", maxOwned: "", minMissing: "", maxMissing: "" }, [], []);
+  };
+
+  const addGame = (game: PickedGame) => {
+    if (pickedGames.some((g) => g.appId === game.appId)) return;
+    const next = [...pickedGames, game];
+    setPickedGames(next);
+    setGameQuery("");
+    setDebouncedGameQuery("");
+    setGameDropdownOpen(false);
+    navigate(search, 1, undefined, undefined, next);
+  };
+
+  const removeGame = (appId: number) => {
+    const next = pickedGames.filter((g) => g.appId !== appId);
+    setPickedGames(next);
+    navigate(search, 1, undefined, undefined, next);
   };
 
   const handleJoin = async (family: Family) => {
@@ -416,6 +480,103 @@ export function CatalogClient({ families, isLoggedIn, currentUserId, hasActiveFa
                     />
                   </div>
                 </div>
+              </div>
+
+              {/* Game wishlist filter */}
+              <div className="space-y-2 pt-1 border-t border-border/40">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-1">
+                  <Gamepad2 className="h-3.5 w-3.5" />
+                  Filtrar por jogo na wishlist
+                </p>
+
+                {pickedGames.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {pickedGames.map((game) => (
+                      <span
+                        key={game.appId}
+                        className="inline-flex items-center gap-1.5 text-[11px] px-2 py-1 rounded-full font-medium"
+                        style={{ background: "hsl(258 82% 60% / 0.15)", color: "hsl(258 82% 75%)", border: "1px solid hsl(258 82% 60% / 0.35)" }}
+                      >
+                        {game.headerImage && (
+                          <img src={game.headerImage} alt="" className="h-4 w-7 object-cover rounded-sm flex-shrink-0" />
+                        )}
+                        <span className="max-w-[140px] truncate">{game.name}</span>
+                        <button
+                          type="button"
+                          onClick={() => removeGame(game.appId)}
+                          className="opacity-60 hover:opacity-100 ml-0.5 flex-shrink-0"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                <div className="relative">
+                  <div className="relative">
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+                    <Input
+                      ref={gameInputRef}
+                      placeholder="Buscar jogo para filtrar famílias..."
+                      className="h-8 text-sm pl-8"
+                      value={gameQuery}
+                      onChange={(e) => {
+                        setGameQuery(e.target.value);
+                        setGameDropdownOpen(true);
+                      }}
+                      onFocus={() => {
+                        if (gameQuery.length >= 2) setGameDropdownOpen(true);
+                      }}
+                    />
+                    {gameSearchFetching && (
+                      <div className="absolute right-2.5 top-1/2 -translate-y-1/2">
+                        <div className="h-3.5 w-3.5 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
+                      </div>
+                    )}
+                  </div>
+
+                  {gameDropdownOpen && gameSearchResults && gameSearchResults.length > 0 && (
+                    <div
+                      ref={gameDropdownRef}
+                      className="absolute z-50 top-full mt-1 w-full rounded-md border border-border bg-card shadow-lg overflow-hidden"
+                    >
+                      {gameSearchResults
+                        .filter((r) => !pickedGames.some((g) => g.appId === r.appId))
+                        .slice(0, 8)
+                        .map((result) => (
+                          <button
+                            key={result.appId}
+                            type="button"
+                            onClick={() => addGame(result)}
+                            className="w-full flex items-center gap-2.5 px-3 py-2 text-sm hover:bg-muted/50 text-left transition-colors"
+                          >
+                            {result.headerImage && (
+                              <img
+                                src={result.headerImage}
+                                alt=""
+                                className="h-6 w-10 object-cover rounded-sm flex-shrink-0"
+                              />
+                            )}
+                            <span className="truncate">{result.name}</span>
+                          </button>
+                        ))}
+                    </div>
+                  )}
+
+                  {gameDropdownOpen && debouncedGameQuery.length >= 2 && !gameSearchFetching &&
+                    (!gameSearchResults || gameSearchResults.filter((r) => !pickedGames.some((g) => g.appId === r.appId)).length === 0) && (
+                    <div className="absolute z-50 top-full mt-1 w-full rounded-md border border-border bg-card shadow-lg px-3 py-2 text-sm text-muted-foreground">
+                      Nenhum jogo encontrado
+                    </div>
+                  )}
+                </div>
+
+                {pickedGames.length > 0 && (
+                  <p className="text-[11px] text-muted-foreground">
+                    Mostrando famílias que têm {pickedGames.length === 1 ? "este jogo" : "pelo menos um desses jogos"} na wishlist.
+                  </p>
+                )}
               </div>
 
               {/* Genre filter */}
