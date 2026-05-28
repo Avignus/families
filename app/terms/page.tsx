@@ -44,7 +44,7 @@ function TermsEN() {
         </p>
         <p>
           Families is <strong>not</strong> a financial institution, broker, or exchange. Payments
-          are processed by Asaas Gestão Financeira, a payment institution regulated by the
+          are processed by Efí Bank (Gerencianet S.A.), a payment institution regulated by the
           Central Bank of Brazil.
         </p>
       </Section>
@@ -70,7 +70,7 @@ function TermsEN() {
 
       <Section title="5. Contributions and payments">
         <ul className="list-disc pl-5 space-y-1">
-          <li>Contributions ("pledges") are made via PIX and processed by Asaas.</li>
+          <li>Contributions ("pledges") are made via PIX and processed by Efí Bank.</li>
           <li>The minimum amount per contribution or entry fee is R$ 5.00.</li>
           <li>Each transaction is subject to a <strong>service fee</strong> retained by the platform: 5% on pledges and 15% on entry fees.</li>
           <li>When a wishlist item is 100% funded, the raised amount (minus service fee) is automatically transferred via PIX to the key registered by the item owner.</li>
@@ -164,7 +164,7 @@ function TermsEN() {
       <Section title="9. Limitation of liability">
         <ul className="list-disc pl-5 space-y-1">
           <li>The platform is provided "as is", without guarantees of continuous availability.</li>
-          <li>We are not responsible for unavailability of Steam, Asaas, or other third-party services.</li>
+          <li>We are not responsible for unavailability of Steam, Efí Bank, or other third-party services.</li>
           <li>Our total liability for any damages is limited to the fees paid by the user in the last 12 months.</li>
           <li>
             The platform acts solely as a marketplace intermediary. Any disputes regarding
@@ -225,7 +225,7 @@ function TermsPT() {
         </p>
         <p>
           O Families <strong>não é</strong> uma instituição financeira, corretora ou exchange. Os
-          pagamentos são processados pela Asaas Gestão Financeira, instituição de pagamento
+          pagamentos são processados pelo Efí Bank (Gerencianet S.A.), instituição de pagamento
           regulada pelo Banco Central do Brasil.
         </p>
       </Section>
@@ -251,7 +251,7 @@ function TermsPT() {
 
       <Section title="5. Contribuições e pagamentos">
         <ul className="list-disc pl-5 space-y-1">
-          <li>Contribuições ("pledges") são realizadas via PIX e processadas pela Asaas.</li>
+          <li>Contribuições ("pledges") são realizadas via PIX e processadas pelo Efí Bank.</li>
           <li>O valor mínimo por contribuição ou taxa de entrada é de R$ 20,00.</li>
           <li>Sobre cada transação incide uma <strong>taxa de serviço</strong> retida pela plataforma: 15% sobre pledges e 15% sobre taxas de entrada.</li>
           <li>Quando um item da lista de desejos é 100% financiado, o valor arrecadado (descontada a taxa de serviço) é repassado automaticamente via PIX para a chave cadastrada pelo dono do item.</li>
@@ -345,7 +345,7 @@ function TermsPT() {
       <Section title="9. Limitação de responsabilidade">
         <ul className="list-disc pl-5 space-y-1">
           <li>A plataforma é fornecida "como está", sem garantias de disponibilidade contínua.</li>
-          <li>Não nos responsabilizamos por indisponibilidades da Steam, Asaas ou outros serviços terceiros.</li>
+          <li>Não nos responsabilizamos por indisponibilidades da Steam, Efí Bank ou outros serviços terceiros.</li>
           <li>Nossa responsabilidade total por eventuais danos está limitada ao valor das taxas pagas pelo usuário nos últimos 12 meses.</li>
           <li>
             A plataforma atua exclusivamente como intermediária de marketplace. Disputas relativas

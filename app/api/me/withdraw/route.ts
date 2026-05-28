@@ -1,11 +1,10 @@
 import { NextRequest } from "next/server";
 import { requireSession, isApiError, ok, err, parseBody } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
-import { sendPixDisbursement, MIN_CHARGE_CENTS as ASAAS_MIN_CHARGE_CENTS } from "@/lib/payment";
+import { sendPixDisbursement, MIN_CHARGE_CENTS } from "@/lib/payment";
 import { z } from "zod";
 
 // Platform keeps 2% of the withdrawal amount to cover operational costs.
-// Asaas transfer fee (R$1.99) is absorbed by the platform — not charged to the chief.
 const WITHDRAWAL_FEE_BPS = parseInt(process.env.WITHDRAWAL_FEE_BPS ?? "200", 10);
 
 const WithdrawSchema = z.object({
@@ -33,10 +32,10 @@ export async function POST(req: NextRequest) {
   if (body.amountCents > available) {
     return err("EXCEEDS_BALANCE", `Valor excede o saldo disponível de R$ ${(available / 100).toFixed(2)}`, 400);
   }
-  if (body.amountCents < ASAAS_MIN_CHARGE_CENTS) {
+  if (body.amountCents < MIN_CHARGE_CENTS) {
     return err(
       "BELOW_MINIMUM",
-      `Saque mínimo de R$ ${(ASAAS_MIN_CHARGE_CENTS / 100).toFixed(2).replace(".", ",")}`,
+      `Saque mínimo de R$ ${(MIN_CHARGE_CENTS / 100).toFixed(2).replace(".", ",")}`,
       400
     );
   }
@@ -104,6 +103,6 @@ export async function GET() {
     feeBps: WITHDRAWAL_FEE_BPS,
     feeCents,
     netCents: available - feeCents,
-    minWithdrawalCents: ASAAS_MIN_CHARGE_CENTS,
+    minWithdrawalCents: MIN_CHARGE_CENTS,
   });
 }

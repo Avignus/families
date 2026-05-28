@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { requireSession, isApiError, ok, err } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { createNotification } from "@/lib/notifications/service";
-import { createPixPayment, ENTRY_FEE_SERVICE_RATE, MIN_CHARGE_CENTS as ASAAS_MIN_CHARGE_CENTS, getWebhookPath } from "@/lib/payment";
+import { createPixPayment, ENTRY_FEE_SERVICE_RATE, MIN_CHARGE_CENTS, getWebhookPath } from "@/lib/payment";
 import { getAppBaseUrl } from "@/lib/utils";
 import { getPlayerSummaries } from "@/lib/steam";
 import { calculateSpotPrice } from "@/lib/spot-price";
@@ -102,7 +102,8 @@ async function handlePost(req: NextRequest, params: { id: string }) {
   // ── Spot marketplace path ────────────────────────────────────────────────
   if (useSpotPricing) {
     const spotResult = await calculateSpotPrice(params.id, user.id);
-    const spotPriceCents = spotResult.spotPriceCents;
+    const overrideRaw = process.env.SPOT_PRICE_OVERRIDE_CENTS;
+    const spotPriceCents = overrideRaw ? Math.max(1, parseInt(overrideRaw, 10)) : spotResult.spotPriceCents;
 
     // Free spot (buyer contributes more than they gain)
     if (spotPriceCents === 0) {
@@ -135,10 +136,10 @@ async function handlePost(req: NextRequest, params: { id: string }) {
       return ok({ message: family.autoApprove ? "Joined family" : "Join request sent" }, 201);
     }
 
-    if (spotPriceCents < ASAAS_MIN_CHARGE_CENTS) {
+    if (spotPriceCents < MIN_CHARGE_CENTS) {
       return err(
         "SPOT_BELOW_MINIMUM",
-        `Valor mínimo de cobrança é R$ ${(ASAAS_MIN_CHARGE_CENTS / 100).toFixed(2).replace(".", ",")}`,
+        `Valor mínimo de cobrança é R$ ${(MIN_CHARGE_CENTS / 100).toFixed(2).replace(".", ",")}`,
         400
       );
     }
@@ -179,9 +180,9 @@ async function handlePost(req: NextRequest, params: { id: string }) {
         externalReference: `spot:${membership.id}`,
         notificationUrl: `${baseUrl}${getWebhookPath()}`,
       });
-    } catch (asaasErr: unknown) {
-      const msg = asaasErr instanceof Error ? asaasErr.message : JSON.stringify(asaasErr);
-      console.error("Asaas spot payment error:", msg);
+    } catch (pixErr: unknown) {
+      const msg = pixErr instanceof Error ? pixErr.message : JSON.stringify(pixErr);
+      console.error("PIX spot payment error:", msg);
       return err("PIX_UNAVAILABLE", "Não foi possível gerar o PIX no momento. Tente novamente em alguns instantes.", 503);
     }
 
@@ -250,15 +251,15 @@ async function handlePost(req: NextRequest, params: { id: string }) {
   const baseUrl = getAppBaseUrl(req);
   const totalChargeCents = Math.ceil(family.entryFeeCents * (1 + ENTRY_FEE_SERVICE_RATE));
 
-  if (totalChargeCents < ASAAS_MIN_CHARGE_CENTS) {
+  if (totalChargeCents < MIN_CHARGE_CENTS) {
     return err(
       "ENTRY_FEE_BELOW_MINIMUM",
-      `Taxa de entrada mínima é R$ ${(Math.ceil(ASAAS_MIN_CHARGE_CENTS / (1 + ENTRY_FEE_SERVICE_RATE)) / 100).toFixed(2).replace(".", ",")}`,
+      `Taxa de entrada mínima é R$ ${(Math.ceil(MIN_CHARGE_CENTS / (1 + ENTRY_FEE_SERVICE_RATE)) / 100).toFixed(2).replace(".", ",")}`,
       400
     );
   }
 
-  // Create or update membership first so we have the ID for the Asaas externalReference
+  // Create or update membership first so we have the ID for the externalReference
   const membership = existing
     ? await prisma.familyMembership.update({
         where: { id: existing.id },
@@ -284,9 +285,9 @@ async function handlePost(req: NextRequest, params: { id: string }) {
       externalReference: `membership:${membership.id}`,
       notificationUrl: `${baseUrl}${getWebhookPath()}`,
     });
-  } catch (asaasErr: unknown) {
-    const msg = asaasErr instanceof Error ? asaasErr.message : JSON.stringify(asaasErr);
-    console.error("Asaas entry fee error:", msg);
+  } catch (pixErr: unknown) {
+    const msg = pixErr instanceof Error ? pixErr.message : JSON.stringify(pixErr);
+    console.error("PIX entry fee error:", msg);
     return err("PIX_UNAVAILABLE", "Não foi possível gerar o PIX no momento. Tente novamente em alguns instantes.", 503);
   }
 

@@ -125,7 +125,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       es.onmessage = (e) => {
         try {
           const notification = JSON.parse(e.data) as Notification;
-          // Dedup — SSE can fire while Asaas retries webhook
+          // Dedup — SSE can fire multiple times for the same event
           if (seenIds.current.has(notification.id)) return;
           seenIds.current.add(notification.id);
 

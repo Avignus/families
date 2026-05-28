@@ -5,7 +5,7 @@ import { getAppBaseUrl } from "@/lib/utils";
 import { prisma } from "@/lib/prisma";
 import { createNotification } from "@/lib/notifications/service";
 import { getAppDetails } from "@/lib/steam";
-import { createPixPayment, SERVICE_FEE_RATE, MIN_CHARGE_CENTS as ASAAS_MIN_CHARGE_CENTS, getWebhookPath } from "@/lib/payment";
+import { createPixPayment, SERVICE_FEE_RATE, MIN_CHARGE_CENTS, getWebhookPath } from "@/lib/payment";
 import { debitWallet } from "@/lib/wallet";
 import { maybeDisburseFunds } from "@/lib/disbursement";
 
@@ -80,8 +80,8 @@ export async function POST(req: NextRequest, { params }: { params: { itemId: str
       // Validate PIX minimum before doing anything irreversible
       if (pixPortion > 0) {
         const pixAmountCents = Math.ceil(pixPortion * (1 + SERVICE_FEE_RATE));
-        if (pixAmountCents < ASAAS_MIN_CHARGE_CENTS) {
-          const minPledge = Math.ceil(ASAAS_MIN_CHARGE_CENTS / (1 + SERVICE_FEE_RATE));
+        if (pixAmountCents < MIN_CHARGE_CENTS) {
+          const minPledge = Math.ceil(MIN_CHARGE_CENTS / (1 + SERVICE_FEE_RATE));
           throw Object.assign(
             new Error(`Contribuição mínima via PIX é R$ ${(minPledge / 100).toFixed(2).replace(".", ",")}${creditsUsed > 0 ? ` (você tem R$ ${(creditsUsed / 100).toFixed(2)} em créditos já aplicados)` : ""}`),
             { code: "BELOW_MINIMUM", status: 400 }
@@ -183,7 +183,7 @@ export async function POST(req: NextRequest, { params }: { params: { itemId: str
       }, 201);
 
     } catch (mpError) {
-      console.error("Asaas PIX creation error:", mpError);
+      console.error("PIX creation error:", mpError);
 
       // Rollback: remove pledge and revert item status so the user can try again
       await prisma.pledge.delete({ where: { id: result.pledge.id } }).catch(() => {});

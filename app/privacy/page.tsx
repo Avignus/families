@@ -68,7 +68,7 @@ function PrivacyEN() {
 
       <Section title="5. Third-party sharing">
         <ul className="list-disc pl-5 space-y-1">
-          <li><strong>Asaas Gestão Financeira</strong>: receives billing data to process PIX payments and transfers. <a href="https://www.asaas.com/politica-de-privacidade" target="_blank" rel="noopener noreferrer" className="text-primary underline">Asaas Privacy Policy</a>.</li>
+          <li><strong>Efí Bank (Gerencianet S.A.)</strong>: receives billing data to process PIX payments and transfers. <a href="https://efipay.com.br/politica-de-privacidade" target="_blank" rel="noopener noreferrer" className="text-primary underline">Efí Privacy Policy</a>.</li>
           <li><strong>Resend Inc.</strong>: receives your email address to send transactional notifications, if you opted in.</li>
           <li><strong>Valve Corporation (Steam)</strong>: public profile data is obtained via Steam's public API.</li>
           <li><strong>Vercel Inc.</strong>: platform hosting, may process technical access data.</li>
@@ -182,7 +182,7 @@ function PrivacyPT() {
 
       <Section title="5. Compartilhamento com terceiros">
         <ul className="list-disc pl-5 space-y-1">
-          <li><strong>Asaas Gestão Financeira</strong>: recebe dados de cobrança para processar pagamentos PIX e realizar repassses. <a href="https://www.asaas.com/politica-de-privacidade" target="_blank" rel="noopener noreferrer" className="text-primary underline">Política de Privacidade Asaas</a>.</li>
+          <li><strong>Efí Bank (Gerencianet S.A.)</strong>: recebe dados de cobrança para processar pagamentos PIX e realizar repasses. <a href="https://efipay.com.br/politica-de-privacidade" target="_blank" rel="noopener noreferrer" className="text-primary underline">Política de Privacidade Efí</a>.</li>
           <li><strong>Resend Inc.</strong>: recebe seu endereço de e-mail para envio de notificações transacionais, se você optou por receber e-mails.</li>
           <li><strong>Valve Corporation (Steam)</strong>: dados de perfil públicos são obtidos via API pública da Steam.</li>
           <li><strong>Vercel Inc.</strong>: hospedagem da plataforma, pode processar dados técnicos de acesso.</li>

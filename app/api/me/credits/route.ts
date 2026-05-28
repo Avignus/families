@@ -1,12 +1,12 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
 import { requireSession, isApiError, ok, err, parseBody } from "@/lib/api";
-import { createPixPayment, MIN_CHARGE_CENTS as ASAAS_MIN_CHARGE_CENTS, getWebhookPath } from "@/lib/payment";
+import { createPixPayment, MIN_CHARGE_CENTS, getWebhookPath } from "@/lib/payment";
 import { prisma } from "@/lib/prisma";
 import { getAppBaseUrl } from "@/lib/utils";
 
 const BodySchema = z.object({
-  amountCents: z.number().int().min(ASAAS_MIN_CHARGE_CENTS),
+  amountCents: z.number().int().min(MIN_CHARGE_CENTS),
 });
 
 export async function POST(req: NextRequest) {

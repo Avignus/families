@@ -276,7 +276,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
   const paidMemberships = family.memberships;
 
   // ── Refund paid pledges ──────────────────────────────────────────────────
-  // Strategy: try Asaas first; if it fails (e.g. 90-day PIX window), fall back
+  // Strategy: try PIX refund first; if it fails (e.g. 90-day window), fall back
   // to wallet credit so the user always recovers their money.
   type PledgeRefundResult = { pledgeId: string; pledgerUserId: string; steamAppId: number; refundCents: number; viaWallet: boolean };
   const pledgeRefunds: PledgeRefundResult[] = [];
@@ -291,7 +291,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
       try {
         await refundPayment(pledge.pixPaymentId, pixCents);
       } catch {
-        // Asaas failed (expired window, etc.) → credit wallet instead
+        // PIX refund failed (expired window, etc.) → credit wallet instead
         viaWallet = true;
       }
     }
@@ -340,7 +340,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
 
   // ── Delete family + notify + re-credit wallets in transaction ────────────
   await prisma.$transaction(async (tx) => {
-    // Re-credit wallet for pledges where Asaas failed or credits were used
+    // Re-credit wallet for pledges where PIX refund failed or credits were used
     for (const r of pledgeRefunds) {
       if (r.viaWallet && r.refundCents > 0) {
         await creditWallet(tx, r.pledgerUserId, r.refundCents, "item_cancelled", r.pledgeId);

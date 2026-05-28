@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { requireSession, isApiError, ok, err } from "@/lib/api";
-import { getPaymentsByExternalReference, normalizePaymentStatus as normalizeAsaasStatus } from "@/lib/payment";
+import { getPaymentsByExternalReference, normalizePaymentStatus } from "@/lib/payment";
 import { prisma } from "@/lib/prisma";
 import { creditWallet } from "@/lib/wallet";
 import { createNotification } from "@/lib/notifications/service";
@@ -13,7 +13,7 @@ export async function POST(_req: NextRequest) {
   const externalRef = `credits:${user.id}`;
   const payments = await getPaymentsByExternalReference(externalRef);
 
-  const approved = payments.filter((p) => normalizeAsaasStatus(p.status) === "approved");
+  const approved = payments.filter((p) => normalizePaymentStatus(p.status) === "approved");
   if (approved.length === 0) {
     return err("NO_APPROVED_PAYMENTS", "Nenhum pagamento aprovado encontrado para recuperar", 404);
   }

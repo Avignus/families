@@ -10,7 +10,6 @@ import {
 
 export const dynamic = "force-dynamic";
 
-// Efí txids are 32 lowercase hex chars; Asaas IDs start with "pay_"
 const EFI_TXID_RE = /^[0-9a-f]{32}$/;
 
 export async function GET(req: NextRequest) {

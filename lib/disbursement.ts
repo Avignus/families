@@ -1,11 +1,8 @@
 import { prisma } from "@/lib/prisma";
-import { sendPixDisbursement, MIN_CHARGE_CENTS as ASAAS_MIN_CHARGE_CENTS } from "@/lib/payment";
+import { sendPixDisbursement, MIN_CHARGE_CENTS } from "@/lib/payment";
 import { createNotification } from "@/lib/notifications/service";
 
-// After this grace period, a late-registration fee is charged before disbursement
 const PIX_KEY_GRACE_DAYS = 7;
-// Fee charged when owner registers PIX key after the grace period:
-// covers Asaas messaging (R$2.98) + platform margin = R$5.00
 export const LATE_REGISTRATION_FEE_CENTS = 500;
 
 export async function maybeDisburseFunds(wishlistItemId: string): Promise<void> {
@@ -27,7 +24,7 @@ export async function maybeDisburseFunds(wishlistItemId: string): Promise<void> 
     _sum: { amountCents: true },
   });
   const totalCents = aggregate._sum.amountCents ?? 0;
-  if (totalCents < ASAAS_MIN_CHARGE_CENTS) return;
+  if (totalCents < MIN_CHARGE_CENTS) return;
 
   const owner = item.owner;
   const steamData = await import("@/lib/steam").then((m) => m.getAppDetails(item.steamAppId));
@@ -66,12 +63,11 @@ export async function maybeDisburseFunds(wishlistItemId: string): Promise<void> 
     ? Math.max(0, totalCents - LATE_REGISTRATION_FEE_CENTS)
     : totalCents;
 
-  if (disburseCents < ASAAS_MIN_CHARGE_CENTS) {
+  if (disburseCents < MIN_CHARGE_CENTS) {
     console.error(`[disbursement] Amount too low after late fee for item ${wishlistItemId}`);
     return;
   }
 
-  // Pre-authorize before Asaas transfer creation (webhook fires synchronously)
   const pendingId = `pending:${wishlistItemId}`;
   await prisma.wishlistItem.update({
     where: { id: wishlistItemId },

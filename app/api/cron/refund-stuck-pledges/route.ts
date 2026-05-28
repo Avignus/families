@@ -126,7 +126,7 @@ export async function GET(req: NextRequest) {
           refundErrors.push(pledge.id);
         }
       } else {
-        // Credit-only pledge: no Asaas call needed, credits returned in transaction
+        // Credit-only pledge: credits returned in transaction
         refundedCount++;
       }
     }

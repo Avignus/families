@@ -1,7 +1,6 @@
 import crypto from "node:crypto";
 import https from "node:https";
 
-// Same platform-level fee rates as Asaas — not provider-specific
 export const SERVICE_FEE_RATE = parseFloat(process.env.SERVICE_FEE_RATE ?? "0.18");
 export const ENTRY_FEE_SERVICE_RATE = parseFloat(process.env.ENTRY_FEE_SERVICE_RATE ?? "0.18");
 export const EFI_MIN_CHARGE_CENTS = 1; // 1 centavo — Efí não tem mínimo prático; limite de negócio definido no front
@@ -162,7 +161,7 @@ export async function createPixPayment(params: {
     paymentId: txid,
     qrCode: qr.qrcode ?? "",
     // Efí returns imagemQrcode with "data:image/png;base64," prefix already included;
-    // strip it so callers get raw base64 (consistent with Asaas).
+    // strip it so callers get raw base64.
     qrCodeBase64: (qr.imagemQrcode ?? "").replace(/^data:image\/[^;]+;base64,/, ""),
     ticketUrl: "",
     status: normalizeEfiStatus(charge.status),

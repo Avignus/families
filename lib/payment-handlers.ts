@@ -1,8 +1,7 @@
 /**
  * Provider-agnostic webhook business logic.
- * Called by both /api/webhooks/asaas and /api/webhooks/efi after their provider-specific
- * parsing and authentication. Uses lib/payment so disbursements/refunds always go through
- * the active PAYMENT_PROVIDER.
+ * Webhook business logic called by /api/webhooks/efi after provider-specific
+ * parsing and authentication.
  */
 import { prisma } from "@/lib/prisma";
 import { refundPayment, sendPixDisbursement } from "@/lib/payment";
