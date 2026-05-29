@@ -27,6 +27,11 @@ export async function GET(
       spotVerifImageUrl: true,
       spotVerifNotes: true,
       spotEscrowCents: true,
+      family: {
+        select: {
+          chief: { select: { personaName: true, avatarMedium: true, steamId: true } },
+        },
+      },
     },
   });
 
@@ -38,6 +43,7 @@ export async function GET(
     deadline: membership.spotVerifDeadline,
     imageUrl: membership.spotVerifImageUrl,
     notes: membership.spotVerifNotes,
+    chief: membership.family?.chief ?? null,
   });
 }
 

@@ -566,7 +566,7 @@ export function WishlistItemCard({ item, familyId, currentUserId, memberColors, 
               <Button
                 size="sm"
                 variant="outline"
-                className="flex-1 h-8 text-xs border-primary/30 text-primary hover:bg-primary/10"
+                className="flex-1 h-8 text-xs border-primary/30 text-primary hover:bg-primary/10 hover:text-primary"
                 onClick={handleMarkPurchased}
               >
                 <ShoppingCart className="h-3 w-3 mr-1" />

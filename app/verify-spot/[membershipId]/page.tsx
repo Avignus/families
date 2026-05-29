@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useParams } from "next/navigation";
-import { Upload, CheckCircle, XCircle, Clock, AlertTriangle, Image as ImageIcon } from "lucide-react";
+import { CheckCircle, XCircle, Clock, AlertTriangle, Image as ImageIcon, ExternalLink } from "lucide-react";
 
 type Status = "idle" | "uploading" | "verified" | "rejected" | "error";
+type Chief = { personaName: string; avatarMedium: string; steamId: string };
 
 export default function VerifySpotPage() {
   const { membershipId } = useParams<{ membershipId: string }>();
@@ -13,7 +14,17 @@ export default function VerifySpotPage() {
   const [preview, setPreview] = useState<string | null>(null);
   const [refunding, setRefunding] = useState(false);
   const [refunded, setRefunded] = useState(false);
+  const [chief, setChief] = useState<Chief | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    fetch(`/api/spot-verification/${membershipId}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.data?.chief) setChief(data.data.chief);
+      })
+      .catch(() => {});
+  }, [membershipId]);
 
   const handleFile = async (file: File) => {
     if (!file.type.startsWith("image/")) { setMessage("Selecione um arquivo de imagem."); return; }
@@ -81,6 +92,26 @@ export default function VerifySpotPage() {
             Tire um print mostrando que você aparece na lista de membros da família Steam e envie abaixo.
           </p>
         </div>
+
+        {/* Chief card */}
+        {chief && (
+          <div className="rounded-xl border border-border/40 bg-card/60 p-4 flex items-center gap-3">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={chief.avatarMedium} alt={chief.personaName} className="h-10 w-10 rounded-full shrink-0" />
+            <div className="min-w-0 flex-1">
+              <p className="text-xs text-muted-foreground">Chefe da família</p>
+              <p className="text-sm font-semibold truncate">{chief.personaName}</p>
+            </div>
+            <a
+              href={`https://steamcommunity.com/profiles/${chief.steamId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 text-xs text-primary hover:underline shrink-0"
+            >
+              Ver Steam <ExternalLink className="h-3 w-3" />
+            </a>
+          </div>
+        )}
 
         {/* How-to */}
         <div className="rounded-xl border border-border/40 bg-card/60 p-4 text-xs text-muted-foreground space-y-1.5">

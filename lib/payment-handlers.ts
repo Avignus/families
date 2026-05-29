@@ -215,6 +215,7 @@ export async function handleSpotPayment(
           entryFeeCents: true,
           currency: true,
           autoApprove: true,
+          chief: { select: { personaName: true, steamId: true } },
         },
       },
       user: { select: { id: true, personaName: true, steamId: true } },
@@ -309,6 +310,8 @@ export async function handleSpotPayment(
           familyName: membership.family.name,
           membershipId: membership.id,
           deadlineAt: verificationDeadline.toISOString(),
+          chiefPersonaName: membership.family.chief?.personaName ?? "",
+          chiefSteamId: membership.family.chief?.steamId ?? "",
         },
       });
 
@@ -324,6 +327,7 @@ export async function handleSpotPayment(
           escrowCents: chiefAmountCents,
           currency: membership.family.currency,
           verificationPending: true,
+          buyerSteamId: membership.user.steamId,
         },
       });
     });

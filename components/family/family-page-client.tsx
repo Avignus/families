@@ -15,7 +15,7 @@ import { GameSearchModal } from "@/components/wishlist/game-search-modal";
 import { VotesPanel } from "@/components/votes/votes-panel";
 import { SteamLibraryPanel } from "@/components/family/steam-library-panel";
 import { MemberActions } from "@/components/family/member-actions";
-import { Plus, ChevronDown, ChevronUp, Settings, Copy, LogIn, Gamepad2, Check, X, Camera, AlertTriangle, Library, Share2, Wallet, ShoppingCart, LogOut } from "lucide-react";
+import { Plus, ChevronDown, ChevronUp, Settings, Copy, LogIn, Gamepad2, Check, X, Camera, AlertTriangle, Library, Share2, Wallet, ShoppingCart, LogOut, ExternalLink } from "lucide-react";
 import { RecommendationsSection } from "@/components/recommendations/recommendations-section";
 import { FamilyBadgesSection } from "@/components/family/family-badges-section";
 import * as TooltipPrimitive from "@radix-ui/react-tooltip";
@@ -89,9 +89,11 @@ type FamilyData = {
   coverOverlay: { id: string; slug: string; name: string; config: Record<string, unknown> } | null;
   coverVideo:   { id: string; slug: string; name: string; config: Record<string, unknown> } | null;
   familyScore: number;
-  memberships: Array<{ user: Member }>;
+  chief: { id: string; steamId: string; personaName: string; avatarUrl: string; avatarMedium: string };
+  memberships: Array<{ id: string; spotVerifStatus: string | null; spotVerifDeadline: string | null; user: Member }>;
   pendingMemberships: PendingMember[];
   wishlistItems: WishlistItem[];
+  currentUserSpotVerif: { membershipId: string; deadline: string | null } | null;
 };
 
 export function FamilyPageClient({
@@ -313,6 +315,38 @@ export function FamilyPageClient({
       )}
 
     <div className="container py-8 space-y-6">
+      {/* Spot verification pending — buyer banner */}
+      {family.currentUserSpotVerif && (
+        <div className="rounded-xl border border-amber-500/40 bg-amber-500/8 p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+          <AlertTriangle className="h-5 w-5 text-amber-400 shrink-0" />
+          <div className="flex-1 min-w-0 space-y-0.5">
+            <p className="text-sm font-semibold text-amber-400">Confirme sua entrada na Família Steam</p>
+            <p className="text-xs text-muted-foreground">
+              O chefe{family.chief?.personaName ? ` ${family.chief.personaName}` : ""} precisa te adicionar à Família Steam.
+              {family.chief?.steamId && (
+                <>
+                  {" "}
+                  <a
+                    href={`https://steamcommunity.com/profiles/${family.chief.steamId}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary underline underline-offset-2 inline-flex items-center gap-0.5"
+                  >
+                    Ver perfil Steam <ExternalLink className="h-3 w-3" />
+                  </a>
+                </>
+              )}
+            </p>
+          </div>
+          <Link
+            href={`/verify-spot/${family.currentUserSpotVerif.membershipId}`}
+            className="shrink-0 text-xs font-semibold px-3 py-1.5 rounded-md bg-amber-500/15 hover:bg-amber-500/25 text-amber-400 border border-amber-500/30 transition-colors"
+          >
+            Enviar comprovante
+          </Link>
+        </div>
+      )}
+
       <Card className="overflow-hidden">
         {/* isolate forces stacking context so overflow-hidden clips transforms */}
         <div className="relative h-[480px] overflow-hidden isolate group/banner">
@@ -489,6 +523,42 @@ export function FamilyPageClient({
               ))}
             </div>
           )}
+
+          {/* Spot members awaiting Steam add — chief reminder */}
+          {family.isChief && (() => {
+            const pendingSpot = family.memberships.filter(
+              (m) => m.spotVerifStatus === "pending" && m.user.id !== family.currentUserId
+            );
+            if (pendingSpot.length === 0) return null;
+            return (
+              <div className="space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-amber-400/80 flex items-center gap-1.5">
+                  <AlertTriangle className="h-3.5 w-3.5" />
+                  Adicionar ao Steam — aguardando confirmação ({pendingSpot.length})
+                </p>
+                {pendingSpot.map((m) => (
+                  <div key={m.id} className="flex items-center gap-3 p-3 rounded-lg bg-amber-500/5 border border-amber-500/20">
+                    <Avatar className="h-9 w-9 shrink-0">
+                      <AvatarImage src={m.user.avatarMedium} alt={m.user.personaName} />
+                      <AvatarFallback>{m.user.personaName[0]}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold truncate">{m.user.personaName}</p>
+                      <p className="text-xs text-muted-foreground">Adicione esta pessoa à Família Steam</p>
+                    </div>
+                    <a
+                      href={`https://steamcommunity.com/profiles/${m.user.steamId}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1 text-xs text-primary hover:underline shrink-0"
+                    >
+                      Perfil Steam <ExternalLink className="h-3 w-3" />
+                    </a>
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
 
           {/* Total accessible games stat card — clickable mosaic */}
           {gameStats && (

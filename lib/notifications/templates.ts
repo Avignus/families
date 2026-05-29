@@ -85,7 +85,9 @@ const templates: Record<Locale, Templates> = {
     },
     JOIN_FEE_PAID: {
       title: () => "Taxa de entrada paga!",
-      body: (p) => `${p.personaName} pagou a taxa e entrou na família "${p.familyName}".`,
+      body: (p) => p.verificationPending
+        ? `${p.personaName} comprou um spot em "${p.familyName}"! Adicione ${p.personaName} à Família Steam para liberar o pagamento (prazo: 5 dias). Perfil Steam: steamcommunity.com/profiles/${p.buyerSteamId}`
+        : `${p.personaName} pagou a taxa e entrou na família "${p.familyName}".`,
       link: (p) => `/families/${p.familyId}`,
     },
     ENTRY_FEE_HELD: {
@@ -186,7 +188,7 @@ const templates: Record<Locale, Templates> = {
     },
     SPOT_VERIFICATION_PENDING: {
       title: () => "Confirme sua entrada na família Steam",
-      body: (p) => `Você entrou em "${p.familyName}"! O chefe precisa te adicionar à família Steam. Quando estiver na lista, tire um print e envie como comprovante. Prazo: 5 dias.`,
+      body: (p) => `Você entrou em "${p.familyName}"! Aguarde o chefe${p.chiefPersonaName ? ` ${p.chiefPersonaName}` : ""} te adicionar à Família Steam e depois envie o comprovante (prazo: 5 dias).${p.chiefSteamId ? ` Perfil do chefe: steamcommunity.com/profiles/${p.chiefSteamId}` : ""}`,
       link: (p) => `/verify-spot/${p.membershipId}`,
     },
     SPOT_VERIFIED: {
@@ -274,7 +276,9 @@ const templates: Record<Locale, Templates> = {
     },
     JOIN_FEE_PAID: {
       title: () => "Entry fee paid!",
-      body: (p) => `${p.personaName} paid the entry fee and joined family "${p.familyName}".`,
+      body: (p) => p.verificationPending
+        ? `${p.personaName} bought a spot in "${p.familyName}"! Add ${p.personaName} to your Steam Family to release the payment (deadline: 5 days). Steam profile: steamcommunity.com/profiles/${p.buyerSteamId}`
+        : `${p.personaName} paid the entry fee and joined family "${p.familyName}".`,
       link: (p) => `/families/${p.familyId}`,
     },
     ENTRY_FEE_HELD: {
@@ -375,7 +379,7 @@ const templates: Record<Locale, Templates> = {
     },
     SPOT_VERIFICATION_PENDING: {
       title: () => "Confirm your Steam family membership",
-      body: (p) => `You joined "${p.familyName}"! The chief needs to add you to the Steam family. Once you're on the list, take a screenshot and upload it as proof. Deadline: 5 days.`,
+      body: (p) => `You joined "${p.familyName}"! Wait for the chief${p.chiefPersonaName ? ` ${p.chiefPersonaName}` : ""} to add you to the Steam Family, then upload a screenshot as proof (deadline: 5 days).${p.chiefSteamId ? ` Chief's profile: steamcommunity.com/profiles/${p.chiefSteamId}` : ""}`,
       link: (p) => `/verify-spot/${p.membershipId}`,
     },
     SPOT_VERIFIED: {

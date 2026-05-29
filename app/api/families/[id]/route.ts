@@ -150,6 +150,9 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     isChief: family.chiefId === user.id,
     currentUserId: user.id,
     monthlyBudgetCents: membership.monthlyBudgetCents,
+    currentUserSpotVerif: membership.spotVerifStatus === "pending"
+      ? { membershipId: membership.id, deadline: membership.spotVerifDeadline?.toISOString() ?? null }
+      : null,
     // Split memberships for the client
     memberships: family.memberships.filter((m) => m.status === "active"),
     pendingMemberships: family.chiefId === user.id
