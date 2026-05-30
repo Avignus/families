@@ -42,14 +42,8 @@ export function getXpProgress(xp: number): {
   return { tier, xpInTier, tierSize, pct, nextTier, xpToNext };
 }
 
-// On-demand refreshes per rolling 7-day window
-export const TIER_WEEKLY_ONDEMAND_LIMIT: Record<ReputationTier, number> = {
-  bronze:   1,
-  prata:    3,
-  ouro:     5,
-  elite:    10,
-  lendario: 20,
-};
+// On-demand refreshes per rolling 30-day window (flat limit, cost-controlled)
+export const MONTHLY_ONDEMAND_LIMIT = 3;
 
 // Games generated per user by the weekly cron
 export const TIER_CRON_REC_COUNT: Record<ReputationTier, number> = {

@@ -15,6 +15,8 @@ import { getOwnedGames } from "@/lib/steam";
 import { checkAchievements } from "@/lib/achievements";
 
 const SPOT_COMMISSION_RATE = 0.12;
+// Conservative estimate of Claude Vision cost per spot verification (USD ~$0.05 ≈ R$0.30 + margin)
+const SPOT_AI_FEE_CENTS = 50;
 
 export async function handleMembershipPayment(
   membershipId: string,
@@ -283,7 +285,7 @@ export async function handleSpotPayment(
     const spotExpiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
     const verificationDeadline = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000); // 5 days
     const chiefAmountCents = membership.feeChargedCents
-      ? Math.floor(membership.feeChargedCents * (1 - SPOT_COMMISSION_RATE))
+      ? Math.max(0, Math.floor(membership.feeChargedCents * (1 - SPOT_COMMISSION_RATE)) - SPOT_AI_FEE_CENTS)
       : 0;
 
     await prisma.$transaction(async (tx) => {

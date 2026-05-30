@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { requireSession, isApiError, ok, err } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { recommendGamesForFamily, recommendGamesForUser } from "@/lib/gemini";
-import { getTier, TIER_WEEKLY_ONDEMAND_LIMIT } from "@/lib/reputation";
+import { getTier, MONTHLY_ONDEMAND_LIMIT } from "@/lib/reputation";
 import { recommendationGetLimiter, recommendationPostLimiter, isRateLimited } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
@@ -45,12 +45,11 @@ async function resolveAppId(aiName: string, aiAppId: number): Promise<number> {
 
 async function getQuota(userId: string, reputationScore: number) {
   const tier = getTier(reputationScore);
-  // Dev override: RECOMMENDATION_DAILY_LIMIT env var bypasses tier limits
   const limit = process.env.RECOMMENDATION_DAILY_LIMIT
     ? parseInt(process.env.RECOMMENDATION_DAILY_LIMIT, 10)
-    : TIER_WEEKLY_ONDEMAND_LIMIT[tier];
+    : MONTHLY_ONDEMAND_LIMIT;
 
-  const windowStart = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const windowStart = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
   const rows = await prisma.gameRecommendation.findMany({
     where: { userId, source: "ondemand", generatedAt: { gte: windowStart } },
@@ -67,7 +66,7 @@ async function getQuota(userId: string, reputationScore: number) {
     null
   );
   const resetsAt = earliest
-    ? new Date(earliest.getTime() + 7 * 24 * 60 * 60 * 1000)
+    ? new Date(earliest.getTime() + 30 * 24 * 60 * 60 * 1000)
     : null;
 
   return { used, limit, remaining, tier, resetsAt };
@@ -139,7 +138,7 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
 
   const quota = await getQuota(user.id, dbUser?.reputationScore ?? 0);
   if (quota.remaining === 0) {
-    return err("QUOTA_EXCEEDED", `Limite semanal de ${quota.limit} buscas atingido para o elo ${quota.tier}`, 429);
+    return err("QUOTA_EXCEEDED", `Limite mensal de ${quota.limit} buscas atingido.`, 429);
   }
 
   const [existingFamily, existingPersonal, userLibCache, family] = await Promise.all([

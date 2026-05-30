@@ -6,8 +6,6 @@ import Anthropic from "@anthropic-ai/sdk";
 import { createNotification } from "@/lib/notifications/service";
 import { refundPayment } from "@/lib/payment";
 
-const SPOT_COMMISSION_RATE = 0.12;
-
 export const dynamic = "force-dynamic";
 
 /** GET — returns current verification status for the buyer's membership */

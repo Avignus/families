@@ -355,8 +355,8 @@ export function RecommendationsSection({ familyId, currentUserId, wishlistAppIds
               className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               title={
                 quota.remaining === 0
-                  ? `Limite semanal atingido (elo ${quota.tier}). ${quota.resetsAt ? `Renova em ${Math.ceil((new Date(quota.resetsAt).getTime() - Date.now()) / 86400000)}d.` : ""}`
-                  : `${quota.remaining} busca${quota.remaining !== 1 ? "s" : ""} restante${quota.remaining !== 1 ? "s" : ""} esta semana · elo ${quota.tier}`
+                  ? `Limite mensal atingido. ${quota.resetsAt ? `Renova em ${Math.ceil((new Date(quota.resetsAt).getTime() - Date.now()) / 86400000)}d.` : ""}`
+                  : `${quota.remaining} busca${quota.remaining !== 1 ? "s" : ""} restante${quota.remaining !== 1 ? "s" : ""} este mês`
               }
             >
               {refreshMutation.isPending ? (
@@ -368,7 +368,7 @@ export function RecommendationsSection({ familyId, currentUserId, wishlistAppIds
                 {refreshMutation.isPending
                   ? "Buscando..."
                   : quota.remaining === 0
-                  ? "Limite semanal"
+                  ? "Limite mensal"
                   : "Descobrir mais"}
               </span>
               <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
