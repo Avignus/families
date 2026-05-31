@@ -355,8 +355,8 @@ export function RecommendationsSection({ familyId, currentUserId, wishlistAppIds
               className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               title={
                 quota.remaining === 0
-                  ? `Limite mensal atingido. ${quota.resetsAt ? `Renova em ${Math.ceil((new Date(quota.resetsAt).getTime() - Date.now()) / 86400000)}d.` : ""}`
-                  : `${quota.remaining} busca${quota.remaining !== 1 ? "s" : ""} restante${quota.remaining !== 1 ? "s" : ""} este mês`
+                  ? `Limite de ${quota.limit} buscas por mês atingido.${quota.resetsAt ? ` Renova em ${Math.ceil((new Date(quota.resetsAt).getTime() - Date.now()) / 86400000)}d.` : ""}`
+                  : `${quota.used} de ${quota.limit} buscas usadas este mês`
               }
             >
               {refreshMutation.isPending ? (
@@ -376,7 +376,7 @@ export function RecommendationsSection({ familyId, currentUserId, wishlistAppIds
                   ? "bg-muted/50 text-muted-foreground"
                   : "bg-primary/10 text-primary"
               }`}>
-                {quota.remaining}/{quota.limit}
+                {quota.used}/{quota.limit}
               </span>
             </button>
           )}
