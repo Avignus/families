@@ -18,7 +18,14 @@ export type ItadDeal = {
   priceCents: number;
   cut: number;
   url: string;
+  drm?: string[];
 };
+
+/** Returns true when the deal sells a Steam key/activation (DRM includes "Steam"). */
+function isSteamDeal(deal: ItadDeal): boolean {
+  if (!deal.drm) return true; // legacy cached entry — include rather than drop
+  return deal.drm.some((d) => d.toLowerCase() === "steam");
+}
 
 /** Resolve a Steam appId to an ITAD game ID. Returns null if not found or key missing. */
 export async function itadLookup(steamAppId: number): Promise<string | null> {
@@ -67,12 +74,14 @@ async function itadCurrentPrices(itadId: string, country = "BR"): Promise<ItadDe
       price: { amount: number; amountInt: number; currency: string };
       cut: number;
       url: string;
+      drm?: string[];
     }>).map((d) => ({
       shopId: d.shop.id,
       shopName: d.shop.name,
       priceCents: d.price.amountInt,
       cut: d.cut,
       url: d.url,
+      drm: d.drm,
     }));
   } catch {
     return [];
@@ -92,7 +101,7 @@ export async function itadAllDeals(steamAppId: number): Promise<ItadDeal[]> {
 
   const fresh = cachedAt && Date.now() - cachedAt < DEALS_CACHE_TTL_MS;
   if (fresh && cachedDeals) {
-    return [...cachedDeals].sort((a, b) => a.priceCents - b.priceCents);
+    return [...cachedDeals].filter(isSteamDeal).sort((a, b) => a.priceCents - b.priceCents);
   }
 
   const itadId = cachedItadId ?? (await itadLookup(steamAppId));
@@ -109,7 +118,7 @@ export async function itadAllDeals(steamAppId: number): Promise<ItadDeal[]> {
     });
   }
 
-  return [...deals].sort((a, b) => a.priceCents - b.priceCents);
+  return [...deals].filter(isSteamDeal).sort((a, b) => a.priceCents - b.priceCents);
 }
 
 /** Returns Steam-only discounted deals for a Steam app, caching the result in SteamAppCache. */
@@ -125,7 +134,7 @@ export async function itadGetDealsForApp(steamAppId: number): Promise<ItadDeal[]
 
   const fresh = cachedAt && Date.now() - cachedAt < DEALS_CACHE_TTL_MS;
   if (fresh && cachedDeals) {
-    return cachedDeals.filter((d) => d.cut > 0);
+    return cachedDeals.filter((d) => d.cut > 0 && isSteamDeal(d));
   }
 
   const itadId = cachedItadId ?? await itadLookup(steamAppId);
@@ -142,5 +151,5 @@ export async function itadGetDealsForApp(steamAppId: number): Promise<ItadDeal[]
     });
   }
 
-  return deals.filter((d) => d.cut > 0);
+  return deals.filter((d) => d.cut > 0 && isSteamDeal(d));
 }
