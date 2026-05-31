@@ -74,6 +74,7 @@ type Family = {
   currency: string;
   isPublic: boolean;
   entryFeeCents: number;
+  entryFeeChargedCents: number;
   spotPricingEnabled: boolean;
   maxMembers: number | null;
   memberCount: number;
@@ -296,7 +297,7 @@ export function CatalogClient({ families, isLoggedIn, currentUserId, hasActiveFa
         return;
       }
       if (data.data?.pendingPayment && data.data?.pix) {
-        setPixModal({ family, pix: data.data.pix, amountCents: data.data.spotPriceCents ?? family.entryFeeCents });
+        setPixModal({ family, pix: data.data.pix, amountCents: data.data.feeChargedCents ?? data.data.spotPriceCents ?? family.entryFeeChargedCents });
       } else {
         toast.success(t.catalog.requestSent);
         setLocalStatus((prev) => ({ ...prev, [family.id]: "pending" }));
@@ -908,7 +909,7 @@ function FamilyCard({
             )
           ) : hasFee ? (
             <span className="text-primary font-semibold">
-              {formatCurrency(family.entryFeeCents, family.currency)}
+              {formatCurrency(family.entryFeeChargedCents, family.currency)}
             </span>
           ) : (
             <span className="flex items-center gap-1 text-emerald-400">
@@ -992,7 +993,7 @@ function FamilyCard({
                     : t.catalog.buySpot
                   : t.catalog.joinSpot
                 : hasFee
-                ? t.catalogJoinBtn.join(formatCurrency(family.entryFeeCents, family.currency))
+                ? t.catalogJoinBtn.join(formatCurrency(family.entryFeeChargedCents, family.currency))
                 : t.catalog.joinRequest}
             </button>
           )}

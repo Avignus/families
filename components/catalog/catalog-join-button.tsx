@@ -45,7 +45,8 @@ export function CatalogJoinButton({
   const [pixOpen, setPixOpen] = useState(false);
 
   const [resolvedSpotPrice, setResolvedSpotPrice] = useState<number | null>(spotPriceCents ?? null);
-  const displayFeeCents = resolvedSpotPrice !== null ? resolvedSpotPrice : entryFeeCents;
+  const [resolvedFeeCharged, setResolvedFeeCharged] = useState<number | null>(null);
+  const displayFeeCents = resolvedSpotPrice !== null ? resolvedSpotPrice : (resolvedFeeCharged ?? entryFeeCents);
   const isSpot = spotPriceCents !== null;
 
   const btnSize = large ? "lg" : "sm";
@@ -67,6 +68,9 @@ export function CatalogJoinButton({
       }
       if (data.data?.spotPriceCents !== undefined) {
         setResolvedSpotPrice(data.data.spotPriceCents);
+      }
+      if (data.data?.feeChargedCents !== undefined) {
+        setResolvedFeeCharged(data.data.feeChargedCents);
       }
       if (data.data?.pendingPayment && data.data?.pix) {
         setPix(data.data.pix);

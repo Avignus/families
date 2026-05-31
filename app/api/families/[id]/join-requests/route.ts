@@ -82,6 +82,7 @@ async function handlePost(req: NextRequest, params: { id: string }) {
         return ok({
           message: "Join request pending payment",
           pendingPayment: true,
+          feeChargedCents: existing.feeChargedCents ?? undefined,
           pix: {
             qrCode: existing.pixQrCode,
             qrCodeBase64: existing.pixQrCodeBase64,
@@ -305,6 +306,7 @@ async function handlePost(req: NextRequest, params: { id: string }) {
   return ok({
     message: "Pay the entry fee to complete your request",
     pendingPayment: true,
+    feeChargedCents: totalChargeCents,
     pix: {
       qrCode: pix.qrCode,
       qrCodeBase64: pix.qrCodeBase64,

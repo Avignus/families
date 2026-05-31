@@ -15,7 +15,8 @@ import { GameSearchModal } from "@/components/wishlist/game-search-modal";
 import { VotesPanel } from "@/components/votes/votes-panel";
 import { SteamLibraryPanel } from "@/components/family/steam-library-panel";
 import { MemberActions } from "@/components/family/member-actions";
-import { Plus, ChevronDown, ChevronUp, Settings, Copy, LogIn, Gamepad2, Check, X, Camera, AlertTriangle, Library, Share2, Wallet, ShoppingCart, LogOut, ExternalLink } from "lucide-react";
+import { Plus, ChevronDown, ChevronUp, Settings, Copy, LogIn, Gamepad2, Check, X, Camera, AlertTriangle, Library, Share2, Wallet, ShoppingCart, LogOut, ExternalLink, MoreHorizontal } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { RecommendationsSection } from "@/components/recommendations/recommendations-section";
 import { FamilyBadgesSection } from "@/components/family/family-badges-section";
 import * as TooltipPrimitive from "@radix-ui/react-tooltip";
@@ -423,20 +424,30 @@ export function FamilyPageClient({
                   </button>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                {family.isChief && (
-                  <Link href={`/families/${familyId}/admin`}>
-                    <Button size="sm" variant="outline" className="shrink-0">
-                      <Settings className="h-4 w-4 mr-1" /> {t.family.manage}
-                    </Button>
-                  </Link>
-                )}
-                {!family.isChief && (
-                  <Button size="sm" variant="outline" className="shrink-0 text-destructive border-destructive/40 hover:bg-destructive/10" onClick={() => setLeaveDialogOpen(true)}>
-                    <LogOut className="h-4 w-4 mr-1" /> {t.family.leaveFamily}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button size="sm" variant="ghost" className="shrink-0 h-8 w-8 p-0 text-white/70 hover:text-white hover:bg-white/10">
+                    <MoreHorizontal className="h-4 w-4" />
                   </Button>
-                )}
-              </div>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  {family.isChief && (
+                    <DropdownMenuItem asChild>
+                      <Link href={`/families/${familyId}/admin`} className="flex items-center gap-2">
+                        <Settings className="h-4 w-4" /> {t.family.manage}
+                      </Link>
+                    </DropdownMenuItem>
+                  )}
+                  {!family.isChief && (
+                    <DropdownMenuItem
+                      className="flex items-center gap-2 text-destructive focus:text-destructive focus:bg-destructive/10"
+                      onClick={() => setLeaveDialogOpen(true)}
+                    >
+                      <LogOut className="h-4 w-4" /> {t.family.leaveFamily}
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </div>

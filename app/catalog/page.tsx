@@ -2,6 +2,7 @@ import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getAppDetails } from "@/lib/steam";
 import { CatalogClient } from "@/components/catalog/catalog-client";
+import { ENTRY_FEE_SERVICE_RATE } from "@/lib/payment";
 
 export const dynamic = "force-dynamic";
 
@@ -436,6 +437,7 @@ export default async function CatalogPage({
         currency: f.currency,
         isPublic: f.isPublic,
         entryFeeCents: f.entryFeeCents,
+        entryFeeChargedCents: Math.ceil(f.entryFeeCents * (1 + ENTRY_FEE_SERVICE_RATE)),
         spotPricingEnabled: f.spotPricingEnabled,
         maxMembers: f.maxMembers,
         memberCount,

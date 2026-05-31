@@ -25,9 +25,10 @@ export function JoinViaInviteButton({
   const [loading, setLoading] = useState(false);
   const [pixModal, setPixModal] = useState<PixData | null>(null);
   const [resolvedSpotPrice, setResolvedSpotPrice] = useState<number | null>(spotPriceCents ?? null);
+  const [resolvedFeeCharged, setResolvedFeeCharged] = useState<number | null>(null);
 
   const isSpot = !!spotPricingEnabled;
-  const displayFeeCents = resolvedSpotPrice !== null ? resolvedSpotPrice : entryFeeCents;
+  const displayFeeCents = resolvedSpotPrice !== null ? resolvedSpotPrice : (resolvedFeeCharged ?? entryFeeCents);
 
   const handleJoin = async () => {
     setLoading(true);
@@ -40,6 +41,9 @@ export function JoinViaInviteButton({
       }
       if (data.data?.spotPriceCents !== undefined) {
         setResolvedSpotPrice(data.data.spotPriceCents);
+      }
+      if (data.data?.feeChargedCents !== undefined) {
+        setResolvedFeeCharged(data.data.feeChargedCents);
       }
       if (data.data?.pendingPayment && data.data?.pix) {
         setPixModal(data.data.pix);

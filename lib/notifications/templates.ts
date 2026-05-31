@@ -65,7 +65,9 @@ const templates: Record<Locale, Templates> = {
     },
     DISBURSEMENT_SENT: {
       title: () => "Repasse enviado!",
-      body: (p) => `${formatCurrency(Number(p.amountCents), String(p.currency))} foram enviados para sua chave PIX referente a "${p.gameName}". Compre na Steam!`,
+      body: (p) => p.lateFeeCents
+        ? `${formatCurrency(Number(p.amountCents), String(p.currency))} foram enviados para sua chave PIX referente a "${p.gameName}" (taxa de atraso de ${formatCurrency(Number(p.lateFeeCents), String(p.currency))} aplicada). Compre na Steam!`
+        : `${formatCurrency(Number(p.amountCents), String(p.currency))} foram enviados para sua chave PIX referente a "${p.gameName}". Compre na Steam!`,
       link: (p) => `/families/${p.familyId}`,
     },
     PIX_KEY_REQUIRED: {
@@ -256,7 +258,9 @@ const templates: Record<Locale, Templates> = {
     },
     DISBURSEMENT_SENT: {
       title: () => "Funds sent!",
-      body: (p) => `${formatCurrency(Number(p.amountCents), String(p.currency))} were sent to your PIX key for "${p.gameName}". Buy it on Steam!`,
+      body: (p) => p.lateFeeCents
+        ? `${formatCurrency(Number(p.amountCents), String(p.currency))} were sent to your PIX key for "${p.gameName}" (${formatCurrency(Number(p.lateFeeCents), String(p.currency))} late registration fee applied). Buy it on Steam!`
+        : `${formatCurrency(Number(p.amountCents), String(p.currency))} were sent to your PIX key for "${p.gameName}". Buy it on Steam!`,
       link: (p) => `/families/${p.familyId}`,
     },
     PIX_KEY_REQUIRED: {

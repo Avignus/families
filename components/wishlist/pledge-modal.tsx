@@ -45,7 +45,11 @@ export function PledgeModal({
   const [pixOpen, setPixOpen] = useState(false);
   const [pixData, setPixData] = useState<PixData | null>(null);
   const [confirmedAmount, setConfirmedAmount] = useState(0);
+  const [pixChargeCents, setPixChargeCents] = useState<number | null>(null);
   const [pledgeId, setPledgeId] = useState<string | null>(null);
+
+  // 18% service fee applied server-side on top of the PIX portion
+  const SERVICE_FEE_RATE = 0.18;
 
   const remaining = targetPriceCents - totalPledgedCents;
 
@@ -109,6 +113,7 @@ export function PledgeModal({
       setConfirmedAmount(amountCents);
       const pixResult = data.data?.pix ?? null;
       setPixData(pixResult);
+      setPixChargeCents(data.data?.pixAmountCents ?? null);
       setPledgeId(data.data?.pledge?.id ?? null);
       onOpenChange(false);
       setInputStr("");
@@ -244,8 +249,9 @@ export function PledgeModal({
                     <span className="flex items-center gap-1.5 text-muted-foreground">
                       <CreditCard className="h-3 w-3" />
                       {t.pledge.pixQrCode}
+                      <span className="text-[10px] opacity-60">(+{Math.round(SERVICE_FEE_RATE * 100)}% taxa)</span>
                     </span>
-                    <span className="font-semibold">{formatCurrency(pixPortion, currency)}</span>
+                    <span className="font-semibold">{formatCurrency(Math.ceil(pixPortion * (1 + SERVICE_FEE_RATE)), currency)}</span>
                   </div>
                 )}
                 {pixPortion === 0 && (
@@ -279,7 +285,7 @@ export function PledgeModal({
       <PixPaymentModal
         open={pixOpen}
         onOpenChange={setPixOpen}
-        amountCents={confirmedAmount}
+        amountCents={pixChargeCents ?? confirmedAmount}
         currency={currency}
         gameName={gameName}
         pix={pixData}

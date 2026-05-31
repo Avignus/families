@@ -2,6 +2,7 @@ import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getAppDetails } from "@/lib/steam";
 import { notFound } from "next/navigation";
+import { ENTRY_FEE_SERVICE_RATE } from "@/lib/payment";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/utils";
@@ -130,6 +131,7 @@ export default async function CatalogFamilyPage({ params }: { params: { id: stri
   const displaySpotPriceCents = hasPendingPayment
     ? (myMembership?.feeChargedCents ?? spotPriceCents)
     : spotPriceCents;
+  const entryFeeChargedCents = Math.ceil(family.entryFeeCents * (1 + ENTRY_FEE_SERVICE_RATE));
   const memberCount = family.memberships.length;
   const isFull = family.maxMembers ? memberCount >= family.maxMembers : false;
 
@@ -246,7 +248,7 @@ export default async function CatalogFamilyPage({ params }: { params: { id: stri
                 </Badge>
               ) : family.entryFeeCents > 0 ? (
                 <Badge variant="outline" className="text-primary border-primary/40">
-                  {formatCurrency(family.entryFeeCents, family.currency)}
+                  {formatCurrency(entryFeeChargedCents, family.currency)}
                 </Badge>
               ) : null}
             </div>
@@ -318,7 +320,7 @@ export default async function CatalogFamilyPage({ params }: { params: { id: stri
                   </p>
                 </>
               ) : family.entryFeeCents > 0 ? (
-                <p className="text-muted-foreground text-sm">{t.catalogFamily.joinBannerFee(formatCurrency(family.entryFeeCents, family.currency))}</p>
+                <p className="text-muted-foreground text-sm">{t.catalogFamily.joinBannerFee(formatCurrency(entryFeeChargedCents, family.currency))}</p>
               ) : (
                 <p className="text-muted-foreground text-sm">{t.catalogFamily.joinBannerFree}</p>
               )}
@@ -327,7 +329,7 @@ export default async function CatalogFamilyPage({ params }: { params: { id: stri
               <CatalogJoinButton
                 familyId={params.id}
                 familyName={family.name}
-                entryFeeCents={family.entryFeeCents}
+                entryFeeCents={entryFeeChargedCents}
                 currency={family.currency}
                 initialStatus={myMembership?.status ?? null}
                 spotPriceCents={family.spotPricingEnabled ? displaySpotPriceCents : null}

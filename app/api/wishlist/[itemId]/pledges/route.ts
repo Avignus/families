@@ -179,6 +179,7 @@ export async function POST(req: NextRequest, { params }: { params: { itemId: str
         newTotal: result.newTotal,
         percent: result.percent,
         pix,
+        pixAmountCents,
         creditsUsed: result.creditsUsed,
       }, 201);
 

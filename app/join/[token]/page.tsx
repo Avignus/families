@@ -2,6 +2,7 @@ import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { notFound, redirect } from "next/navigation";
 import { formatCurrency } from "@/lib/utils";
+import { ENTRY_FEE_SERVICE_RATE } from "@/lib/payment";
 import { Users, Crown, Lock, Unlock, ArrowLeft, Zap } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { FamilyCoverArt } from "@/components/family-cover-art";
@@ -46,6 +47,8 @@ export default async function JoinPage({ params }: { params: { token: string } }
     const spotResult = await calculateSpotPrice(family.id, currentUserId).catch(() => null);
     spotPriceCents = spotResult?.spotPriceCents ?? null;
   }
+
+  const entryFeeChargedCents = Math.ceil(family.entryFeeCents * (1 + ENTRY_FEE_SERVICE_RATE));
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? process.env.NEXTAUTH_URL ?? "http://localhost:3000";
   const loginUrl = `/api/auth/steam?callbackUrl=${encodeURIComponent(`/join/${params.token}`)}`;
@@ -108,7 +111,7 @@ export default async function JoinPage({ params }: { params: { token: string } }
                 )
               ) : family.entryFeeCents > 0 ? (
                 <span className="font-semibold text-primary">
-                  {formatCurrency(family.entryFeeCents, family.currency)}
+                  {formatCurrency(entryFeeChargedCents, family.currency)}
                 </span>
               ) : (
                 <span className="flex items-center gap-1 text-emerald-400">
@@ -136,7 +139,7 @@ export default async function JoinPage({ params }: { params: { token: string } }
               <JoinViaInviteButton
                 familyId={family.id}
                 familyName={family.name}
-                entryFeeCents={family.entryFeeCents}
+                entryFeeCents={entryFeeChargedCents}
                 currency={family.currency}
                 spotPricingEnabled={family.spotPricingEnabled}
                 spotPriceCents={spotPriceCents}
