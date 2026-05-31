@@ -192,7 +192,7 @@ export const translations = {
       joinSpot: "See my price",
       buySpot: "Buy spot",
       paymentPending: "Payment pending",
-      spotPriceTooltip: "Entry fee based on library difference",
+      spotPriceTooltip: "Entry fee based on library difference · valid for 1 year",
     },
     catalogFamily: {
       backLink: "Catalog",
@@ -216,6 +216,7 @@ export const translations = {
       joinBannerFee: (price: string) => `Entry fee: ${price}`,
       joinBannerFree: "Free entry",
       joinBannerSpot: (price: string) => `Your price: ${price}`,
+      spotValidFor: "Valid for 1 year",
       members: (n: number, max: number | null) => max ? `${n}/${max} members` : `${n} members`,
     },
     admin: {
@@ -737,7 +738,7 @@ export const translations = {
       joinSpot: "Ver meu preço",
       buySpot: "Comprar spot",
       paymentPending: "Pagamento pendente",
-      spotPriceTooltip: "Taxa de entrada baseada na diferença de bibliotecas",
+      spotPriceTooltip: "Taxa de entrada baseada na diferença de bibliotecas · válido por 1 ano",
     },
     catalogFamily: {
       backLink: "Catálogo",
@@ -761,6 +762,7 @@ export const translations = {
       joinBannerFee: (price: string) => `Taxa de entrada: ${price}`,
       joinBannerFree: "Entrada gratuita",
       joinBannerSpot: (price: string) => `Seu preço: ${price}`,
+      spotValidFor: "Acesso válido por 1 ano",
       members: (n: number, max: number | null) => max ? `${n}/${max} membros` : `${n} membros`,
     },
     admin: {

@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/utils";
-import { ArrowLeft, Crown, Users, Lock, Unlock, Gamepad2, ShoppingCart, TrendingUp, Library, Trophy, Zap, Medal } from "lucide-react";
+import { ArrowLeft, Crown, Users, Lock, Unlock, Gamepad2, ShoppingCart, TrendingUp, Library, Trophy, Zap, Medal, Clock } from "lucide-react";
 import { FamilyCoverArt } from "@/components/family-cover-art";
 import Link from "next/link";
 import { CatalogJoinButton } from "@/components/catalog/catalog-join-button";
@@ -306,12 +306,17 @@ export default async function CatalogFamilyPage({ params }: { params: { id: stri
             <div className="space-y-1 text-center sm:text-left">
               <p className="font-semibold text-lg">{t.catalogFamily.joinBannerTitle}</p>
               {family.spotPricingEnabled && displaySpotPriceCents !== null ? (
-                <p className="text-muted-foreground text-sm flex items-center gap-1.5 justify-center sm:justify-start">
-                  <Zap className="h-4 w-4 text-primary" />
-                  {displaySpotPriceCents > 0
-                    ? t.catalogFamily.joinBannerSpot(formatCurrency(displaySpotPriceCents, family.currency))
-                    : t.catalogFamily.joinBannerFree}
-                </p>
+                <>
+                  <p className="text-muted-foreground text-sm flex items-center gap-1.5 justify-center sm:justify-start">
+                    <Zap className="h-4 w-4 text-primary" />
+                    {displaySpotPriceCents > 0
+                      ? t.catalogFamily.joinBannerSpot(formatCurrency(displaySpotPriceCents, family.currency))
+                      : t.catalogFamily.joinBannerFree}
+                  </p>
+                  <p className="text-xs text-muted-foreground/60 flex items-center gap-1 justify-center sm:justify-start">
+                    <Clock className="h-3 w-3" /> {t.catalogFamily.spotValidFor}
+                  </p>
+                </>
               ) : family.entryFeeCents > 0 ? (
                 <p className="text-muted-foreground text-sm">{t.catalogFamily.joinBannerFee(formatCurrency(family.entryFeeCents, family.currency))}</p>
               ) : (
