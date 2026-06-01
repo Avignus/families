@@ -32,11 +32,11 @@ export const metadata: Metadata = {
     url: appUrl,
     title: "Families — Compartilhe Jogos, Ganhe Dinheiro",
     description: "Ganhe dinheiro compartilhando seus jogos",
-    images: [{ url: "/images/thumb-sharing-image.jpg", width: 1200, height: 630, type: "image/jpeg" }],
+    images: [{ url: "/images/families-banner.png", width: 1774, height: 596, type: "image/png" }],
   },
   twitter: {
     card: "summary_large_image",
-    images: ["/images/thumb-sharing-image.jpg"],
+    images: ["/images/families-banner.png"],
   },
 };
 
