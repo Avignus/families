@@ -55,7 +55,7 @@ export async function generateMetadata(
     }
   }
 
-  const title = family ? `${family.name} — Families` : "Families — Steam Gift Pooling";
+  const title = family ? `${family.name} — Families` : "Families — Compartilhe Jogos, Ganhe Dinheiro";
   const description = family?.description ?? "Ganhe dinheiro compartilhando seus jogos";
 
   return {
