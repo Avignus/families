@@ -25,13 +25,13 @@ const appUrl = process.env.NEXT_PUBLIC_APP_URL
 
 export const metadata: Metadata = {
   metadataBase: new URL(appUrl),
-  title: "Families — Compartilhe Jogos, Ganhe Dinheiro",
-  description: "Ganhe dinheiro compartilhando seus jogos",
+  title: "Families — Compartilhe jogos da Steam, Ganhe dinheiro",
+  description: "Compartilhe jogos da Steam, Ganhe dinheiro",
   openGraph: {
     type: "website",
     url: appUrl,
-    title: "Families — Compartilhe Jogos, Ganhe Dinheiro",
-    description: "Ganhe dinheiro compartilhando seus jogos",
+    title: "Families — Compartilhe jogos da Steam, Ganhe dinheiro",
+    description: "Compartilhe jogos da Steam, Ganhe dinheiro",
     images: [{ url: "/images/families-banner-v2.png", width: 1254, height: 1254, type: "image/png" }],
   },
   twitter: {
