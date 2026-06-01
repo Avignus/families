@@ -701,6 +701,7 @@ function LibraryGameCard({
 // ─── Root panel ───────────────────────────────────────────────────────────────
 
 export function SteamLibraryPanel({ familyId, currentUserId, memberColors, sharedWishlistItems, onRefresh }: Props) {
+  const { t } = useLanguage();
   const [tab, setTab] = useState<Tab>("library");
   const [syncing, setSyncing] = useState(false);
   const queryClient = useQueryClient();
