@@ -24,7 +24,7 @@ function useInfiniteScroll(total: number, pageSize: number, resetKey: unknown) {
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Library, Heart, Users, Gift, Lock, AlertTriangle, Plus, Clock, CheckCircle2, Search, RefreshCw } from "lucide-react";
+import { Library, Heart, Users, Gift, Lock, AlertTriangle, Plus, Clock, CheckCircle2, Search, RefreshCw, ExternalLink } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { formatCurrency } from "@/lib/utils";
 import { SteamPriceBadge } from "@/components/ui/steam-price-badge";
@@ -739,6 +739,8 @@ export function SteamLibraryPanel({ familyId, currentUserId, memberColors, share
 
   const members = data?.data?.members ?? [];
   const steamKeyInvalid = data?.data?.steamKeyInvalid ?? false;
+  const currentMember = members.find((m) => m.userId === currentUserId);
+  const myProfilePrivate = !isLoading && currentMember !== undefined && currentMember.ownedGames === null;
   const memberMap = useMemo(
     () => new Map(members.map((m) => [m.userId, m])),
     [members]
@@ -774,6 +776,23 @@ export function SteamLibraryPanel({ familyId, currentUserId, memberColors, share
         </div>
       ) : (
         <>
+          {myProfilePrivate && (
+            <div className="flex items-start gap-2.5 rounded-lg border border-sky-500/30 bg-sky-500/8 px-3 py-2.5 text-xs text-sky-300">
+              <Lock className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />
+              <span>
+                {t.steamLibrary.myProfilePrivate}{" "}
+                <a
+                  href="https://steamcommunity.com/my/edit/settings"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-0.5 underline underline-offset-2 hover:text-sky-200"
+                >
+                  {t.steamLibrary.makePublicLink}
+                  <ExternalLink className="h-3 w-3" />
+                </a>
+              </span>
+            </div>
+          )}
           {steamKeyInvalid && (
             <div className="flex items-start gap-2.5 rounded-lg border border-amber-500/30 bg-amber-500/8 px-3 py-2.5 text-xs text-amber-400">
               <AlertTriangle className="h-3.5 w-3.5 mt-0.5 flex-shrink-0" />

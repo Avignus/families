@@ -531,6 +531,8 @@ export const translations = {
       adding: "Adding...",
       addToList: "Add to List",
       contribute: "Contribute",
+      myProfilePrivate: "Your Steam games aren't showing because your profile is set to private.",
+      makePublicLink: "Make it public on Steam",
     },
     withdraw: {
       title: "Spot Earnings",
@@ -1077,6 +1079,8 @@ export const translations = {
       adding: "Adicionando...",
       addToList: "Adicionar à Lista",
       contribute: "Contribuir",
+      myProfilePrivate: "Seus jogos não aparecem porque seu perfil Steam está privado.",
+      makePublicLink: "Tornar público na Steam",
     },
     withdraw: {
       title: "Ganhos de Spot",
