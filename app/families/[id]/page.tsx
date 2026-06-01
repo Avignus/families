@@ -7,14 +7,56 @@ import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
 
-export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
+export async function generateMetadata(
+  { params, searchParams }: { params: { id: string }; searchParams?: Record<string, string | string[] | undefined> }
+): Promise<Metadata> {
   const family = await prisma.family.findUnique({
     where: { id: params.id },
     select: { name: true, description: true },
   });
 
+  const pledgeId = typeof searchParams?.pledge === "string" ? searchParams.pledge : null;
+  const pct = typeof searchParams?.pct === "string" ? Number(searchParams.pct) : 50;
+
+  if (pledgeId) {
+    const item = await prisma.wishlistItem.findUnique({
+      where: { id: pledgeId },
+      select: { steamAppId: true, owner: { select: { personaName: true } } },
+    });
+
+    if (item) {
+      const cache = await prisma.steamAppCache.findUnique({ where: { steamAppId: item.steamAppId } });
+      const steamData = cache?.payload as { name?: string; headerImage?: string } | null;
+      const gameName = steamData?.name ?? `App #${item.steamAppId}`;
+      const ownerName = item.owner?.personaName ?? "Alguém";
+      const ogImage = steamData?.headerImage
+        ?? `https://cdn.cloudflare.steamstatic.com/steam/apps/${item.steamAppId}/header.jpg`;
+
+      const shareTitle = `${ownerName} quer sua ajuda para comprar ${gameName}!`;
+      const shareDesc = `Contribua com ${pct}% do valor de ${gameName} na Steam. Junte-se à família ${family?.name ?? ""} no Families!`;
+
+      return {
+        title: `${shareTitle} — Families`,
+        description: shareDesc,
+        openGraph: {
+          type: "website",
+          url: `${process.env.APP_BASE_URL ?? ""}/families/${params.id}?pledge=${pledgeId}&pct=${pct}`,
+          title: shareTitle,
+          description: shareDesc,
+          images: [{ url: ogImage, width: 460, height: 215 }],
+        },
+        twitter: {
+          card: "summary_large_image",
+          title: shareTitle,
+          description: shareDesc,
+          images: [ogImage],
+        },
+      };
+    }
+  }
+
   const title = family ? `${family.name} — Families` : "Families — Steam Gift Pooling";
-  const description = family?.description ?? "Una-se com amigos para financiar jogos na lista de desejos da Steam";
+  const description = family?.description ?? "Ganhe dinheiro compartilhando seus jogos";
 
   return {
     title,

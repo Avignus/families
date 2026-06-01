@@ -104,7 +104,22 @@ export function WishlistItemCard({ item, familyId, currentUserId, memberColors, 
   };
 
   const handleCopyLink = async () => {
-    await navigator.clipboard.writeText(buildShareUrl(sharePct));
+    const url = buildShareUrl(sharePct);
+
+    if (typeof navigator.share === "function") {
+      try {
+        await navigator.share({
+          title: t.wishlist.shareTitle(gameName),
+          text: t.wishlist.shareText(gameName, sharePct),
+          url,
+        });
+        return;
+      } catch {
+        // cancelled or not supported — fall through to clipboard
+      }
+    }
+
+    await navigator.clipboard.writeText(url);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

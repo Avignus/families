@@ -26,12 +26,12 @@ const appUrl = process.env.NEXT_PUBLIC_APP_URL
 export const metadata: Metadata = {
   metadataBase: new URL(appUrl),
   title: "Families — Steam Gift Pooling",
-  description: "Una-se com amigos para financiar jogos na lista de desejos da Steam",
+  description: "Ganhe dinheiro compartilhando seus jogos",
   openGraph: {
     type: "website",
     url: appUrl,
     title: "Families — Steam Gift Pooling",
-    description: "Una-se com amigos para financiar jogos na lista de desejos da Steam",
+    description: "Ganhe dinheiro compartilhando seus jogos",
     images: [{ url: "/images/thumb-sharing-image.jpg", width: 1200, height: 630, type: "image/jpeg" }],
   },
   twitter: {
