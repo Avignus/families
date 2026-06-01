@@ -21,6 +21,9 @@ async function handlePost(req: NextRequest, params: { id: string }) {
   const user = await requireSession();
   if (isApiError(user)) return user;
 
+  const body = await req.json().catch(() => ({}));
+  const spotTermsAccepted = body?.spotTermsAccepted === true;
+
   // Always use the latest personaName from DB, refreshing from Steam if still a fallback name
   const dbUser = await prisma.user.findUnique({
     where: { id: user.id },
@@ -102,6 +105,10 @@ async function handlePost(req: NextRequest, params: { id: string }) {
 
   // ── Spot marketplace path ────────────────────────────────────────────────
   if (useSpotPricing) {
+    if (!spotTermsAccepted) {
+      return err("SPOT_TERMS_REQUIRED", "Você precisa aceitar os termos do spot antes de prosseguir.", 400);
+    }
+
     const spotResult = await calculateSpotPrice(params.id, user.id);
     const overrideRaw = process.env.SPOT_PRICE_OVERRIDE_CENTS;
     const spotPriceCents = overrideRaw ? Math.max(1, parseInt(overrideRaw, 10)) : spotResult.spotPriceCents;
@@ -165,10 +172,10 @@ async function handlePost(req: NextRequest, params: { id: string }) {
     const membership = existing
       ? await prisma.familyMembership.update({
           where: { id: existing.id },
-          data: { status: "pending", joinedAt: new Date(), feeChargedCents: spotPriceCents },
+          data: { status: "pending", joinedAt: new Date(), feeChargedCents: spotPriceCents, spotTermsAcceptedAt: new Date() },
         })
       : await prisma.familyMembership.create({
-          data: { userId: user.id, familyId: params.id, status: "pending", feeChargedCents: spotPriceCents },
+          data: { userId: user.id, familyId: params.id, status: "pending", feeChargedCents: spotPriceCents, spotTermsAcceptedAt: new Date() },
         });
 
     let pix;

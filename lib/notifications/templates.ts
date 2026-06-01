@@ -205,6 +205,13 @@ const templates: Record<Locale, Templates> = {
         : `O prazo de verificação para "${p.familyName}" expirou.`,
       link: () => `/catalog`,
     },
+    SPOT_REMOVED_REFUND: {
+      title: () => "Removido do spot — reembolso proporcional",
+      body: (p) => Number(p.refundCents) > 0
+        ? `Você foi removido da família "${p.familyName}" antes do término do seu período. Um reembolso proporcional de ${p.refundAmountFormatted} foi creditado na sua carteira.`
+        : `Você foi removido da família "${p.familyName}" antes do término do seu período.`,
+      link: () => `/dashboard`,
+    },
   },
   en: {
     JOIN_REQUEST: {
@@ -397,6 +404,13 @@ const templates: Record<Locale, Templates> = {
         ? `The verification deadline for "${p.familyName}" has passed. Your payment of ${p.refundAmountFormatted} has been refunded.`
         : `The verification deadline for "${p.familyName}" has passed.`,
       link: () => `/catalog`,
+    },
+    SPOT_REMOVED_REFUND: {
+      title: () => "Removed from spot — pro-rata refund",
+      body: (p) => Number(p.refundCents) > 0
+        ? `You were removed from family "${p.familyName}" before your period ended. A pro-rata refund of ${p.refundAmountFormatted} has been credited to your wallet.`
+        : `You were removed from family "${p.familyName}" before your period ended.`,
+      link: () => `/dashboard`,
     },
   },
 };

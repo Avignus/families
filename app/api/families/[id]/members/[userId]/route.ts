@@ -2,6 +2,11 @@ import { NextRequest } from "next/server";
 import { requireSession, isApiError, ok, err } from "@/lib/api";
 import { prisma } from "@/lib/prisma";
 import { creditWallet } from "@/lib/wallet";
+import { createNotification } from "@/lib/notifications/service";
+
+function formatCurrency(cents: number, currency: string) {
+  return new Intl.NumberFormat("pt-BR", { style: "currency", currency }).format(cents / 100);
+}
 
 export async function DELETE(
   req: NextRequest,
@@ -38,13 +43,38 @@ export async function DELETE(
     return err("NOT_FOUND", "Active membership not found", 404);
   }
 
+  // ── Spot pro-rata refund ─────────────────────────────────────────────────
+  // When a chief removes a spot buyer before spotExpiresAt, the buyer is
+  // entitled to a refund proportional to the remaining time.
+  const now = new Date();
+  const isActiveSpot =
+    !isSelf &&
+    isChief &&
+    membership.spotExpiresAt !== null &&
+    membership.feePaidAt !== null &&
+    membership.spotExpiresAt > now;
+
+  let spotRefundCents = 0;
+
+  if (isActiveSpot) {
+    const feePaidAt = membership.feePaidAt!;
+    const spotExpiresAt = membership.spotExpiresAt!;
+    const totalMs = spotExpiresAt.getTime() - feePaidAt.getTime();
+    const remainingMs = spotExpiresAt.getTime() - now.getTime();
+    const remainingFraction = totalMs > 0 ? Math.max(0, remainingMs / totalMs) : 0;
+    // Refund is based on the chief's net escrow (what the chief actually received).
+    // Platform commission is not returned since the coordination service was rendered.
+    const escrow = membership.spotEscrowCents ?? 0;
+    spotRefundCents = Math.round(escrow * remainingFraction);
+  }
+
   await prisma.$transaction(async (tx) => {
     await tx.familyMembership.update({
       where: { id: membership.id },
       data: { status: "removed" },
     });
 
-    // Load all active pledges from this member on items in this family
+    // Pledge cleanup: withdraw and refund active pledges from this member
     const pledges = await tx.pledge.findMany({
       where: {
         pledgerUserId: params.userId,
@@ -58,42 +88,69 @@ export async function DELETE(
       },
     });
 
-    if (pledges.length === 0) return;
+    if (pledges.length > 0) {
+      const pledgeIds = pledges.map((p) => p.id);
+      await tx.pledge.updateMany({
+        where: { id: { in: pledgeIds } },
+        data: { status: "withdrawn" },
+      });
 
-    const pledgeIds = pledges.map((p) => p.id);
-    await tx.pledge.updateMany({
-      where: { id: { in: pledgeIds } },
-      data: { status: "withdrawn" },
-    });
+      for (const pledge of pledges) {
+        const creditAmount =
+          (pledge.paidAt ? (pledge.pixAmountCents ?? 0) : 0) + pledge.creditsCentsUsed;
+        if (creditAmount > 0) {
+          await creditWallet(tx, params.userId, creditAmount, "member_removed", pledge.id);
+        }
+      }
 
-    // Credit removed member's wallet: PIX already paid + credits used
-    for (const pledge of pledges) {
-      const creditAmount =
-        (pledge.paidAt ? (pledge.pixAmountCents ?? 0) : 0) + pledge.creditsCentsUsed;
-      if (creditAmount > 0) {
-        await creditWallet(tx, params.userId, creditAmount, "member_removed", pledge.id);
+      // Revert funded → open for items no longer fully covered
+      const uniqueItems = Object.values(
+        Object.fromEntries(pledges.map((p) => [p.wishlistItem.id, p.wishlistItem]))
+      );
+      const fundedItems = uniqueItems.filter(
+        (item) => item.status === "funded" && !item.disbursedAt
+      );
+      for (const item of fundedItems) {
+        const { _sum } = await tx.pledge.aggregate({
+          where: { wishlistItemId: item.id, status: "active" },
+          _sum: { amountCents: true },
+        });
+        if ((_sum.amountCents ?? 0) < item.targetPriceCents) {
+          await tx.wishlistItem.update({
+            where: { id: item.id },
+            data: { status: "open" },
+          });
+        }
       }
     }
 
-    // Revert funded → open for items no longer fully covered (skip already-disbursed items)
-    const uniqueItems = Object.values(
-      Object.fromEntries(pledges.map((p) => [p.wishlistItem.id, p.wishlistItem]))
-    );
-    const fundedItems = uniqueItems.filter(
-      (item) => item.status === "funded" && !item.disbursedAt
-    );
+    // Spot pro-rata refund: credit buyer wallet and clawback from chief's earnings
+    if (spotRefundCents > 0) {
+      await creditWallet(tx, params.userId, spotRefundCents, "spot_removed", membership.id);
 
-    for (const item of fundedItems) {
-      const { _sum } = await tx.pledge.aggregate({
-        where: { wishlistItemId: item.id, status: "active" },
-        _sum: { amountCents: true },
+      const chief = await tx.user.findUnique({
+        where: { id: family.chiefId },
+        select: { chiefSpotEarningsCents: true },
       });
-      if (((_sum.amountCents ?? 0) < item.targetPriceCents)) {
-        await tx.wishlistItem.update({
-          where: { id: item.id },
-          data: { status: "open" },
-        });
-      }
+      const currentEarnings = chief?.chiefSpotEarningsCents ?? 0;
+      await tx.user.update({
+        where: { id: family.chiefId },
+        data: { chiefSpotEarningsCents: Math.max(0, currentEarnings - spotRefundCents) },
+      });
+
+      const currency = family.currency ?? "BRL";
+      const refundAmountFormatted = formatCurrency(spotRefundCents, currency);
+
+      await createNotification(tx, {
+        recipientUserId: params.userId,
+        type: "SPOT_REMOVED_REFUND",
+        payload: {
+          familyId: params.id,
+          familyName: family.name,
+          refundCents: spotRefundCents,
+          refundAmountFormatted,
+        },
+      });
     }
   });
 
@@ -101,5 +158,5 @@ export async function DELETE(
     console.log(`Member ${params.userId} removed from family ${params.id} by ${user.id}. Reason: ${removalReason}`);
   }
 
-  return ok({ message: "Member removed" });
+  return ok({ message: "Member removed", spotRefundCents });
 }

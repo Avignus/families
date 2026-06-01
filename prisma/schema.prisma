@@ -106,6 +106,7 @@ model FamilyMembership {
   spotVerifImageUrl String?   // Vercel Blob URL of the screenshot uploaded by buyer
   spotVerifNotes    String?   // AI analysis result summary
   spotEscrowCents   Int?      // chief's net amount held in escrow until verification
+  spotTermsAcceptedAt DateTime? // when the buyer acknowledged spot terms before paying
 
   // Auto-distribution
   monthlyBudgetCents    Int       @default(0)
@@ -445,4 +446,5 @@ enum NotificationType {
   SPOT_VERIFICATION_PENDING
   SPOT_VERIFIED
   SPOT_VERIFICATION_EXPIRED
+  SPOT_REMOVED_REFUND
 }
