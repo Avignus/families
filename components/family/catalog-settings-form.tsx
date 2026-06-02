@@ -56,6 +56,7 @@ type Props = {
     spotPricingEnabled: boolean;
     spotFraction: number;
     spotMinPriceCents: number;
+    spotMaxPriceCents: number;
     autoApprove: boolean;
   };
 };
@@ -75,13 +76,17 @@ export function CatalogSettingsForm({ familyId, familyName, chiefName, chiefAvat
   const [spotMinPrice, setSpotMinPrice] = useState(
     initial.spotMinPriceCents > 0 ? (initial.spotMinPriceCents / 100).toFixed(2) : ""
   );
+  const [spotMaxPrice, setSpotMaxPrice] = useState(
+    (initial.spotMaxPriceCents / 100).toFixed(2)
+  );
   const [autoApprove, setAutoApprove] = useState(initial.autoApprove);
   const [saving, setSaving] = useState(false);
 
   const previewFeeCents = entryFee ? Math.round(parseFloat(entryFee) * 100) : 0;
   const previewMax = maxMembers ? parseInt(maxMembers) : null;
-  const spotFractionValue = spotFraction ? Math.min(1, Math.max(0.01, parseFloat(spotFraction) / 100)) : 0.2;
+  const spotFractionValue = spotFraction ? Math.min(1, Math.max(0.01, parseFloat(spotFraction) / 100)) : 0.05;
   const spotMinPriceCents = spotMinPrice ? Math.round(parseFloat(spotMinPrice) * 100) : 0;
+  const spotMaxPriceCents = spotMaxPrice ? Math.round(parseFloat(spotMaxPrice) * 100) : 24900;
 
   // Live cosmetics — same query key as CoverThemeSelector so they share state
   const { data: coverData } = useQuery({
@@ -119,6 +124,7 @@ export function CatalogSettingsForm({ familyId, familyName, chiefName, chiefAvat
           spotPricingEnabled: spotEnabled,
           spotFraction: spotFractionValue,
           spotMinPriceCents,
+          spotMaxPriceCents,
           autoApprove,
         }),
       });
@@ -235,6 +241,17 @@ export function CatalogSettingsForm({ familyId, familyName, chiefName, chiefAvat
               />
               <p className="text-xs text-muted-foreground">{t.catalogSettings.spotMinPriceHint}</p>
             </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-sm">{t.catalogSettings.spotMaxPrice(initial.currency)}</Label>
+            <Input
+              type="number" min={0} step={0.01}
+              placeholder="249.00"
+              value={spotMaxPrice}
+              onChange={(e) => setSpotMaxPrice(e.target.value)}
+              className="text-sm"
+            />
+            <p className="text-xs text-muted-foreground">{t.catalogSettings.spotMaxPriceHint}</p>
           </div>
         )}
       </div>

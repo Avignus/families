@@ -22,7 +22,7 @@ export async function calculateSpotPrice(
 ): Promise<SpotPriceResult> {
   const family = await prisma.family.findUniqueOrThrow({
     where: { id: familyId },
-    select: { spotFraction: true, spotMinPriceCents: true },
+    select: { spotFraction: true, spotMinPriceCents: true, spotMaxPriceCents: true },
   });
 
   // Active members, excluding the buyer — we need steamIds because SteamUserCache is keyed by steamId
@@ -123,9 +123,9 @@ export async function calculateSpotPrice(
   }
 
   const netValueCents = Math.max(0, familyValueCents - buyerContributionCents);
-  const spotPriceCents = Math.max(
-    family.spotMinPriceCents,
-    Math.round(netValueCents * family.spotFraction)
+  const spotPriceCents = Math.min(
+    family.spotMaxPriceCents,
+    Math.max(family.spotMinPriceCents, Math.round(netValueCents * family.spotFraction))
   );
 
   return {

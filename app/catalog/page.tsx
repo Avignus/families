@@ -321,7 +321,7 @@ export default async function CatalogPage({
         let buyerContributionCents = 0;
         for (const id of userAppIds) { if (!familyIds.has(id)) buyerContributionCents += priceMap.get(id) ?? 0; }
         const netValueCents = Math.max(0, familyValueCents - buyerContributionCents);
-        const spotPriceCents = Math.max(f.spotMinPriceCents, Math.round(netValueCents * f.spotFraction));
+        const spotPriceCents = Math.min(f.spotMaxPriceCents, Math.max(f.spotMinPriceCents, Math.round(netValueCents * f.spotFraction)));
         familySpotPricesMap.set(f.id, spotPriceCents);
       }
     }

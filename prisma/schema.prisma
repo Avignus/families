@@ -58,8 +58,9 @@ model Family {
 
   // Spot marketplace
   spotPricingEnabled Boolean @default(false)
-  spotFraction       Float   @default(0.20)  // 0.0–1.0; chief's share of net value
+  spotFraction       Float   @default(0.05)  // 0.0–1.0; chief's share of net value
   spotMinPriceCents  Int     @default(0)     // floor price regardless of formula
+  spotMaxPriceCents  Int     @default(24900) // ceiling price regardless of formula (R$249)
 
   familyScore   Int     @default(0)
   autoApprove   Boolean @default(false)
